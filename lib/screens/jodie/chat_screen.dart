@@ -131,7 +131,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   controller: _scroll,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
-                  itemBuilder: (_, i) => _Bubble(message: messages[i]),
+                  itemBuilder: (_, i) => ChatBubble(message: messages[i]),
                 );
               },
             ),
@@ -195,10 +195,17 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message});
+class ChatBubble extends StatelessWidget {
+  const ChatBubble({
+    super.key,
+    required this.message,
+    this.theirColor = AppColors.surface,
+  });
 
   final ChatMessage message;
+
+  /// Background of received messages (white when the page is tinted).
+  final Color theirColor;
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +220,7 @@ class _Bubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           gradient: mine ? AppColors.buttonGradient : null,
-          color: mine ? null : AppColors.surface,
+          color: mine ? null : theirColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),

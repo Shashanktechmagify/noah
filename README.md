@@ -31,20 +31,45 @@ matchmaking space (Jodie).
 | Screen | What it does |
 |---|---|
 | **Splash** | Gradient background, Noah logo, animated dots, then fades to login. |
-| **Login** | `+91` mobile number with live `XXXXX XXXXX` formatting; needs 10 digits. |
-| **OTP** | 4-box code entry, 24 s resend timer, change number. Demo code: **4821**. |
+| **Login** | A **language dropdown** at the top; tapping it opens a "Choose your language" popup (all six languages), **country-code dropdown** (India +91 default, plus US, UK, UAE, Singapore, Australia), number formatting and validation per country. Demo: India `+91 98765 43210` is an existing member; any other number is a new member and goes through registration after the OTP. |
+| **Registration** | Six steps for new members (purple theme): details, address, ID proof, photo, declaration with typed signature, video KYC (10–30 s read-aloud). Then a "Registration successful" status page with a success popup, office contact and **prototype controls** (*Simulate: admin approves* → Home, *admin returns the video* → back to step 6). ID proof and photo are **real uploads** (JPG/PNG/PDF up to 5 MB via file_picker/image_picker, camera on phones), and every field is validated (Aadhaar 12 digits, PAN, passport, driving licence, voter ID formats, PIN, email, age 18+). The video KYC is a real front-camera recording (camera + video_player), played back before submitting and from the status page; with no camera it falls back to a timer demo. Country, state and city come from every country in the world (bundled `assets/data/world.json`, searchable pickers, only the chosen country's states and cities are listed). The declaration can be read in English, Hindi or Marathi. After *admin approves*, a popup shows the registered number. The whole page scrolls with the keyboard open. Building with these plugins needs Windows Developer Mode. Code in `lib/screens/registration/`, state in `lib/data/registration_data.dart`. |
+| **OTP** | 4-box code entry, 24 s resend timer, change number. Demo code: **4821**. Shows the number with its country code. |
 
 ### Main app (bottom navigation)
-The nav bar has a purple circle that **slides to whichever tab is selected**.
+The nav bar is **Home · Menu · Noahgram · Events · Jodie · Me** (Noahgram uses an Instagram-style glyph), with a purple circle that **slides to whichever tab is selected**.
 
 | Tab | Description |
 |---|---|
-| **Home** | Auto-scrolling banner carousel (5 slides, loops forever, pauses while dragged), today's reading, category chips, feature tiles. |
+| **Home** | Announcement carousel (loops, pauses while dragged; the cards **lift on hover / shrink on press** and open Events), **Today's Daily Manna** (*View all* → last four Mannas), tabs **Prayers / Confessions / Bible commentary** with gradient tiles and a dashed *View all* tile that opens *Daily prayers*, *Words of Faith* (by theme, Save / PDF) or *Commentary*, and a **Prayer request** card that opens the request popup (category chips, details, *Who should pray?* radio: Prayer warriors by default / Everyone). Demo content in `lib/data/word_data.dart`. |
+| **Menu** | Opens a bottom popup with a searchable **icon grid** (My Information, Notifications, eBooks, Chat, Donations, Podcast, Daily Manna, Bible School, Live Video, Events, Praises, **Noahtube**, Bible Study, David's Shields, My Gallery, Daily Prayer, Dream Dictionary, Daily Confessions, **Prayer Request**, Testimonials, TV Listing, Bible Commentary, Prayer Wall, Obituaries). Items with a screen open it; the rest say *Coming soon*. The circle stays on Menu while Noahtube is open. Add or remove items in `kMenuItems` (`screens/menu_sheet.dart`) and handle them in `_openMenu` (`screens/main_shell.dart`). |
 | **Noahgram** | Instagram-style social space — see below. |
-| **Noahtube** | Search, category filter chips, live card, Shorts row, latest videos. |
-| **Events** | Booked pass (ticket with notches and dashed tear line), events open for booking (tap *Book* to toggle), bus routes. |
-| **Jodie** | Matchmaking — see below. |
-| **Me** | Profile, basic info, **language switcher**, settings, sign out. |
+| **Events** | Search by name, place or date; **My passes** carousel (swipe through ticket cards with seats, passes, gate and booking code); *Open for booking* list where tapping **Book** creates a new pass; Bus; and a **Book by date** calendar (dots on days with events, tap a day to see and book its events). Dates are generated relative to today. |
+| **Jodie** | Matchmaking — see below. Opens on a **membership page** (₹300, once) until the member joins. |
+| **Me** | Name, *member since · place · cell*; pastor (**Chat with pastor**), cell leader, family; **Your record**, **More** and **Settings** rows that open the inside pages below. The bottom bar stays visible on those pages. |
+
+### Me tab inside pages
+| Page | What it has |
+|---|---|
+| **Family** | Household card, linked members (verified / minor), family passes. *Add* is not built. |
+| **Location** | Current location and a list to change it (with confirmation); events, passes, transport and giving follow it. |
+| **Profile photo** | In-review status, rules, **upload** (demo: adds a review entry), review history (approved / returned). |
+| **Identity & consent** | Three one-time steps with a progress bar: Aadhaar (already verified in the demo), **consent** (agree / read), **verification video** (demo: records 18 s). |
+| **Everything** | Opens the Menu popup. |
+| **Messages** | Pastor, cell leader and church office chats, with unread counts. |
+| **Drive** | Folders and recent files; *Get* shows a demo toast. |
+| **Store** | Category chips, products, cart bar and **Checkout** through the demo payment. |
+| **Rewards** | Earnings from Noahgram activity (likes, comments, posts), **Withdraw** (minimum ₹50, one pending at a time) and payout history. |
+| **Language** | All six languages, current one marked. |
+| **Notifications**, **Terms and privacy** | Empty-state illustration + earlier items; community / data / giving terms (legal text to be supplied). |
+
+Camera, photo picking and file downloads need plugins, so those actions are demo stand-ins marked in the code.
+
+### Prayer requests
+Opened from **Menu → Prayer Request**, or from a Daily Manna reading (then it is tied to that Manna). The popup has a category, the details, and two switches:
+- **Share with everyone** — ON: visible to the whole congregation. OFF (default): visible to the **prayer warriors only**.
+- **Share anonymously**.
+
+The backend must enforce the audience: `everyone == false` is only visible to the prayer-warriors group.
 
 ### Noahgram
 - **Feed** with stories row, double-tap to like, comments sheet, share sheet, save.
@@ -56,6 +81,7 @@ The nav bar has a purple circle that **slides to whichever tab is selected**.
 - Your Noahgram profile and the **Me** page share the same user data.
 
 ### Jodie (matchmaking)
+- **Membership:** a one-time **₹300** (`kJodieMembershipRupees`) unlocks Jodie. Until then the tab shows the landing page (four-stage verification, number stays private, one sign-in, ₹300 once). *Become a member* goes through the demo payment, then opens the profile sheet.
 - **Discover** — swipe stack: right = like, left = pass, up = Super Like (costs credits). Buttons for each, plus Boost.
 - **Suggestions** — only the opposite gender is shown, ranked by a **compatibility score** built from registration data (congregation, city, languages, interests, age). The profile screen explains *why* you match.
 - **Likes** — people who liked you; blurred until **Premium** or spent credits.
@@ -110,8 +136,13 @@ lib/
 ├── l10n/app_strings.dart         All UI text in 6 languages + tr() helper
 ├── data/
 │   ├── noahgram_data.dart        Demo users, posts, reels + NoahgramState
-│   └── jodie_data.dart           Demo profiles, compatibility, credits,
-│                                 premium, chat + JodieState
+│   ├── jodie_data.dart           Demo profiles, compatibility, credits,
+│   │                             premium, chat + JodieState
+│   ├── manna_data.dart           Daily Manna readings (demo)
+│   ├── events_data.dart          Events, passes and booking (relative to today)
+│   ├── ministry_data.dart        Pastor, cell leader, office + chats (Me tab)
+│   ├── me_data.dart              Location, identity steps, photo, store, rewards
+│   └── prayer_data.dart          Prayer requests (demo store)
 ├── widgets/
 │   ├── auth_scaffold.dart        Purple header + white sheet (login/OTP)
 │   ├── event_carousel.dart       Auto-scrolling banner cards
@@ -121,7 +152,10 @@ lib/
     ├── splash_screen.dart · login_screen.dart · otp_screen.dart
     ├── main_shell.dart           Bottom nav with sliding circle
     ├── home_screen.dart · events_screen.dart
-    ├── noahtube_screen.dart · me_screen.dart
+    ├── noahtube_screen.dart · me_screen.dart · manna_screen.dart · menu_sheet.dart
+    ├── me/                       Family, Location, Profile photo, Identity, Drive,
+    │                             Store, Rewards, Language, Notifications, Terms,
+    │                             Messages + ministry chat
     ├── noahgram/                 feed, stories, reels, explore, profile, sheets
     └── jodie/                    discover, likes, matches, chat, profile,
                                   payment / premium / credits sheets
@@ -134,6 +168,9 @@ test/widget_test.dart             End-to-end widget tests
 ---
 
 ## How it works
+
+### Navigation
+The Events and Me tabs each have their own `Navigator` (`widgets/tab_navigator.dart`), so pages opened from them keep the bottom bar visible. Pages can reach the shell through `ShellScope` (open the Menu, jump to a tab by nav slot).
 
 ### State
 There is no state-management package. Two small `ChangeNotifier` singletons own

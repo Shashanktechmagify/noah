@@ -47,7 +47,10 @@ const kLooks = [
   Look([Color(0xFFA0267F), Color(0xFFE07AB0)], Icons.favorite_border),
   Look([Color(0xFFC2620A), Color(0xFFF0A84C)], Icons.wb_sunny_outlined),
   Look([Color(0xFF1F7A6B), Color(0xFF58C0A5)], Icons.menu_book_outlined),
-  Look([Color(0xFF8E1FB0), Color(0xFFD45BD1)], Icons.volunteer_activism_outlined),
+  Look([
+    Color(0xFF8E1FB0),
+    Color(0xFFD45BD1),
+  ], Icons.volunteer_activism_outlined),
 ];
 
 class Comment {
@@ -168,25 +171,35 @@ class NoahgramState extends ChangeNotifier {
 
     following.addAll(['church', 'samuel', 'youth']);
 
-    Post p(String id, Person a, Look l, String cap, int likes, int hours,
-            {bool reel = false, List<Comment>? c}) =>
-        Post(
-          id: id,
-          author: a,
-          look: l,
-          caption: cap,
-          likes: likes,
-          hours: hours,
-          isReel: reel,
-          comments: c,
-        );
+    Post p(
+      String id,
+      Person a,
+      Look l,
+      String cap,
+      int likes,
+      int hours, {
+      bool reel = false,
+      List<Comment>? c,
+    }) => Post(
+      id: id,
+      author: a,
+      look: l,
+      caption: cap,
+      likes: likes,
+      hours: hours,
+      isReel: reel,
+      comments: c,
+    );
 
     posts.addAll([
       p(
         'p1',
         church,
-        const Look([Color(0xFF6A2DA8), Color(0xFFC060C2)],
-            Icons.church_outlined, 'Night of Worship\nFriday · 7 pm · Hall A'),
+        const Look(
+          [Color(0xFF6A2DA8), Color(0xFFC060C2)],
+          Icons.church_outlined,
+          'Night of Worship\nFriday · 7 pm · Hall A',
+        ),
         'Join us this Friday for a night of worship. Free entry, book your pass in the Events tab.',
         342,
         2,
@@ -198,8 +211,11 @@ class NoahgramState extends ChangeNotifier {
       p(
         'p2',
         samuel,
-        const Look([Color(0xFF3F3C9E), Color(0xFF7C6BD6)],
-            Icons.menu_book_outlined, 'He restores what the years took\nJoel 2:25'),
+        const Look(
+          [Color(0xFF3F3C9E), Color(0xFF7C6BD6)],
+          Icons.menu_book_outlined,
+          'He restores what the years took\nJoel 2:25',
+        ),
         "Today's reading is a reminder: nothing given to God is ever wasted.",
         518,
         5,
@@ -226,20 +242,16 @@ class NoahgramState extends ChangeNotifier {
       p(
         'p5',
         youth,
-        const Look([Color(0xFF1F7A6B), Color(0xFF58C0A5)], Icons.groups_outlined,
-            'Youth Camp 2026\nRegistrations open'),
+        const Look(
+          [Color(0xFF1F7A6B), Color(0xFF58C0A5)],
+          Icons.groups_outlined,
+          'Youth Camp 2026\nRegistrations open',
+        ),
         'Three days of worship, teaching and fellowship. Limited places, so register early.',
         411,
         27,
       ),
-      p(
-        'p6',
-        rahul,
-        kLooks[3],
-        'Sunrise prayer walk this morning.',
-        63,
-        30,
-      ),
+      p('p6', rahul, kLooks[3], 'Sunrise prayer walk this morning.', 63, 30),
       p(
         'p7',
         me,
@@ -257,26 +269,49 @@ class NoahgramState extends ChangeNotifier {
         41,
         76,
       ),
-      p(
-        'p9',
-        me,
-        kLooks[5],
-        'Serving at the food drive.',
-        72,
-        120,
-      ),
+      p('p9', me, kLooks[5], 'Serving at the food drive.', 72, 120),
     ]);
 
     reels.addAll([
-      p('r1', choir, kLooks[1], 'Worship moment from last Sunday', 1280, 6,
-          reel: true, c: [Comment(rahul, 'Goosebumps')]),
-      p('r2', samuel, kLooks[4], 'One minute devotion: faith over fear', 3420, 12,
-          reel: true, c: [Comment(priya, 'Powerful')]),
+      p(
+        'r1',
+        choir,
+        kLooks[1],
+        'Worship moment from last Sunday',
+        1280,
+        6,
+        reel: true,
+        c: [Comment(rahul, 'Goosebumps')],
+      ),
+      p(
+        'r2',
+        samuel,
+        kLooks[4],
+        'One minute devotion: faith over fear',
+        3420,
+        12,
+        reel: true,
+        c: [Comment(priya, 'Powerful')],
+      ),
       p('r3', youth, kLooks[3], 'Youth Camp teaser', 2210, 26, reel: true),
-      p('r4', church, kLooks[0], 'Sunday service highlights', 4890, 30,
-          reel: true),
-      p('r5', priya, kLooks[2], 'Kitchen seva behind the scenes', 764, 48,
-          reel: true),
+      p(
+        'r4',
+        church,
+        kLooks[0],
+        'Sunday service highlights',
+        4890,
+        30,
+        reel: true,
+      ),
+      p(
+        'r5',
+        priya,
+        kLooks[2],
+        'Kitchen seva behind the scenes',
+        764,
+        48,
+        reel: true,
+      ),
       p('r6', me, kLooks[5], 'Food drive, in 30 seconds', 120, 96, reel: true),
     ]);
   }
@@ -358,11 +393,16 @@ class NoahgramState extends ChangeNotifier {
     ];
     final seed = who.id.codeUnits.fold<int>(0, (a, b) => a + b);
     return [
-      Look(kLooks[seed % kLooks.length].colors,
-          kLooks[seed % kLooks.length].icon, lines[seed % lines.length]),
-      Look(kLooks[(seed + 2) % kLooks.length].colors,
-          kLooks[(seed + 2) % kLooks.length].icon,
-          lines[(seed + 3) % lines.length]),
+      Look(
+        kLooks[seed % kLooks.length].colors,
+        kLooks[seed % kLooks.length].icon,
+        lines[seed % lines.length],
+      ),
+      Look(
+        kLooks[(seed + 2) % kLooks.length].colors,
+        kLooks[(seed + 2) % kLooks.length].icon,
+        lines[(seed + 3) % lines.length],
+      ),
     ];
   }
 }

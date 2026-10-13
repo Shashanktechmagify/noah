@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to take your profile photo and record your video KYC.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Used to record your voice in the video KYC.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to choose your profile photo and ID proof.</string>
 </dict>
 </plist>

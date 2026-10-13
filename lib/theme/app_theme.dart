@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const purpleDeep = Color(0xFF5E2CA5);
   static const purple = Color(0xFF7B35B0);
-  static const magenta = Color(0xFFA81BC4);
+  static const magenta = Color(0xFFA719C8);
   static const orchid = Color(0xFFBE5BC0);
   static const ink = Color(0xFF1E1B2E);
   static const muted = Color(0xFF8A8BA3);
@@ -14,17 +14,17 @@ class AppColors {
   static const splashGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6A2DA8), Color(0xFFA43FB5), Color(0xFFC060C2)],
+    colors: [Color(0xFF6A2DA8), Color(0xFFA33CC0), Color(0xFFC264D8)],
   );
 
   static const headerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF5F2BA6), Color(0xFF8B3BB0), Color(0xFFA747B8)],
+    colors: [Color(0xFF5F2BA6), Color(0xFF8E2EB8), Color(0xFFA719C8)],
   );
 
   static const buttonGradient = LinearGradient(
-    colors: [Color(0xFF9C14BD), Color(0xFFB21FC8)],
+    colors: [Color(0xFF9815BA), Color(0xFFB22DD6)],
   );
 }
 

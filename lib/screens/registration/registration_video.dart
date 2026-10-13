@@ -1,0 +1,684 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+
+import '../../data/registration_data.dart';
+import '../../l10n/app_strings.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/auth_scaffold.dart';
+import '../events/events_widgets.dart' show fullDate;
+import 'registration_status.dart';
+
+String clock(int seconds) =>
+    '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+
+/// Plays the recorded video KYC in a popup.
+Future<void> showVideoDialog(BuildContext context) {
+  final path = registration.videoPath;
+  return showDialog<void>(
+    context: context,
+    builder: (dialog) => Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr(dialog, 'reg_video_title'),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            if (path == null)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  tr(dialog, 'reg_video_demo'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.muted),
+                ),
+              )
+            else
+              _VideoPlayerBox(path: path, height: 360, autoPlay: true),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(),
+              child: Text(
+                tr(dialog, 'reg_close'),
+                style: const TextStyle(
+                  color: AppColors.magenta,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// A video player that toggles on tap.
+class _VideoPlayerBox extends StatefulWidget {
+  const _VideoPlayerBox({
+    super.key,
+    required this.path,
+    required this.height,
+    this.autoPlay = false,
+  });
+
+  final String path;
+  final double height;
+  final bool autoPlay;
+
+  @override
+  State<_VideoPlayerBox> createState() => _VideoPlayerBoxState();
+}
+
+class _VideoPlayerBoxState extends State<_VideoPlayerBox> {
+  VideoPlayerController? _c;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final c = VideoPlayerController.file(File(widget.path));
+      await c.initialize();
+      await c.setLooping(true);
+      if (!mounted) {
+        await c.dispose();
+        return;
+      }
+      c.addListener(() {
+        if (mounted) setState(() {});
+      });
+      setState(() => _c = c);
+      if (widget.autoPlay) await c.play();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _c;
+    return Container(
+      height: widget.height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF10131E),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: c == null
+          ? Center(
+              child: _failed
+                  ? const Icon(Icons.error_outline, color: Colors.white54)
+                  : const CircularProgressIndicator(color: Colors.white54),
+            )
+          : GestureDetector(
+              onTap: () => c.value.isPlaying ? c.pause() : c.play(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.contain,
+                    child: SizedBox(
+                      width: c.value.size.width,
+                      height: c.value.size.height,
+                      child: VideoPlayer(c),
+                    ),
+                  ),
+                  if (!c.value.isPlaying)
+                    Center(
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: const BoxDecoration(
+                          color: Colors.black45,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+/// Step 6: record a short read-aloud video with the front camera, then watch it
+/// back before submitting. Falls back to a timer-only demo if there is no camera.
+class VideoStep extends StatefulWidget {
+  const VideoStep({super.key});
+
+  @override
+  State<VideoStep> createState() => _VideoStepState();
+}
+
+class _VideoStepState extends State<VideoStep> {
+  CameraController? _cam;
+  bool _demo = false;
+  Timer? _timer;
+  bool _recording = false;
+  int _seconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cams = await availableCameras();
+      if (cams.isEmpty) throw StateError('no camera');
+      final cam = cams.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cams.first,
+      );
+      final controller = CameraController(
+        cam,
+        ResolutionPreset.medium,
+        enableAudio: true,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() => _cam = controller);
+    } catch (_) {
+      if (mounted) setState(() => _demo = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    final cam = _cam;
+    if (cam != null) {
+      if (cam.value.isRecordingVideo) {
+        cam.stopVideoRecording().catchError((_) => XFile(''));
+      }
+      cam.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    registration.videoSeconds = null;
+    registration.videoPath = null;
+    registration.touch();
+    final cam = _cam;
+    if (cam != null) {
+      try {
+        await cam.startVideoRecording();
+      } catch (_) {
+        _demo = true;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _recording = true;
+      _seconds = 0;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _seconds++);
+      if (_seconds >= kMaxVideoSeconds) _stop();
+    });
+  }
+
+  Future<void> _stop() async {
+    _timer?.cancel();
+    String? path;
+    final cam = _cam;
+    if (cam != null && cam.value.isRecordingVideo) {
+      try {
+        path = (await cam.stopVideoRecording()).path;
+      } catch (_) {}
+    }
+    registration.videoSeconds = _seconds;
+    registration.videoPath = path;
+    registration.touch();
+    if (mounted) setState(() => _recording = false);
+  }
+
+  void _again() {
+    registration.videoSeconds = null;
+    registration.videoPath = null;
+    registration.touch();
+    setState(() => _seconds = 0);
+  }
+
+  void _complete() {
+    registration.complete();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const RegistrationStatusScreen(showSuccess: true),
+      ),
+    );
+  }
+
+  /// The read-aloud script, with the name and place highlighted.
+  InlineSpan _script(BuildContext context) {
+    final r = registration;
+    final signed = r.signedOn ?? DateTime.now();
+    final raw = tr(
+      context,
+      'reg_script',
+      args: {'date': fullDate(context, signed)},
+    );
+    final parts = raw.split(RegExp(r'(\{name\}|\{place\})'));
+    final marks = RegExp(r'\{name\}|\{place\}').allMatches(raw).toList();
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < parts.length; i++) {
+      spans.add(TextSpan(text: parts[i]));
+      if (i < marks.length) {
+        final isName = marks[i].group(0) == '{name}';
+        spans.add(
+          TextSpan(
+            text: isName ? r.displayName : '${r.city}, ${r.country}',
+            style: const TextStyle(
+              color: AppColors.magenta,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        );
+      }
+    }
+    return TextSpan(children: spans);
+  }
+
+  Widget _preview() {
+    final cam = _cam;
+    final size = cam?.value.previewSize;
+    if (cam == null || size == null) return const SizedBox.expand();
+    // The sensor reports landscape sizes; swap for a portrait preview.
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: size.height,
+        height: size.width,
+        child: CameraPreview(cam),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = registration;
+    final recorded = !_recording && r.videoSeconds != null;
+    final shown = recorded ? r.videoSeconds! : _seconds;
+    final badge = _recording
+        ? 'reg_recording'
+        : recorded
+        ? 'reg_recorded'
+        : 'reg_cam_ready';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (r.status == RegStatus.videoReturned)
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDEBD3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              tr(context, 'reg_returned_note'),
+              style: const TextStyle(
+                color: Color(0xFFC2620A),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        const SizedBox(height: 16),
+        if (recorded && r.videoPath != null)
+          // Watch the recording back before submitting.
+          _VideoPlayerBox(
+            key: ValueKey(r.videoPath),
+            path: r.videoPath!,
+            height: 300,
+          )
+        else
+          Container(
+            height: 250,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF232A3F), Color(0xFF10131E)],
+              ),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_cam != null) _preview(),
+                Positioned(
+                  left: 14,
+                  top: 14,
+                  child: _Badge(
+                    dot: _recording ? const Color(0xFFE5334B) : Colors.white54,
+                    text: tr(context, badge),
+                  ),
+                ),
+                Positioned(
+                  right: 14,
+                  top: 14,
+                  child: _Badge(text: clock(shown)),
+                ),
+                if (recorded)
+                  Center(
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: const BoxDecoration(
+                        color: Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow_outlined,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  )
+                else ...[
+                  Center(
+                    child: CustomPaint(
+                      size: const Size(130, 170),
+                      painter: _OvalPainter(),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 14,
+                    child: Text(
+                      tr(context, 'reg_oval'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        const SizedBox(height: 14),
+        if (recorded) ...[
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                _Check(label: tr(context, 'reg_chk_face'), ok: true),
+                const Divider(height: 1, color: AppColors.border),
+                _Check(label: tr(context, 'reg_chk_voice'), ok: true),
+                const Divider(height: 1, color: AppColors.border),
+                _Check(
+                  label: tr(
+                    context,
+                    'reg_chk_len',
+                    args: {'len': clock(shown)},
+                  ),
+                  ok: r.videoValid,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GradientButton(
+            label: tr(context, 'reg_complete'),
+            onPressed: r.videoValid ? _complete : null,
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: _again,
+            child: Container(
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.tint,
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Text(
+                tr(context, 'reg_record_again'),
+                style: const TextStyle(
+                  color: Color(0xFF555770),
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ] else ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr(context, 'reg_read_aloud').toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: spacing(context, 0.5),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text.rich(
+                  _script(context),
+                  style: const TextStyle(
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  tr(context, 'reg_script_note'),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: _seconds / kMaxVideoSeconds,
+              minHeight: 5,
+              backgroundColor: const Color(0xFFE3DDF1),
+              color: AppColors.magenta,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Center(
+            child: Text(
+              tr(context, 'reg_secs'),
+              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _recording ? _stop : _start,
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: AppColors.buttonGradient,
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _recording
+                        ? Icons.stop_circle_outlined
+                        : Icons.videocam_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    tr(context, _recording ? 'reg_stop_rec' : 'reg_start_rec'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_demo)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Center(
+                child: Text(
+                  tr(context, 'reg_cam_unavailable'),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.text, this.dot});
+
+  final String text;
+  final Color? dot;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (dot != null) ...[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Check extends StatelessWidget {
+  const _Check({required this.label, required this.ok});
+
+  final String label;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(12),
+    child: Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: ok ? const Color(0xFFA719C8) : const Color(0xFFD6334B),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(
+            ok ? Icons.check : Icons.close,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _OvalPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white54
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    final path = Path()..addOval(Offset.zero & size);
+    for (final m in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < m.length) {
+        canvas.drawPath(m.extractPath(d, d + 6), paint);
+        d += 11;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_OvalPainter old) => false;
+}

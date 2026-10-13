@@ -64,8 +64,11 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ],
                 ),
-                child: Image.asset('assets/images/noah.png',
-                    width: 120, height: 120),
+                child: Image.asset(
+                  'assets/images/noah.png',
+                  width: 120,
+                  height: 120,
+                ),
               ),
               const SizedBox(height: 26),
               const Text(
@@ -99,8 +102,9 @@ class _SplashScreenState extends State<SplashScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white
-                              .withValues(alpha: i == phase ? 0.85 : 0.35),
+                          color: Colors.white.withValues(
+                            alpha: i == phase ? 0.85 : 0.35,
+                          ),
                         ),
                       );
                     }),

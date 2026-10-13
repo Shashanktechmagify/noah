@@ -5,6 +5,7 @@ import '../../data/jodie_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import 'discover_view.dart';
+import 'jodie_intro.dart';
 import 'jodie_widgets.dart';
 import 'likes_view.dart';
 import 'matches_view.dart';
@@ -22,6 +23,14 @@ class _JodieScreenState extends State<JodieScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: jodie,
+      builder: (context, _) =>
+          jodie.isMember ? _buildApp(context) : const JodieIntro(),
+    );
+  }
+
+  Widget _buildApp(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -45,11 +54,14 @@ class _JodieScreenState extends State<JodieScreen> {
                       children: [
                         Icon(Icons.favorite, color: Colors.white, size: 26),
                         SizedBox(width: 6),
-                        Text('Jodie',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800)),
+                        Text(
+                          'Jodie',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -61,7 +73,10 @@ class _JodieScreenState extends State<JodieScreen> {
                   ),
                   IconButton(
                     onPressed: () => showMyProfileSheet(context),
-                    icon: const Icon(Icons.person_outline, color: AppColors.ink),
+                    icon: const Icon(
+                      Icons.person_outline,
+                      color: AppColors.ink,
+                    ),
                   ),
                   ListenableBuilder(
                     listenable: jodie,
@@ -80,11 +95,7 @@ class _JodieScreenState extends State<JodieScreen> {
             Expanded(
               child: IndexedStack(
                 index: _tab,
-                children: const [
-                  DiscoverView(),
-                  LikesView(),
-                  MatchesView(),
-                ],
+                children: const [DiscoverView(), LikesView(), MatchesView()],
               ),
             ),
           ],
@@ -133,28 +144,35 @@ class _Tabs extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(labels[i],
-                                      style: TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: i == index
-                                            ? AppColors.ink
-                                            : AppColors.muted,
-                                      )),
+                                  Text(
+                                    labels[i],
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: i == index
+                                          ? AppColors.ink
+                                          : AppColors.muted,
+                                    ),
+                                  ),
                                   if (badges[i] > 0) ...[
                                     const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 1),
+                                        horizontal: 6,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: kPink,
                                         borderRadius: BorderRadius.circular(9),
                                       ),
-                                      child: Text('${badges[i]}',
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10.5,
-                                              fontWeight: FontWeight.w800)),
+                                      child: Text(
+                                        '${badges[i]}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ],

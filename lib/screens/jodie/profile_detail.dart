@@ -37,8 +37,7 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
       body: Stack(
         children: [
           ListView(
-            padding: EdgeInsets.only(
-                bottom: widget.onLike != null ? 110 : 30),
+            padding: EdgeInsets.only(bottom: widget.onLike != null ? 110 : 30),
             children: [
               // Photos
               SizedBox(
@@ -54,11 +53,14 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                         children: [
                           LookCanvas(look: p.photos[i], showText: false),
                           Center(
-                            child: Text(p.initials,
-                                style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.28),
-                                    fontSize: 130,
-                                    fontWeight: FontWeight.w800)),
+                            child: Text(
+                              p.initials,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.28),
+                                fontSize: 130,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -73,8 +75,9 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                             Expanded(
                               child: Container(
                                 height: 3,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: i == _photo
                                       ? Colors.white
@@ -97,26 +100,40 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                     Row(
                       children: [
                         Flexible(
-                          child: Text('${p.name}, ${p.age}',
-                              style: const TextStyle(
-                                  fontSize: 23, fontWeight: FontWeight.w800)),
+                          child: Text(
+                            '${p.name}, ${p.age}',
+                            style: const TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                         if (p.verified) ...[
                           const SizedBox(width: 6),
-                          const Icon(Icons.verified,
-                              color: Color(0xFF2E8BEA), size: 22),
+                          const Icon(
+                            Icons.verified,
+                            color: Color(0xFF2E8BEA),
+                            size: 22,
+                          ),
                         ],
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.place_outlined,
-                            size: 16, color: AppColors.muted),
+                        const Icon(
+                          Icons.place_outlined,
+                          size: 16,
+                          color: AppColors.muted,
+                        ),
                         const SizedBox(width: 4),
-                        Text('${p.city} · ${p.congregation}',
-                            style: const TextStyle(
-                                color: AppColors.muted, fontSize: 13.5)),
+                        Text(
+                          '${p.city} · ${p.congregation}',
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 13.5,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -133,20 +150,31 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.favorite,
-                                  color: AppColors.magenta, size: 18),
+                              const Icon(
+                                Icons.favorite,
+                                color: AppColors.magenta,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
-                              Text(tr(context, 'jd_compat'),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14.5)),
+                              Text(
+                                tr(context, 'jd_compat'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14.5,
+                                ),
+                              ),
                               const Spacer(),
                               Text(
-                                  tr(context, 'jd_match_pct',
-                                      args: {'n': '${compat.score}'}),
-                                  style: const TextStyle(
-                                      color: AppColors.magenta,
-                                      fontWeight: FontWeight.w800)),
+                                tr(
+                                  context,
+                                  'jd_match_pct',
+                                  args: {'n': '${compat.score}'},
+                                ),
+                                style: const TextStyle(
+                                  color: AppColors.magenta,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -165,12 +193,17 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 3),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.check,
-                                      size: 16, color: AppColors.magenta),
+                                  const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: AppColors.magenta,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(reasonText(context, r),
-                                        style: const TextStyle(fontSize: 13.5)),
+                                    child: Text(
+                                      reasonText(context, r),
+                                      style: const TextStyle(fontSize: 13.5),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -180,19 +213,32 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                     ),
                     const SizedBox(height: 20),
                     _Heading(tr(context, 'jd_about')),
-                    Text(p.bio, style: const TextStyle(fontSize: 14.5, height: 1.4)),
+                    Text(
+                      p.bio,
+                      style: const TextStyle(fontSize: 14.5, height: 1.4),
+                    ),
                     const SizedBox(height: 20),
                     _Heading(tr(context, 'jd_details')),
-                    _DetailRow(Icons.work_outline, tr(context, 'jd_profession'),
-                        p.profession),
-                    _DetailRow(Icons.school_outlined, tr(context, 'jd_education'),
-                        p.education),
-                    _DetailRow(Icons.church_outlined, tr(context, 'me_church'),
-                        p.congregation),
                     _DetailRow(
-                        Icons.translate,
-                        tr(context, 'jd_languages'),
-                        p.languages.map(langNative).join(', ')),
+                      Icons.work_outline,
+                      tr(context, 'jd_profession'),
+                      p.profession,
+                    ),
+                    _DetailRow(
+                      Icons.school_outlined,
+                      tr(context, 'jd_education'),
+                      p.education,
+                    ),
+                    _DetailRow(
+                      Icons.church_outlined,
+                      tr(context, 'me_church'),
+                      p.congregation,
+                    ),
+                    _DetailRow(
+                      Icons.translate,
+                      tr(context, 'jd_languages'),
+                      p.languages.map(langNative).join(', '),
+                    ),
                     const SizedBox(height: 20),
                     _Heading(tr(context, 'jd_interests')),
                     Wrap(
@@ -202,7 +248,9 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                         for (final k in p.interests)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
@@ -214,20 +262,30 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                                   ? AppColors.tint
                                   : Colors.white,
                             ),
-                            child: Text(tr(context, 'int_$k'),
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w700)),
+                            child: Text(
+                              tr(context, 'int_$k'),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     Center(
                       child: TextButton.icon(
-                        onPressed: () => toast(context, tr(context, 'jd_reported')),
-                        icon: const Icon(Icons.flag_outlined,
-                            color: AppColors.muted, size: 18),
-                        label: Text('${tr(context, 'jd_report')} ${p.firstName}',
-                            style: const TextStyle(color: AppColors.muted)),
+                        onPressed: () =>
+                            toast(context, tr(context, 'jd_reported')),
+                        icon: const Icon(
+                          Icons.flag_outlined,
+                          color: AppColors.muted,
+                          size: 18,
+                        ),
+                        label: Text(
+                          '${tr(context, 'jd_report')} ${p.firstName}',
+                          style: const TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                   ],
@@ -244,7 +302,9 @@ class _JodieProfileScreenState extends State<JodieProfileScreen> {
                 width: 38,
                 height: 38,
                 decoration: const BoxDecoration(
-                    color: Colors.black38, shape: BoxShape.circle),
+                  color: Colors.black38,
+                  shape: BoxShape.circle,
+                ),
                 child: const Icon(Icons.arrow_back, color: Colors.white),
               ),
             ),
@@ -291,10 +351,12 @@ class _Heading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 class _DetailRow extends StatelessWidget {
@@ -306,23 +368,26 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: AppColors.magenta),
-            const SizedBox(width: 12),
-            Text(label,
-                style: const TextStyle(color: AppColors.muted, fontSize: 13.5)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(value,
-                  textAlign: TextAlign.end,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700)),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.magenta),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.muted, fontSize: 13.5),
         ),
-      );
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _RoundAction extends StatelessWidget {
@@ -340,23 +405,23 @@ class _RoundAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 62,
-          height: 62,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: background,
-            color: background == null ? Colors.white : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
+    onTap: onTap,
+    child: Container(
+      width: 62,
+      height: 62,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: background,
+        color: background == null ? Colors.white : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
-          child: Icon(icon, color: color, size: 30),
-        ),
-      );
+        ],
+      ),
+      child: Icon(icon, color: color, size: 30),
+    ),
+  );
 }

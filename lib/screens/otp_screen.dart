@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
-import 'main_shell.dart';
+import '../widgets/language_dropdown.dart';
+import 'registration/registration_router.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.phone});
@@ -58,10 +59,7 @@ class _OtpScreenState extends State<OtpScreen> {
       setState(() => _error = true);
       return;
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const MainShell()),
-      (_) => false,
-    );
+    routeAfterOtp(context, widget.phone);
   }
 
   @override
@@ -72,7 +70,9 @@ class _OtpScreenState extends State<OtpScreen> {
       icon: Icons.lock_outline,
       title: tr(context, 'enter_code'),
       subtitle: tr(context, 'sent_to', args: {'phone': widget.phone}),
-      headerHeight: 250,
+      headerHeight: 290,
+      // Leave room for the back button on the left of the strip.
+      topRight: const LanguageDropdown(),
       onBack: () => Navigator.of(context).pop(),
       child: Column(
         children: [
@@ -95,15 +95,17 @@ class _OtpScreenState extends State<OtpScreen> {
                           color: _error
                               ? Colors.redAccent
                               : active || filled
-                                  ? AppColors.magenta
-                                  : AppColors.border,
+                              ? AppColors.magenta
+                              : AppColors.border,
                           width: active ? 1.8 : 1,
                         ),
                       ),
                       child: Text(
                         filled ? code[i] : '',
                         style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.w800),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   );
@@ -136,37 +138,49 @@ class _OtpScreenState extends State<OtpScreen> {
           if (_error)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(tr(context, 'bad_code'),
-                  style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 12)),
+              child: Text(
+                tr(context, 'bad_code'),
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
             ),
           const SizedBox(height: 18),
           if (_seconds > 0)
-            Text(tr(context, 'resend_in', args: {'time': timerText}),
-                style: const TextStyle(color: AppColors.muted, fontSize: 12.5))
+            Text(
+              tr(context, 'resend_in', args: {'time': timerText}),
+              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+            )
           else
             GestureDetector(
               onTap: () => setState(_startTimer),
-              child: Text(tr(context, 'resend_code'),
-                  style: const TextStyle(
-                      color: AppColors.magenta,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700)),
+              child: Text(
+                tr(context, 'resend_code'),
+                style: const TextStyle(
+                  color: AppColors.magenta,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           const SizedBox(height: 8),
-          Text(tr(context, 'demo_code'),
-              style: const TextStyle(
-                  color: Color(0xFF555770),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            tr(context, 'demo_code'),
+            style: const TextStyle(
+              color: Color(0xFF555770),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: Text(tr(context, 'change_number'),
-                style: const TextStyle(
-                    color: AppColors.magenta,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
+            child: Text(
+              tr(context, 'change_number'),
+              style: const TextStyle(
+                color: AppColors.magenta,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),

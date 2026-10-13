@@ -7,124 +7,165 @@ import 'hex_pattern.dart';
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
-    required this.icon,
+    this.icon,
     required this.title,
     required this.subtitle,
     required this.child,
     this.onBack,
     this.footer,
+    this.topRight,
     this.headerHeight = 290,
   });
 
-  final IconData icon;
+  /// Omit for a compact header with no icon or title.
+  final IconData? icon;
   final String title;
   final String subtitle;
   final Widget child;
   final VoidCallback? onBack;
   final Widget? footer;
+
+  /// Shown in a strip along the top of the header (e.g. language pills).
+  final Widget? topRight;
   final double headerHeight;
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
+    final headerH = headerHeight + top;
     return Scaffold(
       backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        fit: StackFit.expand,
+      // The keyboard pushes the page up; the whole page (header included)
+      // scrolls, and the footer button stays above the keyboard.
+      resizeToAvoidBottomInset: true,
+      body: Column(
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: headerHeight + top,
-            child: Container(
-              decoration:
-                  const BoxDecoration(gradient: AppColors.headerGradient),
-              child: const HexPattern(),
-            ),
-          ),
-          Positioned(
-            top: top + 20,
-            left: 0,
-            right: 0,
-            child: Column(
-              children: [
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 28),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      fontSize: 14,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (onBack != null)
-            Positioned(
-              top: top + 14,
-              left: 14,
-              child: GestureDetector(
-                onTap: onBack,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.chevron_left,
-                      color: Colors.white, size: 24),
-                ),
-              ),
-            ),
-          Positioned.fill(
-            top: headerHeight + top - 36,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-              child: Column(
-                children: [
-                  Expanded(child: SingleChildScrollView(child: child)),
-                  if (footer != null)
-                    Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).padding.bottom + 14,
-                        top: 8,
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: headerH,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: AppColors.headerGradient,
+                        ),
+                        child: const HexPattern(),
                       ),
-                      child: footer,
                     ),
-                ],
+                    if (icon != null)
+                      Positioned(
+                        top: top + (topRight != null ? 58 : 20),
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(icon!, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                              ),
+                              child: Text(
+                                subtitle,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                  fontSize: 14,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (topRight != null)
+                      Positioned(
+                        top: top + 12,
+                        left: 0,
+                        right: 0,
+                        child: topRight!,
+                      ),
+                    if (onBack != null)
+                      Positioned(
+                        top: top + 14,
+                        left: 14,
+                        child: GestureDetector(
+                          onTap: onBack,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chevron_left,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    // The white sheet sits over the bottom of the header.
+                    Padding(
+                      padding: EdgeInsets.only(top: headerH - 36),
+                      child: Container(
+                        width: double.infinity,
+                        constraints: BoxConstraints(
+                          minHeight: (box.maxHeight - (headerH - 36)).clamp(
+                            0,
+                            double.infinity,
+                          ),
+                        ),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(36),
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                        child: child,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+          if (footer != null)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                MediaQuery.of(context).padding.bottom + 14,
+              ),
+              child: footer,
+            ),
         ],
       ),
     );

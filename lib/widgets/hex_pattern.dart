@@ -24,7 +24,10 @@ class HexPatternPainter extends CustomPainter {
         final path = Path();
         for (var i = 0; i < 6; i++) {
           final a = math.pi / 180 * (60 * i - 30);
-          final p = Offset(cx + radius * math.cos(a), cy + radius * math.sin(a));
+          final p = Offset(
+            cx + radius * math.cos(a),
+            cy + radius * math.sin(a),
+          );
           i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
         }
         path.close();
@@ -45,9 +48,9 @@ class HexPattern extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-        child: CustomPaint(
-          painter: HexPatternPainter(opacity: opacity),
-          size: Size.infinite,
-        ),
-      );
+    child: CustomPaint(
+      painter: HexPatternPainter(opacity: opacity),
+      size: Size.infinite,
+    ),
+  );
 }

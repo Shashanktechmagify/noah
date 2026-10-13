@@ -51,8 +51,8 @@ class JodieProfile {
 
   /// Three stand-in "photos" derived from the seed.
   List<Look> get photos => [
-        for (var i = 0; i < 3; i++) kLooks[(photoSeed + i * 2) % kLooks.length],
-      ];
+    for (var i = 0; i < 3; i++) kLooks[(photoSeed + i * 2) % kLooks.length],
+  ];
 
   List<Color> get colors => photos.first.colors;
 }
@@ -71,7 +71,7 @@ class MyJodie {
 
 class ChatMessage {
   ChatMessage(this.text, {required this.mine, DateTime? at})
-      : at = at ?? DateTime.now();
+    : at = at ?? DateTime.now();
 
   final String text;
   final bool mine;
@@ -80,7 +80,7 @@ class ChatMessage {
 
 class JodieMatch {
   JodieMatch(this.profile, this.at, [List<ChatMessage>? messages])
-      : messages = messages ?? [];
+    : messages = messages ?? [];
 
   final JodieProfile profile;
   final DateTime at;
@@ -91,7 +91,13 @@ class JodieMatch {
 }
 
 class Plan {
-  const Plan(this.id, this.months, this.rupees, this.bonusCredits, this.labelKey);
+  const Plan(
+    this.id,
+    this.months,
+    this.rupees,
+    this.bonusCredits,
+    this.labelKey,
+  );
 
   final String id;
   final int months;
@@ -124,6 +130,9 @@ const kCreditPacks = [
 const kDailyRewards = [5, 5, 10, 10, 15, 15, 30];
 
 /// What each action costs, in credits.
+/// One-time Jodie membership fee, in rupees.
+const kJodieMembershipRupees = 300;
+
 const kSuperLikeCost = 5;
 const kBoostCost = 20;
 const kRevealCost = 10;
@@ -147,6 +156,9 @@ class JodieState extends ChangeNotifier {
   final matches = <JodieMatch>[];
   final doneTasks = <String>{};
 
+  /// Paid the one-time membership. Until then Jodie shows the intro page.
+  bool isMember = false;
+
   int credits = 30;
   int streak = 3;
   DateTime? lastClaim = DateTime.now().subtract(const Duration(days: 1));
@@ -169,81 +181,225 @@ class JodieState extends ChangeNotifier {
       List<String> langs,
       List<String> ints,
       int seed,
-    ) =>
-        JodieProfile(
-          id: id,
-          name: name,
-          age: age,
-          gender: g,
-          city: city,
-          congregation: church,
-          profession: job,
-          education: edu,
-          bio: bio,
-          languages: langs.toSet(),
-          interests: ints.toSet(),
-          photoSeed: seed,
-        );
+    ) => JodieProfile(
+      id: id,
+      name: name,
+      age: age,
+      gender: g,
+      city: city,
+      congregation: church,
+      profession: job,
+      education: edu,
+      bio: bio,
+      languages: langs.toSet(),
+      interests: ints.toSet(),
+      photoSeed: seed,
+    );
 
     const w = Gender.woman;
     const m = Gender.man;
     profiles.addAll([
-      p('w1', 'Anita Joseph', 27, w, 'Dadar', 'Karuna Sadan', 'Nurse',
-          'B.Sc. Nursing', 'Sunday school teacher who loves hymns and chai.',
-          ['English', 'Marathi', 'Hindi'], ['worship', 'music', 'volunteering'], 0),
-      p('w2', 'Meera Thomas', 25, w, 'Thane', 'Karuna Sadan',
-          'Software engineer', 'B.Tech', 'Coder by day, baker by weekend.',
-          ['English', 'Malayalam'], ['reading', 'travel', 'cooking'], 1),
-      p('w3', "Sneha D'Souza", 28, w, 'Goregaon', 'Grace Fellowship',
-          'School teacher', 'B.Ed.', 'Believes kindness is a love language.',
-          ['English', 'Marathi'], ['family', 'worship', 'movies'], 2),
-      p('w4', 'Priya Paul', 26, w, 'Dadar', 'Karuna Sadan', 'Graphic designer',
-          'B.Des.', 'Sketchbook in my bag, faith in my heart.',
-          ['English', 'Hindi', 'Marathi'], ['photography', 'travel', 'music'], 3),
-      p('w5', 'Esther Kumar', 30, w, 'Navi Mumbai', 'Karuna Sadan',
-          'Chartered accountant', 'CA', 'Numbers, coffee and Sunday worship.',
-          ['English', 'Hindi', 'Telugu'], ['reading', 'fitness', 'worship'], 4),
-      p('w6', 'Rachel George', 24, w, 'Pune', 'Hope Church', 'Doctor', 'MBBS',
-          'Medical intern, choir member.', ['English', 'Malayalam', 'Kannada'],
-          ['music', 'volunteering', 'cooking'], 5),
-      p('m1', 'Samuel Pereira', 29, m, 'Dadar', 'Karuna Sadan', 'Architect',
-          'B.Arch.', 'Builds spaces, hopes to build a home.',
-          ['English', 'Marathi', 'Hindi'], ['travel', 'photography', 'worship'], 0),
-      p('m2', 'Joel Mathew', 31, m, 'Thane', 'Karuna Sadan', 'Bank manager',
-          'MBA', 'Steady, family-minded, always up for a road trip.',
-          ['English', 'Malayalam', 'Hindi'], ['family', 'travel', 'music'], 1),
-      p('m3', 'Aaron Fernandes', 27, m, 'Goregaon', 'Grace Fellowship',
-          'Physiotherapist', 'BPT', 'Gym in the morning, youth group at night.',
-          ['English', 'Marathi'], ['fitness', 'worship', 'volunteering'], 2),
-      p('m4', 'Nathan Roy', 28, m, 'Dadar', 'Karuna Sadan', 'Data analyst',
-          'M.Sc. Statistics', 'Guitarist on the worship team.',
-          ['English', 'Hindi', 'Marathi'], ['music', 'reading', 'worship'], 3),
-      p('m5', 'Caleb Dsouza', 32, m, 'Navi Mumbai', 'Karuna Sadan', 'Civil engineer',
-          'B.E. Civil', 'Quiet, loyal, loves cooking for friends.',
-          ['English', 'Kannada', 'Hindi'], ['cooking', 'family', 'movies'], 4),
-      p('m6', 'Isaac Thomas', 26, m, 'Pune', 'Hope Church', 'Pastor in training',
-          'B.Th.', 'Called to serve, hoping to find a partner in ministry.',
-          ['English', 'Malayalam', 'Telugu'], ['volunteering', 'reading', 'worship'], 5),
+      p(
+        'w1',
+        'Anita Joseph',
+        27,
+        w,
+        'Dadar',
+        'Karuna Sadan',
+        'Nurse',
+        'B.Sc. Nursing',
+        'Sunday school teacher who loves hymns and chai.',
+        ['English', 'Marathi', 'Hindi'],
+        ['worship', 'music', 'volunteering'],
+        0,
+      ),
+      p(
+        'w2',
+        'Meera Thomas',
+        25,
+        w,
+        'Thane',
+        'Karuna Sadan',
+        'Software engineer',
+        'B.Tech',
+        'Coder by day, baker by weekend.',
+        ['English', 'Malayalam'],
+        ['reading', 'travel', 'cooking'],
+        1,
+      ),
+      p(
+        'w3',
+        "Sneha D'Souza",
+        28,
+        w,
+        'Goregaon',
+        'Grace Fellowship',
+        'School teacher',
+        'B.Ed.',
+        'Believes kindness is a love language.',
+        ['English', 'Marathi'],
+        ['family', 'worship', 'movies'],
+        2,
+      ),
+      p(
+        'w4',
+        'Priya Paul',
+        26,
+        w,
+        'Dadar',
+        'Karuna Sadan',
+        'Graphic designer',
+        'B.Des.',
+        'Sketchbook in my bag, faith in my heart.',
+        ['English', 'Hindi', 'Marathi'],
+        ['photography', 'travel', 'music'],
+        3,
+      ),
+      p(
+        'w5',
+        'Esther Kumar',
+        30,
+        w,
+        'Navi Mumbai',
+        'Karuna Sadan',
+        'Chartered accountant',
+        'CA',
+        'Numbers, coffee and Sunday worship.',
+        ['English', 'Hindi', 'Telugu'],
+        ['reading', 'fitness', 'worship'],
+        4,
+      ),
+      p(
+        'w6',
+        'Rachel George',
+        24,
+        w,
+        'Pune',
+        'Hope Church',
+        'Doctor',
+        'MBBS',
+        'Medical intern, choir member.',
+        ['English', 'Malayalam', 'Kannada'],
+        ['music', 'volunteering', 'cooking'],
+        5,
+      ),
+      p(
+        'm1',
+        'Samuel Pereira',
+        29,
+        m,
+        'Dadar',
+        'Karuna Sadan',
+        'Architect',
+        'B.Arch.',
+        'Builds spaces, hopes to build a home.',
+        ['English', 'Marathi', 'Hindi'],
+        ['travel', 'photography', 'worship'],
+        0,
+      ),
+      p(
+        'm2',
+        'Joel Mathew',
+        31,
+        m,
+        'Thane',
+        'Karuna Sadan',
+        'Bank manager',
+        'MBA',
+        'Steady, family-minded, always up for a road trip.',
+        ['English', 'Malayalam', 'Hindi'],
+        ['family', 'travel', 'music'],
+        1,
+      ),
+      p(
+        'm3',
+        'Aaron Fernandes',
+        27,
+        m,
+        'Goregaon',
+        'Grace Fellowship',
+        'Physiotherapist',
+        'BPT',
+        'Gym in the morning, youth group at night.',
+        ['English', 'Marathi'],
+        ['fitness', 'worship', 'volunteering'],
+        2,
+      ),
+      p(
+        'm4',
+        'Nathan Roy',
+        28,
+        m,
+        'Dadar',
+        'Karuna Sadan',
+        'Data analyst',
+        'M.Sc. Statistics',
+        'Guitarist on the worship team.',
+        ['English', 'Hindi', 'Marathi'],
+        ['music', 'reading', 'worship'],
+        3,
+      ),
+      p(
+        'm5',
+        'Caleb Dsouza',
+        32,
+        m,
+        'Navi Mumbai',
+        'Karuna Sadan',
+        'Civil engineer',
+        'B.E. Civil',
+        'Quiet, loyal, loves cooking for friends.',
+        ['English', 'Kannada', 'Hindi'],
+        ['cooking', 'family', 'movies'],
+        4,
+      ),
+      p(
+        'm6',
+        'Isaac Thomas',
+        26,
+        m,
+        'Pune',
+        'Hope Church',
+        'Pastor in training',
+        'B.Th.',
+        'Called to serve, hoping to find a partner in ministry.',
+        ['English', 'Malayalam', 'Telugu'],
+        ['volunteering', 'reading', 'worship'],
+        5,
+      ),
     ]);
 
     // Two existing conversations so Matches isn't empty on first open.
     final now = DateTime.now();
-    matches.add(JodieMatch(
-      profiles.firstWhere((x) => x.id == 'w2'),
-      now.subtract(const Duration(days: 1)),
-      [
-        ChatMessage('Hi Daniel! Saw you play at the Night of Worship.',
-            mine: false, at: now.subtract(const Duration(hours: 5))),
-        ChatMessage('Thank you! Were you there?',
-            mine: true, at: now.subtract(const Duration(hours: 4))),
-        ChatMessage('Yes, front left. Loved the last song.',
-            mine: false, at: now.subtract(const Duration(hours: 3))),
-      ],
-    )..unread = true);
-    matches.add(JodieMatch(
-      profiles.firstWhere((x) => x.id == 'w4'),
-      now.subtract(const Duration(hours: 3)),
-    ));
+    matches.add(
+      JodieMatch(
+        profiles.firstWhere((x) => x.id == 'w2'),
+        now.subtract(const Duration(days: 1)),
+        [
+          ChatMessage(
+            'Hi Daniel! Saw you play at the Night of Worship.',
+            mine: false,
+            at: now.subtract(const Duration(hours: 5)),
+          ),
+          ChatMessage(
+            'Thank you! Were you there?',
+            mine: true,
+            at: now.subtract(const Duration(hours: 4)),
+          ),
+          ChatMessage(
+            'Yes, front left. Loved the last song.',
+            mine: false,
+            at: now.subtract(const Duration(hours: 3)),
+          ),
+        ],
+      )..unread = true,
+    );
+    matches.add(
+      JodieMatch(
+        profiles.firstWhere((x) => x.id == 'w4'),
+        now.subtract(const Duration(hours: 3)),
+      ),
+    );
     liked.addAll(['w2', 'w4']);
   }
 
@@ -264,11 +420,13 @@ class JodieState extends ChangeNotifier {
   /// Opposite-gender profiles, inside the age filter, best match first.
   List<JodieProfile> get deck {
     final list = profiles
-        .where((p) =>
-            p.gender == seeking &&
-            !_seen(p) &&
-            p.age >= ageFilter.start &&
-            p.age <= ageFilter.end)
+        .where(
+          (p) =>
+              p.gender == seeking &&
+              !_seen(p) &&
+              p.age >= ageFilter.start &&
+              p.age <= ageFilter.end,
+        )
         .toList();
     list.sort((a, b) => compat(b).score.compareTo(compat(a).score));
     return list;
@@ -291,8 +449,7 @@ class JodieState extends ChangeNotifier {
   }
 
   /// Index (0-6) of today's reward in the weekly cycle.
-  int get rewardIndex =>
-      claimedToday ? (streak - 1) % 7 : streak % 7;
+  int get rewardIndex => claimedToday ? (streak - 1) % 7 : streak % 7;
 
   int get todaysReward => kDailyRewards[rewardIndex];
 
@@ -365,7 +522,8 @@ class JodieState extends ChangeNotifier {
     final now = DateTime.now();
     final yesterday = now.subtract(const Duration(days: 1));
     final last = lastClaim;
-    final continued = last != null &&
+    final continued =
+        last != null &&
         last.year == yesterday.year &&
         last.month == yesterday.month &&
         last.day == yesterday.day;
@@ -399,6 +557,11 @@ class JodieState extends ChangeNotifier {
     return true;
   }
 
+  void join() {
+    isMember = true;
+    notifyListeners();
+  }
+
   // ── Premium + chat ─────────────────────────────────────────────────────
   void subscribe(Plan plan) {
     final base = isPremium ? premiumUntil! : DateTime.now();
@@ -426,10 +589,9 @@ class JodieState extends ChangeNotifier {
         'Which service do you usually attend?',
         'Would you like to meet after Sunday service?',
       ];
-      m.messages.add(ChatMessage(
-        replies[m.messages.length % replies.length],
-        mine: false,
-      ));
+      m.messages.add(
+        ChatMessage(replies[m.messages.length % replies.length], mine: false),
+      );
       notifyListeners();
     });
   }

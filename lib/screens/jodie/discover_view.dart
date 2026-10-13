@@ -88,8 +88,7 @@ class _DiscoverViewState extends State<DiscoverView>
     }
     if (matched && mounted) {
       final match = jodie.matches.first;
-      showMatchDialog(context, top,
-          onMessage: () => openChat(context, match));
+      showMatchDialog(context, top, onMessage: () => openChat(context, match));
     }
   }
 
@@ -108,13 +107,15 @@ class _DiscoverViewState extends State<DiscoverView>
   }
 
   void _openDetail(JodieProfile p) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => JodieProfileScreen(
-        profile: p,
-        onLike: () => _decide(_Swipe.like),
-        onPass: () => _decide(_Swipe.pass),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => JodieProfileScreen(
+          profile: p,
+          onLike: () => _decide(_Swipe.like),
+          onPass: () => _decide(_Swipe.pass),
+        ),
       ),
-    ));
+    );
   }
 
   void _boost() {
@@ -139,30 +140,37 @@ class _DiscoverViewState extends State<DiscoverView>
             Expanded(
               child: deck.isEmpty
                   ? _Empty(onFilters: () => showFiltersSheet(context))
-                  : LayoutBuilder(builder: (context, c) {
-                      _area = Size(c.maxWidth - 24, c.maxHeight - 12);
-                      final count = deck.length < 3 ? deck.length : 3;
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          for (var i = count - 1; i >= 0; i--)
-                            Positioned.fill(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                                child: i == 0
-                                    ? _topCard(deck.first)
-                                    : Transform.translate(
-                                        offset: Offset(0, 14.0 * i),
-                                        child: Transform.scale(
-                                          scale: 1 - 0.045 * i,
-                                          child: _CardFace(profile: deck[i]),
+                  : LayoutBuilder(
+                      builder: (context, c) {
+                        _area = Size(c.maxWidth - 24, c.maxHeight - 12);
+                        final count = deck.length < 3 ? deck.length : 3;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            for (var i = count - 1; i >= 0; i--)
+                              Positioned.fill(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    4,
+                                    12,
+                                    8,
+                                  ),
+                                  child: i == 0
+                                      ? _topCard(deck.first)
+                                      : Transform.translate(
+                                          offset: Offset(0, 14.0 * i),
+                                          child: Transform.scale(
+                                            scale: 1 - 0.045 * i,
+                                            child: _CardFace(profile: deck[i]),
+                                          ),
                                         ),
-                                      ),
+                                ),
                               ),
-                            ),
-                        ],
-                      );
-                    }),
+                          ],
+                        );
+                      },
+                    ),
             ),
             if (deck.isNotEmpty)
               Padding(
@@ -196,7 +204,9 @@ class _DiscoverViewState extends State<DiscoverView>
                     _CircleButton(
                       icon: Icons.bolt,
                       color: jodie.isBoosted ? Colors.white : AppColors.magenta,
-                      background: jodie.isBoosted ? AppColors.buttonGradient : null,
+                      background: jodie.isBoosted
+                          ? AppColors.buttonGradient
+                          : null,
                       size: 46,
                       badge: jodie.isBoosted ? null : '$kBoostCost',
                       onTap: _boost,
@@ -228,8 +238,12 @@ class _DiscoverViewState extends State<DiscoverView>
               onPanEnd: _onPanEnd,
               onTapUp: (d) {
                 final i = _photo[p.id] ?? 0;
-                final next = d.localPosition.dx > _area.width / 2 ? i + 1 : i - 1;
-                setState(() => _photo[p.id] = next.clamp(0, p.photos.length - 1));
+                final next = d.localPosition.dx > _area.width / 2
+                    ? i + 1
+                    : i - 1;
+                setState(
+                  () => _photo[p.id] = next.clamp(0, p.photos.length - 1),
+                );
               },
               child: _CardFace(
                 profile: p,
@@ -266,9 +280,10 @@ class _CardFace extends StatelessWidget {
     final nopeOpacity = (-offset.dx / 110).clamp(0.0, 1.0);
     final superOpacity = (-offset.dy / 110).clamp(0.0, 1.0);
     final shared = p.interests.intersection(jodie.me.interests).toList();
-    final chips = [...shared, ...p.interests.where((k) => !shared.contains(k))]
-        .take(3)
-        .toList();
+    final chips = [
+      ...shared,
+      ...p.interests.where((k) => !shared.contains(k)),
+    ].take(3).toList();
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
@@ -287,11 +302,14 @@ class _CardFace extends StatelessWidget {
           children: [
             LookCanvas(look: p.photos[photo], showText: false),
             Center(
-              child: Text(p.initials,
-                  style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.28),
-                      fontSize: 140,
-                      fontWeight: FontWeight.w800)),
+              child: Text(
+                p.initials,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.28),
+                  fontSize: 140,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
             // Photo progress
             Positioned(
@@ -319,8 +337,10 @@ class _CardFace extends StatelessWidget {
               top: 26,
               left: 14,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(14),
@@ -330,11 +350,14 @@ class _CardFace extends StatelessWidget {
                   children: [
                     const Icon(Icons.favorite, color: Colors.white, size: 14),
                     const SizedBox(width: 5),
-                    Text(tr(context, 'jd_match_pct', args: {'n': '$score'}),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800)),
+                    Text(
+                      tr(context, 'jd_match_pct', args: {'n': '$score'}),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -370,27 +393,37 @@ class _CardFace extends StatelessWidget {
                         Row(
                           children: [
                             Flexible(
-                              child: Text('${p.firstName}, ${p.age}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 27,
-                                      fontWeight: FontWeight.w800)),
+                              child: Text(
+                                '${p.firstName}, ${p.age}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 27,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                             if (p.verified) ...[
                               const SizedBox(width: 6),
-                              const Icon(Icons.verified,
-                                  color: Color(0xFF59B6FF), size: 22),
+                              const Icon(
+                                Icons.verified,
+                                color: Color(0xFF59B6FF),
+                                size: 22,
+                              ),
                             ],
                           ],
                         ),
                         const SizedBox(height: 2),
-                        Text('${p.profession} · ${p.city}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14)),
+                        Text(
+                          '${p.profession} · ${p.city}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 6,
@@ -399,20 +432,25 @@ class _CardFace extends StatelessWidget {
                             for (final k in chips)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 11, vertical: 5),
+                                  horizontal: 11,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
                                   color: shared.contains(k)
                                       ? Colors.white
                                       : Colors.white24,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: Text(tr(context, 'int_$k'),
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: shared.contains(k)
-                                            ? AppColors.magenta
-                                            : Colors.white)),
+                                child: Text(
+                                  tr(context, 'int_$k'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: shared.contains(k)
+                                        ? AppColors.magenta
+                                        : Colors.white,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -427,9 +465,14 @@ class _CardFace extends StatelessWidget {
                         height: 38,
                         margin: const EdgeInsets.only(left: 10),
                         decoration: const BoxDecoration(
-                            color: Colors.white24, shape: BoxShape.circle),
-                        child: const Icon(Icons.info_outline,
-                            color: Colors.white, size: 22),
+                          color: Colors.white24,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                     ),
                 ],
@@ -439,7 +482,12 @@ class _CardFace extends StatelessWidget {
             Positioned(
               top: 70,
               left: 22,
-              child: _Stamp('LIKE', const Color(0xFF3DDC84), likeOpacity, -0.25),
+              child: _Stamp(
+                'LIKE',
+                const Color(0xFF3DDC84),
+                likeOpacity,
+                -0.25,
+              ),
             ),
             Positioned(
               top: 70,
@@ -451,8 +499,12 @@ class _CardFace extends StatelessWidget {
               left: 0,
               right: 0,
               child: Center(
-                child:
-                    _Stamp('SUPER', const Color(0xFF59B6FF), superOpacity, 0),
+                child: _Stamp(
+                  'SUPER',
+                  const Color(0xFF59B6FF),
+                  superOpacity,
+                  0,
+                ),
               ),
             ),
           ],
@@ -472,21 +524,26 @@ class _Stamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Opacity(
-        opacity: opacity,
-        child: Transform.rotate(
-          angle: angle,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              border: Border.all(color: color, width: 4),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(text,
-                style: TextStyle(
-                    color: color, fontSize: 30, fontWeight: FontWeight.w900)),
+    opacity: opacity,
+    child: Transform.rotate(
+      angle: angle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          border: Border.all(color: color, width: 4),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _CircleButton extends StatelessWidget {
@@ -508,49 +565,51 @@ class _CircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: background,
-                color: background == null ? Colors.white : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+    onTap: onTap,
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: background,
+            color: background == null ? Colors.white : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: size * 0.52),
-            ),
-            if (badge != null)
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: kGold,
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: Text(badge!,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800)),
+            ],
+          ),
+          child: Icon(icon, color: color, size: size * 0.52),
+        ),
+        if (badge != null)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: kGold,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                badge!,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-          ],
-        ),
-      );
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Empty extends StatelessWidget {
@@ -560,35 +619,43 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: const BoxDecoration(
-                    color: AppColors.tint, shape: BoxShape.circle),
-                child: const Icon(Icons.favorite_border,
-                    color: AppColors.magenta, size: 42),
-              ),
-              const SizedBox(height: 18),
-              Text(tr(context, 'jd_no_more'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text(tr(context, 'jd_no_more_sub'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.muted)),
-              const SizedBox(height: 18),
-              OutlinedButton(
-                onPressed: onFilters,
-                child: Text(tr(context, 'jd_filters')),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 90,
+            height: 90,
+            decoration: const BoxDecoration(
+              color: AppColors.tint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.favorite_border,
+              color: AppColors.magenta,
+              size: 42,
+            ),
           ),
-        ),
-      );
+          const SizedBox(height: 18),
+          Text(
+            tr(context, 'jd_no_more'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            tr(context, 'jd_no_more_sub'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted),
+          ),
+          const SizedBox(height: 18),
+          OutlinedButton(
+            onPressed: onFilters,
+            child: Text(tr(context, 'jd_filters')),
+          ),
+        ],
+      ),
+    ),
+  );
 }

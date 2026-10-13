@@ -2,18 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:noah_frontend_flutter/data/events_data.dart';
 import 'package:noah_frontend_flutter/data/jodie_data.dart';
+import 'package:noah_frontend_flutter/data/me_data.dart';
+import 'package:noah_frontend_flutter/data/ministry_data.dart';
+import 'package:noah_frontend_flutter/data/prayer_data.dart';
+import 'package:noah_frontend_flutter/data/world_data.dart';
+import 'package:noah_frontend_flutter/data/registration_data.dart';
+import 'package:noah_frontend_flutter/screens/registration/registration_flow.dart';
 import 'package:noah_frontend_flutter/data/noahgram_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/main.dart';
+import 'package:noah_frontend_flutter/screens/events/events_widgets.dart';
 import 'package:noah_frontend_flutter/screens/main_shell.dart';
 import 'package:noah_frontend_flutter/screens/noahgram/noahgram_widgets.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
-import 'package:noah_frontend_flutter/widgets/event_carousel.dart';
+import 'package:noah_frontend_flutter/widgets/event_carousel.dart' show EventCarousel, enableCardIdleSway;
 
 void main() {
-  testWidgets('splash -> login -> otp -> home -> tabs -> language',
-      (tester) async {
+  enableCardIdleSway = false; // a forever-running animation never settles
+  testWidgets('splash -> login -> otp -> home -> tabs -> language', (
+    tester,
+  ) async {
     // Tests fall back to a blocky font unless the bundled one is loaded.
     final loader = FontLoader('PlusJakartaSans')
       ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
@@ -40,43 +50,63 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('Karuna Sadan'), findsOneWidget);
-    expect(find.text('Night of Worship'), findsOneWidget);
+    expect(
+      find.text('Christmas convention booking opens 1 October'),
+      findsOneWidget,
+    );
 
     // Carousel advances on its own.
     await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(seconds: 1));
-    expect(find.text('Family Service'), findsOneWidget);
+    expect(find.text('Night of Worship'), findsOneWidget);
     expect(find.byType(EventCarousel), findsOneWidget);
 
     // The nav circle follows the selected tab.
     Rect circle() => tester.getRect(find.byType(AnimatedPositioned).last);
     final homeX = circle().center.dx;
-    await tester.tap(find.text('Noahtube'));
-    await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    expect(circle().center.dx, greaterThan(homeX + 100));
-    expect(find.text('Sermons, worship and testimonies'), findsOneWidget);
-
     await tester.tap(find.text('Events'));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(circle().center.dx, greaterThan(homeX + 100));
+    expect(find.text('My passes'), findsOneWidget);
     expect(find.text('Open for booking'), findsOneWidget);
-    expect(find.text('Sunday Second Service'), findsOneWidget);
+    expect(find.text('Night of Worship'), findsWidgets);
+
+    // Noahtube now lives behind Menu: the circle jumps to Menu and a bottom
+    // popup offers Noahtube.
+    await tester.tap(find.text('Menu'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('Noahtube'), findsOneWidget);
+    expect(circle().center.dx, lessThan(homeX + 100));
+    await tester.tap(find.text('Noahtube'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('Sermons, worship and testimonies'), findsOneWidget);
 
     // Switch the whole app to Hindi from the Me tab.
     await tester.tap(find.text('Me'));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    expect(find.text('Basic information'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('हिन्दी'), 200,
-        scrollable: find.byType(Scrollable).last);
-    await tester.tap(find.text('हिन्दी'));
+    expect(find.text('Your record'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Language'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    expect(find.text('बुनियादी जानकारी'), findsOneWidget);
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('App text and content'), findsOneWidget);
+    await tester.tap(find.text('हिन्दी · Hindi'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('भाषा'), findsWidgets); // the page title, now in Hindi
 
     await tester.tap(find.text('होम'));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    expect(find.text('आज का पाठ'), findsOneWidget);
+    expect(find.text('आज का दैनिक मन्ना'), findsOneWidget);
   });
 
-  testWidgets('noahgram: feed, like, comment, reels, profile edit', (tester) async {
+  testWidgets('noahgram: feed, like, comment, reels, profile edit', (
+    tester,
+  ) async {
     final loader = FontLoader('PlusJakartaSans')
       ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
     await tester.runAsync(loader.load);
@@ -84,10 +114,12 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(AppLocale(
-      controller: LocaleController(),
-      child: MaterialApp(theme: buildTheme(), home: const MainShell()),
-    ));
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
     await tester.pump();
 
     await tester.tap(find.text('Noahgram').last);
@@ -135,7 +167,9 @@ void main() {
     expect(find.text('Daniel F'), findsWidgets);
   });
 
-  testWidgets('jodie: match, paywall, payment, chat, daily reward', (tester) async {
+  testWidgets('jodie: match, paywall, payment, chat, daily reward', (
+    tester,
+  ) async {
     final loader = FontLoader('PlusJakartaSans')
       ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
     await tester.runAsync(loader.load);
@@ -143,14 +177,36 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(AppLocale(
-      controller: LocaleController(),
-      child: MaterialApp(theme: buildTheme(), home: const MainShell()),
-    ));
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
     await tester.pump();
-    Future<void> settle() => tester.pumpAndSettle(const Duration(milliseconds: 100));
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
 
+    // Not a member yet: the tab shows the membership page.
+    jodie.isMember = false;
     await tester.tap(find.text('Jodie').last);
+    await settle();
+    expect(
+      find.text('Find a partner within the church family'),
+      findsOneWidget,
+    );
+    expect(find.text('Four-stage verification'), findsOneWidget);
+    await tester.tap(find.text('Become a member · ₹300'));
+    await settle();
+    expect(find.text('Demo checkout'), findsOneWidget);
+    await tester.tap(find.text('Simulate successful payment'));
+    await settle();
+    expect(jodie.isMember, isTrue);
+    expect(
+      find.text('My Jodie profile'),
+      findsOneWidget,
+    ); // "then create your profile"
+    await tester.tapAt(const Offset(195, 20)); // close the sheet
     await settle();
     expect(find.text('Discover'), findsOneWidget);
 
@@ -206,5 +262,634 @@ void main() {
     await settle();
     expect(jodie.credits, greaterThan(before));
     expect(jodie.claimedToday, isTrue);
+  });
+
+  testWidgets('home: manna, menu grid, prayer request audience', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    // Home no longer has a prayer section at the bottom.
+    expect(find.text('Prayer requests'), findsNothing);
+    expect(find.text('Add prayer request'), findsNothing);
+
+    // Manna: list -> detail.
+    expect(find.text("Today's Daily Manna"), findsOneWidget);
+    await tester.tap(find.text('View all').first);
+    await settle();
+    expect(find.text('Daily Manna'), findsOneWidget);
+    expect(find.text('Peace that guards your heart'), findsOneWidget);
+    expect(find.text('Walking by faith'), findsOneWidget);
+    await tester.tap(find.text('Strength for today'));
+    await settle();
+    expect(find.text('Reflection'), findsOneWidget);
+
+    // Prayer request from this Manna: audience is "warriors only" by default.
+    final addButton = find.text('Add prayer request');
+    await tester.scrollUntilVisible(
+      addButton,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(addButton);
+    await settle();
+    expect(find.text('New prayer request'), findsOneWidget);
+    expect(find.text('About this Manna: Strength for today'), findsOneWidget);
+    expect(
+      find.text('Default. Our prayer warriors will pray for you.'),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField).last, 'Strength for my week');
+    await tester.pump();
+    await tester.tap(find.text('Submit'));
+    await settle();
+    expect(prayer.requests.first.everyone, isFalse);
+    expect(prayer.requests.first.mannaTitleKey, 'manna_3');
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+
+    // Menu grid: Prayer Request, audience switched to everyone.
+    await tester.tap(find.text('Menu'));
+    await settle();
+    expect(find.text('My Information'), findsOneWidget);
+    expect(find.text('Noahtube'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Prayer Request'),
+      200,
+      scrollable: find.descendant(
+        of: find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byType(GridView),
+        ),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.ensureVisible(find.text('Prayer Request'));
+    await settle();
+    await tester.tap(find.text('Prayer Request'));
+    await settle();
+    expect(find.text('New prayer request'), findsOneWidget);
+    expect(find.textContaining('About this Manna'), findsNothing);
+    await tester.tap(find.text('Everyone'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, 'Pray for our church');
+    await tester.pump();
+    await tester.tap(find.text('Submit'));
+    await settle();
+    expect(prayer.requests.length, 2);
+    expect(prayer.requests.first.everyone, isTrue);
+
+    // Menu items without a screen yet say so.
+    await tester.tap(find.text('Menu'));
+    await settle();
+    await tester.tap(find.text('eBooks'));
+    // Look before the snackbar auto-dismisses (pumpAndSettle would wait it out).
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.textContaining('Coming soon'), findsOneWidget);
+    await settle();
+  });
+
+  testWidgets('events: passes, calendar booking, search', (tester) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    await tester.tap(find.text('Events'));
+    await settle();
+    expect(find.text('My passes'), findsOneWidget);
+    expect(find.text('Latest'), findsOneWidget);
+    expect(find.text('Swipe to see your other passes'), findsOneWidget);
+    final passesBefore = eventsState.passes.length;
+    expect(passesBefore, 2);
+
+    // Calendar: pick the day of the next special event and book it.
+    final target = eventsState.open.first; // Marathi Service
+    await tester.tap(find.byIcon(Icons.edit_calendar_outlined));
+    await settle();
+    expect(find.text('Book by date'), findsOneWidget);
+    if (target.start.month != eventsState.today.month) {
+      await tester.tap(find.byIcon(Icons.chevron_right).first);
+      await settle();
+    }
+    await tester.tap(find.text('${target.start.day}').first);
+    await settle();
+    expect(find.text('Marathi Service'), findsOneWidget);
+    expect(eventsState.isBooked(target), isFalse);
+    // That day also has a cell meeting, so tap Book inside the Marathi row.
+    final marathiRow = find.ancestor(
+      of: find.text('Marathi Service'),
+      matching: find.byType(EventRow),
+    );
+    await tester.tap(
+      find.descendant(of: marathiRow, matching: find.text('Book')),
+    );
+    await settle();
+    expect(eventsState.isBooked(target), isTrue);
+    expect(eventsState.passes.length, passesBefore + 1);
+    expect(find.text('Booked'), findsWidgets);
+
+    // Back on the Events tab, search replaces the passes.
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    await tester.enterText(find.byType(TextField), 'marathi');
+    await tester.pump();
+    expect(find.text('My passes'), findsNothing);
+    expect(find.text('Marathi Service'), findsWidgets);
+    await tester.enterText(find.byType(TextField), 'zzzz');
+    await tester.pump();
+    expect(find.text('No events match your search'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    expect(find.text('My passes'), findsOneWidget);
+  });
+
+  testWidgets('me: pastor chat, messages, everything, jodie', (tester) async {
+    jodie.isMember = true;
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 1900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    await tester.tap(find.text('Me'));
+    await settle();
+    expect(find.text('Ps. Emmanuel Kumar'), findsOneWidget);
+    expect(find.text('4 members linked'), findsOneWidget);
+    expect(ministry.unreadTotal, 2);
+    expect(find.text('2 new'), findsOneWidget);
+
+    // Chat with the pastor.
+    await tester.tap(find.text('Chat with pastor'));
+    await settle();
+    expect(find.text('Your pastor'), findsOneWidget);
+    expect(find.textContaining('Bring her on Sunday'), findsOneWidget);
+    expect(
+      find.textContaining('Only you and Ps. Emmanuel Kumar'),
+      findsOneWidget,
+    );
+    expect(ministry.unreadTotal, 0); // opening the chat marks it read
+    await tester.enterText(find.byType(TextField), 'Thank you pastor');
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.send_outlined));
+    await tester.pump();
+    expect(ministry.pastor.messages.last.text, 'Thank you pastor');
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    expect(find.text('2 new'), findsNothing);
+
+    // Messages list -> cell leader chat.
+    await tester.tap(find.text('Pastor, cell leader and the office'));
+    await settle();
+    expect(find.text('Church office'), findsOneWidget);
+    await tester.tap(find.text('Blessy Mathew'));
+    await settle();
+    expect(find.text('Your cell leader'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+
+    // "Everything" opens the Menu popup.
+    await tester.tap(find.text('Everything'));
+    await settle();
+    expect(find.text('My Information'), findsOneWidget);
+    await tester.tapAt(const Offset(195, 40)); // dismiss
+    await settle();
+
+    // Jodie shortcut switches the tab.
+    await tester.tap(find.text('Open'));
+    await settle();
+    expect(find.text('Discover'), findsOneWidget);
+  });
+
+  testWidgets('login: language dropdown and country code', (tester) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const NoahApp());
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome to Noah'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget); // the dropdown pill
+    expect(find.text('मराठी'), findsNothing); // languages live in the popup
+    expect(find.text('+91'), findsOneWidget);
+
+    // Another country: the demo number is cleared, so Continue stays off.
+    await tester.tap(find.text('+91'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('United States  +1').last);
+    await tester.pumpAndSettle();
+    expect(find.text('+1'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '5551234567');
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sent to +1 5551234567'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget); // language dropdown on OTP too
+
+    // Back, then switch language from the popup.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your language'), findsOneWidget);
+    await tester.tap(find.text('हिन्दी'));
+    await tester.pumpAndSettle();
+    expect(find.text('Noah में आपका स्वागत है'), findsOneWidget);
+  });
+
+  testWidgets(
+    'me inside pages: family, location, photo, identity, drive, store, rewards',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 2200); // every row visible
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+        ),
+      );
+      await tester.pump();
+      Future<void> settle() =>
+          tester.pumpAndSettle(const Duration(milliseconds: 100));
+      Future<void> back() async {
+        await tester.tap(find.byIcon(Icons.arrow_back));
+        await settle();
+      }
+
+      await tester.tap(find.text('Me'));
+      await settle();
+
+      // Family
+      await tester.tap(find.text('4 linked · passes and guardianship'));
+      await settle();
+      final last = noahgram.me.name.split(' ').last; // earlier tests may rename
+      expect(find.text('$last household'), findsOneWidget);
+      expect(find.text('Linked members'), findsOneWidget);
+      expect(find.text('Rebecca $last'), findsOneWidget);
+      expect(find.text('Minor'), findsNWidgets(2));
+      await back();
+
+      // Location: change it, with a confirmation.
+      await tester.tap(find.text('Dadar East').last);
+      await settle();
+      expect(find.text('YOUR LOCATION'), findsOneWidget);
+      await tester.tap(find.text('Andheri West'));
+      await settle();
+      expect(find.text('Change location?'), findsOneWidget);
+      await tester.tap(find.text('Change'));
+      await settle();
+      expect(meState.location.name, 'Andheri West');
+      meState.setLocation(MeState.locations.first); // put the demo back
+      await back();
+
+      // Profile photo: upload adds a review entry.
+      final photosBefore = meState.photos.length;
+      await tester.tap(find.text('Profile photo'));
+      await settle();
+      expect(find.text('Review history'), findsOneWidget);
+      await tester.tap(find.text('Upload a new photograph'));
+      await tester.pump();
+      expect(meState.photos.length, photosBefore + 1);
+      await settle();
+      await back();
+
+      // Identity & consent: agree, then record the video.
+      await tester.tap(find.text('Identity & consent'));
+      await settle();
+      expect(find.text('1 · Aadhaar'), findsOneWidget);
+      expect(meState.identityDone, 1);
+      await tester.tap(find.text('I agree and consent'));
+      await settle();
+      expect(find.text('Consent recorded'), findsOneWidget);
+      await tester.tap(find.text('Record now'));
+      await settle();
+      expect(find.text('Video submitted'), findsOneWidget);
+      expect(meState.identityDone, 3);
+      await back();
+      expect(find.text('3 of 3'), findsOneWidget);
+
+      // Drive
+      await tester.tap(find.text('Shared folders and study material'));
+      await settle();
+      expect(find.text('Study material'), findsOneWidget);
+      expect(find.text('Recent files'), findsOneWidget);
+      await tester.tap(find.text('Get').first);
+      // The earlier toast must leave before the new one shows.
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('Download started'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5)); // let the toast leave
+      await settle();
+      await back();
+
+      // Store: add to cart, check out through the demo payment.
+      await tester.tap(find.text('Books and resources'));
+      await settle();
+      expect(find.text('The Weight of Grace'), findsOneWidget);
+      expect(meState.cartCount, 0);
+      await tester.tap(find.text('Add').first);
+      await settle();
+      expect(meState.cartCount, 1);
+      expect(find.text('1 in your cart'), findsOneWidget);
+      await tester.tap(find.text('Checkout'));
+      await settle();
+      expect(find.text('Demo checkout'), findsOneWidget);
+      await tester.tap(find.text('Simulate successful payment'));
+      await settle();
+      expect(meState.cartCount, 0);
+      await tester.pump(const Duration(seconds: 5)); // let the toast leave
+      await settle();
+      await back();
+
+      // Rewards: withdraw once.
+      await tester.tap(find.text('Earnings from your Noahgram activity'));
+      await settle();
+      expect(find.text('Available to withdraw'), findsOneWidget);
+      expect(find.text('₹62.40'), findsWidgets);
+      expect(meState.canWithdraw, isTrue);
+      await tester.tap(find.text('Withdraw ₹62.40'));
+      await settle();
+      expect(meState.withdrawalPending, isTrue);
+      expect(find.text('Withdrawal pending'), findsWidgets);
+      await tester.pump(const Duration(seconds: 5)); // let the toast leave
+      await settle();
+      await back();
+
+      // Notifications and Terms
+      await tester.tap(find.text('Service reminders, replies and receipts'));
+      await settle();
+      expect(find.text("You're all caught up"), findsOneWidget);
+      expect(find.text('Earlier'), findsOneWidget);
+      await back();
+      await tester.tap(find.text('Community terms and how your data is held'));
+      await settle();
+      expect(find.text('Version 1.0'), findsOneWidget);
+      expect(find.text('Your data'), findsOneWidget);
+      await back();
+
+      // Log out returns to the login page (the root navigator).
+      await tester.tap(find.text('Log out'));
+      await settle();
+      expect(find.text('Welcome to Noah'), findsOneWidget);
+    },
+  );
+
+  testWidgets('registration: six steps, success popup, approval', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(World.load); // the address step uses the world data
+    registration.start('+91 90000 00001');
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const RegistrationFlow()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Create your account'), findsOneWidget);
+    expect(find.text('Step 1 of 6 · Your details'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+
+    // Fill the model directly; each step's Continue unlocks when valid.
+    final r = registration;
+    Future<void> next(String label) async {
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    r
+      ..firstName = 'Shashank'
+      ..lastName = 'Gupta'
+      ..email = 'shashank@example.com'
+      ..gender = 'male'
+      ..dob = DateTime(1990, 5, 4)
+      ..marital = 'single'
+      ..touch();
+    await tester.pump();
+    await next('Continue');
+    expect(find.text('Step 2 of 6 · Address details'), findsOneWidget);
+
+    r
+      ..address1 = '12 Church Road'
+      ..state = 'Maharashtra'
+      ..city = 'Mumbai'
+      ..pin = '400001'
+      ..touch();
+    await tester.pump();
+    await next('Continue');
+
+    r
+      ..idType = 'aadhaar'
+      ..idNumber = '2345 6789 0123'
+      ..idFile = 'id_proof.jpg'
+      ..touch();
+    await tester.pump();
+    await next('Continue');
+
+    r
+      ..photoFile = 'photo.jpg'
+      ..touch();
+    await tester.pump();
+    await next('Continue');
+
+    // Ticking the agree box must show a tick (header icon + checkbox).
+    expect(find.byIcon(Icons.check), findsOneWidget);
+    await tester.ensureVisible(
+      find.text('I have read the document above and I agree to it.'),
+    );
+    await tester.tap(
+      find.text('I have read the document above and I agree to it.'),
+    );
+    await tester.pump();
+    expect(r.agreed, isTrue);
+    expect(find.byIcon(Icons.check), findsNWidgets(2));
+    r
+      ..signature = 'Shashank Gupta'
+      ..touch();
+    await tester.pump();
+    await next('Continue to video');
+    expect(find.text('Camera ready'), findsOneWidget);
+
+    // Record for the minimum length, then complete.
+    await tester.tap(find.text('Start recording'));
+    await tester.pump();
+    for (var i = 0; i < kMinVideoSeconds; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await tester.tap(find.text('Stop recording'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Complete registration'));
+    await next('Complete registration');
+    expect(find.text('Successful'), findsOneWidget); // the popup
+    await next('OK');
+    expect(find.text('Registration successful'), findsOneWidget);
+    expect(find.text('Anitha Varghese · $kOfficePhone'), findsOneWidget);
+
+    // The office returns the video, then approves.
+    await tester.ensureVisible(find.text('Simulate: admin approves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Simulate: admin approves'));
+    await tester.pumpAndSettle();
+    // The popup names the number used at registration.
+    expect(find.text('Registration approved'), findsOneWidget);
+    expect(find.textContaining('approved the registration for +91 90000 00001'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(r.status, RegStatus.approved);
+    expect(find.text('Karuna Sadan'), findsOneWidget);
+  });
+
+  test('registration field validation', () {
+    expect(idNumberError('aadhaar', '2345 6789 0123'), isNull);
+    expect(idNumberError('aadhaar', '2345 6789 012'), isNotNull); // 11 digits
+    expect(idNumberError('aadhaar', '1234 5678 9012'), isNotNull); // starts 1
+    expect(idNumberError('pan', 'abcde1234f'), isNull);
+    expect(idNumberError('pan', 'ABCD12345F'), isNotNull);
+    expect(idNumberError('passport', 'A1234567'), isNull);
+    expect(idNumberError('passport', 'A123456'), isNotNull);
+    expect(idNumberError('dl', 'MH12 20110012345'), isNull);
+    expect(idNumberError('dl', 'MH12 2011001'), isNotNull);
+    expect(idNumberError('voter', 'ABC1234567'), isNull);
+    expect(idNumberError('voter', 'AB12345678'), isNotNull);
+    expect(pinError('400001'), isNull);
+    expect(pinError('040001'), isNotNull);
+    expect(pinError('4000'), isNotNull);
+    expect(emailError('a@b.co'), isNull);
+    expect(emailError('a@b'), isNotNull);
+    expect(nameError('Shashank'), isNull);
+    expect(nameError('R2D2'), isNotNull);
+    expect(dobError(DateTime.now().subtract(const Duration(days: 365 * 10))),
+        isNotNull);
+    expect(dobError(DateTime(1990, 1, 1)), isNull);
+  });
+
+  testWidgets('world data: every country with its states and cities', (
+    tester,
+  ) async {
+    final w = await tester.runAsync(World.load);
+    expect(w!.countries.length, greaterThan(240));
+    expect(w.countries, containsAll(['India', 'United States', 'Japan']));
+    expect(w.statesOf('India'), contains('Maharashtra'));
+    expect(w.citiesOf('India', 'Maharashtra'), contains('Mumbai'));
+    // Only that country's states are offered.
+    expect(w.statesOf('India'), isNot(contains('California')));
+    expect(w.statesOf('United States'), contains('California'));
+  });
+
+  testWidgets('home: tabs, word screens and prayer request card', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.text('For the household'), findsOneWidget);
+    expect(find.text('All prayers'), findsOneWidget);
+    await tester.tap(find.text('Confessions'));
+    await settle();
+    expect(find.text('I am kept in perfect peace'), findsOneWidget);
+    await tester.tap(find.text('Bible commentary'));
+    await settle();
+    expect(find.text('The day of the Lord'), findsOneWidget);
+    await tester.tap(find.text('The day of the Lord'));
+    await settle();
+    expect(find.text('Joel · chapter 2'), findsOneWidget);
+    expect(find.text('Read · 7 languages'), findsNWidgets(4));
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await settle();
+
+    await tester.tap(find.text('Prayers'));
+    await settle();
+    await tester.tap(find.text('All prayers'));
+    await settle();
+    expect(find.text('Daily prayers'), findsOneWidget);
+    expect(find.text('Earlier this week'), findsOneWidget);
+    expect(find.text('Read'), findsNWidgets(3));
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await settle();
+
+    // The prayer request card opens the popup with radio choices.
+    await tester.scrollUntilVisible(
+      find.text('Do you need prayers?'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Start typing your prayer request'));
+    await settle();
+    expect(find.text('Who should pray?'), findsOneWidget);
+    expect(find.text('Prayer warriors'), findsOneWidget);
   });
 }

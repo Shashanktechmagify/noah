@@ -78,8 +78,11 @@ class _ReelPageState extends State<_ReelPage>
                       opacity: t == 0 ? 0 : (t < 0.7 ? 1 : (1 - t) / 0.3),
                       child: Transform.scale(
                         scale: t < 0.4 ? 0.4 + t * 2 : 1.2 - (t - 0.4) * 0.3,
-                        child: const Icon(Icons.favorite,
-                            color: Colors.white, size: 100),
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 100,
+                        ),
                       ),
                     );
                   },
@@ -87,8 +90,11 @@ class _ReelPageState extends State<_ReelPage>
               ),
               if (_paused)
                 const Center(
-                  child: Icon(Icons.play_arrow_rounded,
-                      color: Colors.white70, size: 80),
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white70,
+                    size: 80,
+                  ),
                 ),
               // Right-hand actions
               Positioned(
@@ -98,7 +104,9 @@ class _ReelPageState extends State<_ReelPage>
                   children: [
                     _ReelAction(
                       icon: post.liked ? Icons.favorite : Icons.favorite_border,
-                      color: post.liked ? const Color(0xFFFF4D67) : Colors.white,
+                      color: post.liked
+                          ? const Color(0xFFFF4D67)
+                          : Colors.white,
                       label: compact(post.likes),
                       onTap: () => noahgram.toggleLike(post),
                     ),
@@ -135,13 +143,16 @@ class _ReelPageState extends State<_ReelPage>
                         ),
                         const SizedBox(width: 10),
                         Flexible(
-                          child: Text(author.handle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14)),
+                          child: Text(
+                            author.handle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                         if (author != noahgram.me) ...[
                           const SizedBox(width: 10),
@@ -149,17 +160,23 @@ class _ReelPageState extends State<_ReelPage>
                             onTap: () => noahgram.toggleFollow(author),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 5),
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.white),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                tr(context, following ? 'ng_following' : 'ng_follow'),
+                                tr(
+                                  context,
+                                  following ? 'ng_following' : 'ng_follow',
+                                ),
                                 style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -167,16 +184,24 @@ class _ReelPageState extends State<_ReelPage>
                       ],
                     ),
                     const SizedBox(height: 10),
-                    Text(post.caption,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13.5, height: 1.3)),
+                    Text(
+                      post.caption,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                        height: 1.3,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.music_note,
-                            color: Colors.white, size: 14),
+                        const Icon(
+                          Icons.music_note,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -184,7 +209,9 @@ class _ReelPageState extends State<_ReelPage>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 12),
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -215,26 +242,32 @@ class _ReelAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 30, shadows: const [
-                Shadow(color: Colors.black45, blurRadius: 6),
-              ]),
-              if (label != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(label!,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700)),
-                ),
-            ],
+    padding: const EdgeInsets.only(bottom: 16),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 30,
+            shadows: const [Shadow(color: Colors.black45, blurRadius: 6)],
           ),
-        ),
-      );
+          if (label != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                label!,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }

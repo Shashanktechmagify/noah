@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../data/manna_data.dart';
+import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/event_carousel.dart';
-import '../widgets/hex_pattern.dart';
+import '../widgets/header_band.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/prayer_dialog.dart';
+import 'events/events_widgets.dart' show monthShort;
+import 'manna_screen.dart';
+import 'word_screens.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,13 +20,73 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _chipKeys = [
-    'chip_community',
-    'the_word',
-    'chip_media',
-    'chip_church',
-  ];
-  int _chip = 0;
+  static const _tabKeys = ['tab_prayers', 'tab_confessions', 'tab_commentary'];
+  int _tab = 0;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _push(Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+
+  /// The three tiles of the selected tab, then "View all".
+  List<Widget> _tiles(BuildContext context) {
+    final now = DateTime.now();
+    switch (_tab) {
+      case 0:
+        return [
+          for (var i = 0; i < 3; i++)
+            _WordTile(
+              icon: Icons.self_improvement,
+              title: kPrayers[i].title,
+              sub:
+                  '${now.subtract(Duration(days: kPrayers[i].daysAgo)).day} '
+                  '${monthShort(context, now.subtract(Duration(days: kPrayers[i].daysAgo)).month)}'
+                  ' · ${kPrayers[i].ref}',
+              colors: _tileColors[i],
+              onTap: () => _push(const DailyPrayersScreen()),
+            ),
+          _ViewAllTile(
+            label: tr(context, 'all_prayers'),
+            onTap: () => _push(const DailyPrayersScreen()),
+          ),
+        ];
+      case 1:
+        return [
+          for (var i = 0; i < 3; i++)
+            _WordTile(
+              icon: Icons.favorite_border,
+              title: kConfessions[i].title,
+              sub: kConfessions[i].ref,
+              colors: _tileColors[i],
+              onTap: () => _push(const WordsOfFaithScreen()),
+            ),
+          _ViewAllTile(
+            label: tr(context, 'all_confessions'),
+            onTap: () => _push(const WordsOfFaithScreen()),
+          ),
+        ];
+      default:
+        return [
+          for (var i = 0; i < 3; i++)
+            _WordTile(
+              icon: Icons.insert_drive_file_outlined,
+              title: kCommentary[i].title,
+              sub: kCommentary[i].ref,
+              colors: _tileColors[i],
+              onTap: () => _push(const CommentaryScreen()),
+            ),
+          _ViewAllTile(
+            label: tr(context, 'all_commentary'),
+            onTap: () => _push(const CommentaryScreen()),
+          ),
+        ];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Stack(
       children: [
         // Purple header band sits behind the top of the carousel.
-        Container(
-          height: top + 150,
-          decoration: const BoxDecoration(gradient: AppColors.headerGradient),
-          child: const HexPattern(),
-        ),
+        HeaderBand(controller: _scroll),
         ListView(
+          controller: _scroll,
           padding: EdgeInsets.only(top: top + 14, bottom: 120),
           children: [
             const _Header(),
@@ -41,8 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const EventCarousel(),
             const SizedBox(height: 22),
             SectionTitle(
-              title: tr(context, 'today_reading'),
-              action: tr(context, 'the_word'),
+              title: tr(context, 'home_manna_title'),
+              action: tr(context, 'home_view_all'),
+              onAction: () => _push(const MannaScreen()),
             ),
             const SizedBox(height: 12),
             const _ReadingCard(),
@@ -52,12 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _chipKeys.length,
+                itemCount: _tabKeys.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (_, i) {
-                  final on = i == _chip;
+                  final on = i == _tab;
                   return GestureDetector(
-                    onTap: () => setState(() => _chip = i),
+                    onTap: () => setState(() => _tab = i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       alignment: Alignment.center,
@@ -72,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       child: Text(
-                        tr(context, _chipKeys[i]),
+                        tr(context, _tabKeys[i]),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -85,13 +149,45 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const _FeatureGrid(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.count(
+                key: ValueKey(_tab),
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                children: _tiles(context),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Text(
+                tr(context, 'pr_req_title'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const _PrayerRequestCard(),
           ],
         ),
       ],
     );
   }
 }
+
+const _tileColors = [
+  [Color(0xFF6A2DA8), Color(0xFF9B3BC0)],
+  [Color(0xFFB41FC8), Color(0xFFE766B8)],
+  [Color(0xFF5B2AA0), Color(0xFF8E3BB8)],
+];
 
 class _Header extends StatelessWidget {
   const _Header();
@@ -130,8 +226,11 @@ class _Header extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.notifications_none,
-                color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.notifications_none,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
         ],
       ),
@@ -144,129 +243,103 @@ class _ReadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WhiteCard(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.purple,
-              borderRadius: BorderRadius.circular(15),
+    final m = kMannas.first;
+    return GestureDetector(
+      onTap: () => openManna(context, m),
+      child: WhiteCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.purple,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Icon(
+                Icons.menu_book_outlined,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
-            child: const Icon(Icons.menu_book_outlined,
-                color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(tr(context, 'reading_title'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr(context, m.titleKey),
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 3),
-                Text(tr(context, 'reading_meta'),
-                    style:
-                        const TextStyle(color: AppColors.muted, fontSize: 12)),
-              ],
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    tr(
+                      context,
+                      'home_manna_meta',
+                      args: {'ref': m.ref, 'n': '${m.minutes}'},
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.tint,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(tr(context, 'today'),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.tint,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                tr(context, 'today'),
                 style: const TextStyle(
-                    color: AppColors.magenta,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700)),
-          ),
-        ],
+                  color: AppColors.magenta,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _Feature {
-  const _Feature({
-    this.brand,
-    this.titleKey,
-    required this.subKey,
+/// Gradient tile for a prayer, confession or commentary entry.
+class _WordTile extends StatelessWidget {
+  const _WordTile({
     required this.icon,
+    required this.title,
+    required this.sub,
     required this.colors,
+    required this.onTap,
   });
 
-  final String? brand;
-  final String? titleKey;
-  final String subKey;
   final IconData icon;
+  final String title;
+  final String sub;
   final List<Color> colors;
-}
-
-const _features = [
-  _Feature(
-      brand: 'Noahgram',
-      subKey: 'tile_noahgram_sub',
-      icon: Icons.grid_view_rounded,
-      colors: [Color(0xFF6A2DA8), Color(0xFF8E3BB8)]),
-  _Feature(
-      titleKey: 'tile_polls',
-      subKey: 'tile_polls_sub',
-      icon: Icons.flag_outlined,
-      colors: [Color(0xFF9B2BB8), Color(0xFFB83FC8)]),
-  _Feature(
-      titleKey: 'tile_giving',
-      subKey: 'tile_giving_sub',
-      icon: Icons.favorite_border,
-      colors: [Color(0xFF55269C), Color(0xFF7B35B0)]),
-  _Feature(
-      titleKey: 'tile_sermons',
-      subKey: 'tile_sermons_sub',
-      icon: Icons.mic_none,
-      colors: [Color(0xFF8E3BB8), Color(0xFFB05BC4)]),
-];
-
-class _FeatureGrid extends StatelessWidget {
-  const _FeatureGrid();
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.count(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.1,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        children: [for (final f in _features) _FeatureTile(feature: f)],
-      ),
-    );
-  }
-}
-
-class _FeatureTile extends StatelessWidget {
-  const _FeatureTile({required this.feature});
-
-  final _Feature feature;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: ClipRRect(
       borderRadius: BorderRadius.circular(22),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: feature.colors,
+            colors: colors,
           ),
         ),
         child: Stack(
@@ -289,32 +362,34 @@ class _FeatureTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(11),
                     ),
-                    child: Icon(feature.icon, color: Colors.white, size: 19),
+                    child: Icon(icon, color: Colors.white, size: 18),
                   ),
                   const Spacer(),
                   Text(
-                    feature.brand ?? tr(context, feature.titleKey!),
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
+                      height: 1.2,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    tr(context, feature.subKey),
-                    maxLines: 2,
+                    sub,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 11.5,
-                      height: 1.3,
                     ),
                   ),
                 ],
@@ -323,6 +398,143 @@ class _FeatureTile extends StatelessWidget {
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// Dashed "View all" tile closing each grid.
+class _ViewAllTile extends StatelessWidget {
+  const _ViewAllTile({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: CustomPaint(
+      painter: _DashedRRect(),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E1F7),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.grid_view_rounded,
+                color: AppColors.magenta,
+                size: 18,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              tr(context, 'home_view_all'),
+              style: const TextStyle(
+                color: AppColors.magenta,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _DashedRRect extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(22),
     );
+    canvas.drawRRect(r, Paint()..color = Colors.white);
+    final paint = Paint()
+      ..color = AppColors.magenta
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    for (final m in (Path()..addRRect(r)).computeMetrics()) {
+      var d = 0.0;
+      while (d < m.length) {
+        canvas.drawPath(m.extractPath(d, d + 4), paint);
+        d += 7;
+      }
+    }
   }
+
+  @override
+  bool shouldRepaint(_DashedRRect old) => false;
+}
+
+/// "Do you need prayers?" card: tapping the field opens the request popup.
+class _PrayerRequestCard extends StatelessWidget {
+  const _PrayerRequestCard();
+
+  @override
+  Widget build(BuildContext context) => WhiteCard(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          tr(context, 'pr_req_q'),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          tr(context, 'pr_req_sub'),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: () => showPrayerDialog(context),
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.self_improvement,
+                  size: 20,
+                  color: AppColors.ink,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    tr(context, 'pr_hint'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

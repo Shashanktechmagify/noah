@@ -20,8 +20,10 @@ class ProfileScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.ink,
-        title: Text(person.handle,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        title: Text(
+          person.handle,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
       ),
       body: ProfileView(person: person),
     );
@@ -42,8 +44,10 @@ class PostDetailScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.ink,
-        title: Text(tr(context, 'ng_posts'),
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        title: Text(
+          tr(context, 'ng_posts'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
       ),
       body: ListView(children: [PostCard(post: post)]),
     );
@@ -77,9 +81,13 @@ class _ProfileViewState extends State<ProfileView> {
         final List<Post> shown = switch (_tab) {
           0 => posts,
           1 => reels,
-          _ => isMe
-              ? noahgram.saved
-              : noahgram.posts.where((p) => p.author != person).take(3).toList(),
+          _ =>
+            isMe
+                ? noahgram.saved
+                : noahgram.posts
+                      .where((p) => p.author != person)
+                      .take(3)
+                      .toList(),
         };
 
         return ListView(
@@ -106,14 +114,17 @@ class _ProfileViewState extends State<ProfileView> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _Stat(
-                            value: compact(posts.length + reels.length),
-                            label: tr(context, 'ng_posts')),
+                          value: compact(posts.length + reels.length),
+                          label: tr(context, 'ng_posts'),
+                        ),
                         _Stat(
-                            value: compact(noahgram.followersOf(person)),
-                            label: tr(context, 'ng_followers')),
+                          value: compact(noahgram.followersOf(person)),
+                          label: tr(context, 'ng_followers'),
+                        ),
                         _Stat(
-                            value: compact(noahgram.followingOf(person)),
-                            label: tr(context, 'ng_following')),
+                          value: compact(noahgram.followingOf(person)),
+                          label: tr(context, 'ng_following'),
+                        ),
                       ],
                     ),
                   ),
@@ -128,52 +139,73 @@ class _ProfileViewState extends State<ProfileView> {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(person.name,
-                            style: const TextStyle(
-                                fontSize: 14.5, fontWeight: FontWeight.w800)),
+                        child: Text(
+                          person.name,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                       if (person.verified) ...[
                         const SizedBox(width: 4),
-                        const Icon(Icons.verified,
-                            size: 15, color: Color(0xFF2E8BEA)),
+                        const Icon(
+                          Icons.verified,
+                          size: 15,
+                          color: Color(0xFF2E8BEA),
+                        ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(person.bio, style: const TextStyle(fontSize: 13.5, height: 1.35)),
+                  Text(
+                    person.bio,
+                    style: const TextStyle(fontSize: 13.5, height: 1.35),
+                  ),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: isMe
-                  ? Row(children: [
-                      Expanded(
-                        child: _OutlineButton(
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: _OutlineButton(
                             label: tr(context, 'ng_edit_profile'),
-                            onTap: () => showEditProfileSheet(context)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _OutlineButton(
-                            label: tr(context, 'ng_share_profile'),
-                            onTap: () => showShareSheet(context)),
-                      ),
-                    ])
-                  : Row(children: [
-                      Expanded(
-                        child: _OutlineButton(
-                          label: tr(context, following ? 'ng_following' : 'ng_follow'),
-                          filled: !following,
-                          onTap: () => noahgram.toggleFollow(person),
+                            onTap: () => showEditProfileSheet(context),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _OutlineButton(
-                            label: tr(context, 'ng_message'), onTap: () {}),
-                      ),
-                    ]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _OutlineButton(
+                            label: tr(context, 'ng_share_profile'),
+                            onTap: () => showShareSheet(context),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _OutlineButton(
+                            label: tr(
+                              context,
+                              following ? 'ng_following' : 'ng_follow',
+                            ),
+                            filled: !following,
+                            onTap: () => noahgram.toggleFollow(person),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _OutlineButton(
+                            label: tr(context, 'ng_message'),
+                            onTap: () {},
+                          ),
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 16),
             _Highlights(person: person),
@@ -194,13 +226,17 @@ class _ProfileViewState extends State<ProfileView> {
                         decoration: BoxDecoration(
                           border: Border(
                             bottom: BorderSide(
-                              color: i == _tab ? AppColors.ink : AppColors.border,
+                              color: i == _tab
+                                  ? AppColors.ink
+                                  : AppColors.border,
                               width: i == _tab ? 1.6 : 1,
                             ),
                           ),
                         ),
-                        child: Icon(icon,
-                            color: i == _tab ? AppColors.ink : AppColors.muted),
+                        child: Icon(
+                          icon,
+                          color: i == _tab ? AppColors.ink : AppColors.muted,
+                        ),
                       ),
                     ),
                   ),
@@ -211,7 +247,10 @@ class _ProfileViewState extends State<ProfileView> {
                 padding: const EdgeInsets.all(40),
                 child: Center(
                   child: Text(
-                    tr(context, _tab == 2 && isMe ? 'ng_no_saved' : 'ng_no_posts'),
+                    tr(
+                      context,
+                      _tab == 2 && isMe ? 'ng_no_saved' : 'ng_no_posts',
+                    ),
                     style: const TextStyle(color: AppColors.muted),
                   ),
                 ),
@@ -246,9 +285,9 @@ class PostGrid extends StatelessWidget {
       itemBuilder: (_, i) {
         final p = posts[i];
         return GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => PostDetailScreen(post: p)),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => PostDetailScreen(post: p))),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -257,7 +296,11 @@ class PostGrid extends StatelessWidget {
                 const Positioned(
                   top: 6,
                   right: 6,
-                  child: Icon(Icons.smart_display, color: Colors.white, size: 18),
+                  child: Icon(
+                    Icons.smart_display,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
             ],
           ),
@@ -275,14 +318,15 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          Text(value,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: AppColors.ink)),
-        ],
-      );
+    children: [
+      Text(
+        value,
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+      ),
+      const SizedBox(height: 2),
+      Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink)),
+    ],
+  );
 }
 
 class _OutlineButton extends StatelessWidget {
@@ -298,27 +342,27 @@ class _OutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: filled ? AppColors.magenta : AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: filled ? Colors.white : AppColors.ink,
-            ),
-          ),
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: filled ? AppColors.magenta : AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: filled ? Colors.white : AppColors.ink,
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _Highlights extends StatelessWidget {
@@ -351,11 +395,14 @@ class _Highlights extends StatelessWidget {
                 border: Border.all(color: AppColors.border, width: 1.5),
               ),
               child: ClipOval(
-                  child: LookCanvas(look: items[i].$2, showText: false)),
+                child: LookCanvas(look: items[i].$2, showText: false),
+              ),
             ),
             const SizedBox(height: 6),
-            Text(tr(context, items[i].$1),
-                style: const TextStyle(fontSize: 11.5)),
+            Text(
+              tr(context, items[i].$1),
+              style: const TextStyle(fontSize: 11.5),
+            ),
           ],
         ),
       ),

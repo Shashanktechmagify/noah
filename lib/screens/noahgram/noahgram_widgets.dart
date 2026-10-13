@@ -6,7 +6,7 @@ import '../../theme/app_theme.dart';
 import 'profile_view.dart';
 
 const _heart = Color(0xFFE5334B);
-const _storyRing = [Color(0xFFF2A33A), Color(0xFFE5334B), Color(0xFFA81BC4)];
+const _storyRing = [Color(0xFFF2A33A), Color(0xFFE5334B), Color(0xFFA719C8)];
 
 String agoText(BuildContext context, int hours) {
   if (hours <= 0) return tr(context, 'ng_just_now');
@@ -22,15 +22,19 @@ String compact(int n) {
 }
 
 void openProfile(BuildContext context, Person who) {
-  Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => ProfileScreen(person: who)),
-  );
+  Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => ProfileScreen(person: who)));
 }
 
 /// Circular profile picture; initials on a gradient (the church uses the logo).
 /// [ring]: 0 none, 1 unseen story, 2 seen story.
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.person, this.size = 40, this.ring = 0});
+  const Avatar({
+    super.key,
+    required this.person,
+    this.size = 40,
+    this.ring = 0,
+  });
 
   final Person person;
   final double size;
@@ -80,8 +84,10 @@ class Avatar extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.all(2),
-        decoration:
-            const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: core,
       ),
     );
@@ -97,49 +103,57 @@ class LookCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final side = c.biggest.shortestSide;
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: look.colors,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -side * 0.08,
-              bottom: -side * 0.08,
-              child: Icon(look.icon,
-                  size: side * 0.62, color: Colors.white.withValues(alpha: 0.16)),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final side = c.biggest.shortestSide;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: look.colors,
             ),
-            if (showText && look.text != null && side > 140)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(side * 0.08),
-                  child: Text(
-                    look.text!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: side * 0.075,
-                      height: 1.3,
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -side * 0.08,
+                bottom: -side * 0.08,
+                child: Icon(
+                  look.icon,
+                  size: side * 0.62,
+                  color: Colors.white.withValues(alpha: 0.16),
+                ),
+              ),
+              if (showText && look.text != null && side > 140)
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(side * 0.08),
+                    child: Text(
+                      look.text!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: side * 0.075,
+                        height: 1.3,
+                      ),
                     ),
                   ),
+                )
+              else if (side > 40)
+                Center(
+                  child: Icon(
+                    look.icon,
+                    size: side * 0.3,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
-              )
-            else if (side > 40)
-              Center(
-                child: Icon(look.icon,
-                    size: side * 0.3, color: Colors.white.withValues(alpha: 0.9)),
-              ),
-          ],
-        ),
-      );
-    });
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -200,17 +214,23 @@ class _PostCardState extends State<PostCard>
                       child: Row(
                         children: [
                           Flexible(
-                            child: Text(author.handle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w800)),
+                            child: Text(
+                              author.handle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                           if (author.verified) ...[
                             const SizedBox(width: 4),
-                            const Icon(Icons.verified,
-                                size: 14, color: Color(0xFF2E8BEA)),
+                            const Icon(
+                              Icons.verified,
+                              size: 14,
+                              color: Color(0xFF2E8BEA),
+                            ),
                           ],
                         ],
                       ),
@@ -237,13 +257,18 @@ class _PostCardState extends State<PostCard>
                         animation: _burst,
                         builder: (_, _) {
                           final t = _burst.value;
-                          final scale = t < 0.4 ? 0.4 + t * 2.0 : 1.2 - (t - 0.4) * 0.3;
+                          final scale = t < 0.4
+                              ? 0.4 + t * 2.0
+                              : 1.2 - (t - 0.4) * 0.3;
                           return Opacity(
                             opacity: t == 0 ? 0 : (t < 0.7 ? 1 : (1 - t) / 0.3),
                             child: Transform.scale(
                               scale: scale,
-                              child: const Icon(Icons.favorite,
-                                  color: Colors.white, size: 96),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.white,
+                                size: 96,
+                              ),
                             ),
                           );
                         },
@@ -253,8 +278,11 @@ class _PostCardState extends State<PostCard>
                       const Positioned(
                         top: 12,
                         right: 12,
-                        child: Icon(Icons.smart_display_outlined,
-                            color: Colors.white, size: 22),
+                        child: Icon(
+                          Icons.smart_display_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                   ],
                 ),
@@ -291,17 +319,21 @@ class _PostCardState extends State<PostCard>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(tr(context, 'ng_likes', args: {'n': compact(post.likes)}),
-                      style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w800)),
+                  Text(
+                    tr(context, 'ng_likes', args: {'n': compact(post.likes)}),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(
-                            text: '${author.handle}  ',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w800)),
+                          text: '${author.handle}  ',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
                         TextSpan(text: post.caption),
                       ],
                     ),
@@ -312,17 +344,26 @@ class _PostCardState extends State<PostCard>
                     GestureDetector(
                       onTap: () => showCommentsSheet(context, post),
                       child: Text(
-                        tr(context, 'ng_view_comments',
-                            args: {'n': '${post.comments.length}'}),
+                        tr(
+                          context,
+                          'ng_view_comments',
+                          args: {'n': '${post.comments.length}'},
+                        ),
                         style: const TextStyle(
-                            color: AppColors.muted, fontSize: 13),
+                          color: AppColors.muted,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Text(agoText(context, post.hours),
-                      style: const TextStyle(
-                          color: AppColors.muted, fontSize: 11.5)),
+                  Text(
+                    agoText(context, post.hours),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11.5,
+                    ),
+                  ),
                   const SizedBox(height: 18),
                 ],
               ),
@@ -343,15 +384,19 @@ class _ActionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-        onPressed: onTap,
-        splashRadius: 22,
-        icon: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-          child: Icon(icon,
-              key: ValueKey(icon), size: 26, color: color ?? AppColors.ink),
-        ),
-      );
+    onPressed: onTap,
+    splashRadius: 22,
+    icon: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+      child: Icon(
+        icon,
+        key: ValueKey(icon),
+        size: 26,
+        color: color ?? AppColors.ink,
+      ),
+    ),
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -364,21 +409,22 @@ Future<void> _sheet(BuildContext context, WidgetBuilder builder) =>
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
       builder: builder,
     );
 
 Widget _grabber() => Center(
-      child: Container(
-        width: 40,
-        height: 4,
-        margin: const EdgeInsets.only(top: 10, bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.border,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    );
+  child: Container(
+    width: 40,
+    height: 4,
+    margin: const EdgeInsets.only(top: 10, bottom: 12),
+    decoration: BoxDecoration(
+      color: AppColors.border,
+      borderRadius: BorderRadius.circular(2),
+    ),
+  ),
+);
 
 Future<void> showCommentsSheet(BuildContext context, Post post) =>
     _sheet(context, (_) => _CommentsSheet(post: post));
@@ -418,15 +464,18 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height * 0.72;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SizedBox(
         height: height,
         child: Column(
           children: [
             _grabber(),
-            Text(tr(context, 'ng_comments'),
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            Text(
+              tr(context, 'ng_comments'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
             const Divider(height: 24, color: AppColors.border),
             Expanded(
               child: ListenableBuilder(
@@ -438,10 +487,12 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     itemCount: items.length + 1,
                     itemBuilder: (_, i) {
                       // First row is the caption, like on Instagram.
-                      final author =
-                          i == 0 ? widget.post.author : items[i - 1].author;
-                      final text =
-                          i == 0 ? widget.post.caption : items[i - 1].text;
+                      final author = i == 0
+                          ? widget.post.author
+                          : items[i - 1].author;
+                      final text = i == 0
+                          ? widget.post.caption
+                          : items[i - 1].text;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Row(
@@ -451,15 +502,21 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text.rich(
-                                TextSpan(children: [
-                                  TextSpan(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
                                       text: '${author.handle}  ',
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.w800)),
-                                  TextSpan(text: text),
-                                ]),
-                                style:
-                                    const TextStyle(fontSize: 13.5, height: 1.35),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    TextSpan(text: text),
+                                  ],
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  height: 1.35,
+                                ),
                               ),
                             ),
                           ],
@@ -490,8 +547,10 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                   ),
                   TextButton(
                     onPressed: _controller.text.trim().isEmpty ? null : _send,
-                    child: Text(tr(context, 'ng_post'),
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    child: Text(
+                      tr(context, 'ng_post'),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ],
               ),
@@ -523,23 +582,33 @@ class _ShareSheetState extends State<_ShareSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _grabber(),
-          Text(tr(context, 'ng_share_to'),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          Text(
+            tr(context, 'ng_share_to'),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 8),
           for (final p in noahgram.others)
             ListTile(
               leading: Avatar(person: p, size: 42),
-              title: Text(p.name,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700)),
-              subtitle: Text('@${p.handle}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+              title: Text(
+                p.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: Text(
+                '@${p.handle}',
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
               trailing: GestureDetector(
                 onTap: () => setState(() => _sent.add(p.id)),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _sent.contains(p.id)
                         ? AppColors.tint
@@ -597,7 +666,9 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -607,9 +678,13 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
             children: [
               _grabber(),
               Center(
-                child: Text(tr(context, 'ng_new_post'),
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800)),
+                child: Text(
+                  tr(context, 'ng_new_post'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               Center(
@@ -623,8 +698,10 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              Text(tr(context, 'ng_choose_look'),
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              Text(
+                tr(context, 'ng_choose_look'),
+                style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 height: 48,
@@ -648,7 +725,8 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
                         ),
                       ),
                       child: ClipOval(
-                          child: LookCanvas(look: kLooks[i], showText: false)),
+                        child: LookCanvas(look: kLooks[i], showText: false),
+                      ),
                     ),
                   ),
                 ),
@@ -676,12 +754,17 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.magenta,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25)),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                   ),
                   onPressed: _share,
-                  child: Text(tr(context, 'ng_share'),
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w800)),
+                  child: Text(
+                    tr(context, 'ng_share'),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -714,19 +797,21 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   }
 
   InputDecoration _decoration(String label) => InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: AppColors.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
-      );
+    labelText: label,
+    filled: true,
+    fillColor: AppColors.surface,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide.none,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -734,11 +819,18 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _grabber(),
-              Text(tr(context, 'ng_edit_profile'),
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w800)),
+              Text(
+                tr(context, 'ng_edit_profile'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 16),
-              TextField(controller: _name, decoration: _decoration(tr(context, 'ng_name'))),
+              TextField(
+                controller: _name,
+                decoration: _decoration(tr(context, 'ng_name')),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _bio,
@@ -753,15 +845,20 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.magenta,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25)),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                   ),
                   onPressed: () {
                     noahgram.updateProfile(name: _name.text, bio: _bio.text);
                     Navigator.of(context).pop();
                   },
-                  child: Text(tr(context, 'ng_save'),
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w800)),
+                  child: Text(
+                    tr(context, 'ng_save'),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],

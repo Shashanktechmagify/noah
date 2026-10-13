@@ -79,11 +79,16 @@ class _StoriesRow extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: AppColors.magenta,
                                 shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
                               ),
-                              child: const Icon(Icons.add,
-                                  size: 14, color: Colors.white),
+                              child: const Icon(
+                                Icons.add,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),

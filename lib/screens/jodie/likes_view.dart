@@ -35,15 +35,21 @@ class LikesView extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.workspace_premium,
-                          color: Colors.white, size: 30),
+                      const Icon(
+                        Icons.workspace_premium,
+                        color: Colors.white,
+                        size: 30,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(tr(context, 'jd_see_all_likes'),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14)),
+                        child: Text(
+                          tr(context, 'jd_see_all_likes'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                       const Icon(Icons.chevron_right, color: Colors.white),
                     ],
@@ -54,17 +60,22 @@ class LikesView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(40),
                 child: Center(
-                  child: Text(tr(context, 'jd_no_matches'),
-                      style: const TextStyle(color: AppColors.muted)),
+                  child: Text(
+                    tr(context, 'jd_no_matches'),
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
                 ),
               )
             else ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 10, left: 2),
                 child: Text(
-                    tr(context, 'jd_likes_sub', args: {'n': '${likes.length}'}),
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800)),
+                  tr(context, 'jd_likes_sub', args: {'n': '${likes.length}'}),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
               GridView.builder(
                 shrinkWrap: true,
@@ -96,8 +107,11 @@ class _LikeCard extends StatelessWidget {
     jodie.like(p);
     if (!context.mounted) return;
     final match = jodie.matches.first;
-    await showMatchDialog(context, p,
-        onMessage: () => openChat(context, match));
+    await showMatchDialog(
+      context,
+      p,
+      onMessage: () => openChat(context, match),
+    );
   }
 
   Future<void> _reveal(BuildContext context) async {
@@ -116,13 +130,15 @@ class _LikeCard extends StatelessWidget {
           _reveal(context);
           return;
         }
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => JodieProfileScreen(
-            profile: p,
-            onLike: () => _likeBack(context),
-            onPass: () => jodie.pass(p),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => JodieProfileScreen(
+              profile: p,
+              onLike: () => _likeBack(context),
+              onPass: () => jodie.pass(p),
+            ),
           ),
-        ));
+        );
       },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -137,11 +153,14 @@ class _LikeCard extends StatelessWidget {
                 children: [
                   LookCanvas(look: p.photos.first, showText: false),
                   Center(
-                    child: Text(p.initials,
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            fontSize: 70,
-                            fontWeight: FontWeight.w800)),
+                    child: Text(
+                      p.initials,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 70,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -170,16 +189,23 @@ class _LikeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('${p.firstName}, ${p.age}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800)),
-                    Text(p.city,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
+                    Text(
+                      '${p.firstName}, ${p.age}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      p.city,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () => _likeBack(context),
@@ -193,14 +219,20 @@ class _LikeCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.favorite,
-                                color: AppColors.magenta, size: 16),
+                            const Icon(
+                              Icons.favorite,
+                              color: AppColors.magenta,
+                              size: 16,
+                            ),
                             const SizedBox(width: 6),
-                            Text(tr(context, 'jd_like_back'),
-                                style: const TextStyle(
-                                    color: AppColors.magenta,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12.5)),
+                            Text(
+                              tr(context, 'jd_like_back'),
+                              style: const TextStyle(
+                                color: AppColors.magenta,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -213,12 +245,17 @@ class _LikeCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_outline,
-                        color: Colors.white, size: 30),
+                    const Icon(
+                      Icons.lock_outline,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(16),
@@ -226,15 +263,24 @@ class _LikeCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.stars_rounded, color: kGold, size: 16),
+                          const Icon(
+                            Icons.stars_rounded,
+                            color: kGold,
+                            size: 16,
+                          ),
                           const SizedBox(width: 5),
                           Text(
-                              tr(context, 'jd_reveal',
-                                  args: {'n': '$kRevealCost'}),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800)),
+                            tr(
+                              context,
+                              'jd_reveal',
+                              args: {'n': '$kRevealCost'},
+                            ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ],
                       ),
                     ),

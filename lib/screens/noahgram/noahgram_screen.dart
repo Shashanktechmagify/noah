@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/insta_icon.dart';
+
 import 'package:flutter/services.dart';
 
 import '../../data/noahgram_data.dart';
@@ -44,6 +47,8 @@ class _NoahgramScreenState extends State<NoahgramScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
               child: Row(
                 children: [
+                  const InstaIcon(size: 26, color: Color(0xFF8E3BB8)),
+                  const SizedBox(width: 10),
                   ShaderMask(
                     shaderCallback: (r) => const LinearGradient(
                       colors: [Color(0xFF6A2DA8), Color(0xFFC13FBF)],
@@ -60,18 +65,27 @@ class _NoahgramScreenState extends State<NoahgramScreen> {
                   const Spacer(),
                   IconButton(
                     onPressed: () => showCreatePostSheet(context),
-                    icon: const Icon(Icons.add_box_outlined,
-                        color: AppColors.ink, size: 26),
+                    icon: const Icon(
+                      Icons.add_box_outlined,
+                      color: AppColors.ink,
+                      size: 26,
+                    ),
                   ),
                   const IconButton(
                     onPressed: null,
-                    icon: Icon(Icons.favorite_border,
-                        color: AppColors.ink, size: 26),
+                    icon: Icon(
+                      Icons.favorite_border,
+                      color: AppColors.ink,
+                      size: 26,
+                    ),
                   ),
                   IconButton(
                     onPressed: () => showShareSheet(context),
-                    icon: const Icon(Icons.send_outlined,
-                        color: AppColors.ink, size: 25),
+                    icon: const Icon(
+                      Icons.send_outlined,
+                      color: AppColors.ink,
+                      size: 25,
+                    ),
                   ),
                 ],
               ),
@@ -149,7 +163,9 @@ class _TabBar extends StatelessWidget {
                                       ),
                                     ),
                                     child: Avatar(
-                                        person: noahgram.me, size: 24),
+                                      person: noahgram.me,
+                                      size: 24,
+                                    ),
                                   ),
                                 ),
                         ),

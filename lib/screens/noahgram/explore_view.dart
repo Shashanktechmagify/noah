@@ -32,9 +32,12 @@ class _ExploreViewState extends State<ExploreView> {
         final people = q.isEmpty
             ? <Person>[]
             : noahgram.others
-                .where((p) =>
-                    p.name.toLowerCase().contains(q) || p.handle.contains(q))
-                .toList();
+                  .where(
+                    (p) =>
+                        p.name.toLowerCase().contains(q) ||
+                        p.handle.contains(q),
+                  )
+                  .toList();
         return ListView(
           padding: const EdgeInsets.only(bottom: 110),
           children: [
@@ -70,18 +73,26 @@ class _ExploreViewState extends State<ExploreView> {
               ListTile(
                 onTap: () => openProfile(context, p),
                 leading: Avatar(person: p, size: 44),
-                title: Text(p.handle,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w800)),
-                subtitle: Text(p.name,
-                    style: const TextStyle(color: AppColors.muted)),
+                title: Text(
+                  p.handle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                subtitle: Text(
+                  p.name,
+                  style: const TextStyle(color: AppColors.muted),
+                ),
               ),
             if (posts.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(40),
                 child: Center(
-                  child: Text(tr(context, 'ng_no_posts'),
-                      style: const TextStyle(color: AppColors.muted)),
+                  child: Text(
+                    tr(context, 'ng_no_posts'),
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
                 ),
               )
             else
