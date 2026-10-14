@@ -10,6 +10,7 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../events/events_widgets.dart' show fullDate;
+import 'uploads.dart';
 import 'registration_status.dart';
 
 String clock(int seconds) =>
@@ -183,6 +184,7 @@ class _VideoStepState extends State<VideoStep> {
   bool _demo = false;
   Timer? _timer;
   bool _recording = false;
+  bool _compressing = false;
   int _seconds = 0;
 
   @override
@@ -262,8 +264,21 @@ class _VideoStepState extends State<VideoStep> {
     }
     registration.videoSeconds = _seconds;
     registration.videoPath = path;
+    registration.videoBytes = registration.videoOriginalBytes = null;
     registration.touch();
     if (mounted) setState(() => _recording = false);
+    if (path != null) await _compress(path);
+  }
+
+  /// Shrinks the file so it does not fill up storage once uploaded.
+  Future<void> _compress(String path) async {
+    if (mounted) setState(() => _compressing = true);
+    final out = await compressVideo(path);
+    registration.videoPath = out.path;
+    registration.videoBytes = out.after;
+    registration.videoOriginalBytes = out.before;
+    registration.touch();
+    if (mounted) setState(() => _compressing = false);
   }
 
   void _again() {
@@ -460,9 +475,48 @@ class _VideoStepState extends State<VideoStep> {
             ),
           ),
           const SizedBox(height: 16),
+          if (_compressing)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    tr(context, 'reg_compressing'),
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
+                ],
+              ),
+            )
+          else if (r.videoBytes != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Center(
+                child: Text(
+                  tr(
+                    context,
+                    'reg_video_size',
+                    args: {
+                      'now': formatBytes(r.videoBytes!),
+                      'was': formatBytes(r.videoOriginalBytes ?? r.videoBytes!),
+                    },
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+            ),
           GradientButton(
             label: tr(context, 'reg_complete'),
-            onPressed: r.videoValid ? _complete : null,
+            onPressed: r.videoValid && !_compressing ? _complete : null,
           ),
           const SizedBox(height: 10),
           GestureDetector(

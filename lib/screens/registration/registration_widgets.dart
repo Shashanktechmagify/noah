@@ -262,7 +262,13 @@ class RegPicker extends StatelessWidget {
     required this.onSelect,
     this.enabled = true,
     this.loading = false,
+    this.leadingFor,
+    this.searchable = true,
   });
+
+  /// A widget shown before an item (e.g. a flag).
+  final Widget? Function(String item)? leadingFor;
+  final bool searchable;
 
   final String value;
   final String hint;
@@ -280,8 +286,13 @@ class RegPicker extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheet) =>
-          _PickerSheet(title: title, items: items, value: value),
+      builder: (sheet) => _PickerSheet(
+        title: title,
+        items: items,
+        value: value,
+        leadingFor: leadingFor,
+        searchable: searchable,
+      ),
     );
     if (picked != null) onSelect(picked);
   }
@@ -301,6 +312,13 @@ class RegPicker extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (leadingFor != null &&
+              value.isNotEmpty &&
+              leadingFor!(value) != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: leadingFor!(value),
+            ),
           Expanded(
             child: Text(
               loading ? '…' : (value.isEmpty ? hint : value),
@@ -325,8 +343,12 @@ class _PickerSheet extends StatefulWidget {
     required this.title,
     required this.items,
     required this.value,
+    this.leadingFor,
+    this.searchable = true,
   });
 
+  final Widget? Function(String item)? leadingFor;
+  final bool searchable;
   final String title;
   final List<String> items;
   final String value;
@@ -344,7 +366,12 @@ class _PickerSheetState extends State<_PickerSheet> {
     final shown = q.isEmpty
         ? widget.items
         : widget.items.where((i) => i.toLowerCase().contains(q)).toList();
-    final height = MediaQuery.of(context).size.height * 0.75;
+    final height = widget.searchable
+        ? MediaQuery.of(context).size.height * 0.75
+        : (widget.items.length * 48.0 + 70).clamp(
+            0.0,
+            MediaQuery.of(context).size.height * 0.75,
+          );
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -358,34 +385,40 @@ class _PickerSheetState extends State<_PickerSheet> {
               widget.title,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.tint,
-                  borderRadius: BorderRadius.circular(23),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search, size: 20, color: AppColors.muted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        autofocus: false,
-                        onChanged: (v) => setState(() => _q = v),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          hintText: tr(context, 'reg_search'),
+            if (!widget.searchable) const SizedBox(height: 8),
+            if (widget.searchable)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.tint,
+                    borderRadius: BorderRadius.circular(23),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search,
+                        size: 20,
+                        color: AppColors.muted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          autofocus: false,
+                          onChanged: (v) => setState(() => _q = v),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            hintText: tr(context, 'reg_search'),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             Expanded(
               child: shown.isEmpty
                   ? Center(
@@ -398,6 +431,7 @@ class _PickerSheetState extends State<_PickerSheet> {
                       itemCount: shown.length,
                       itemBuilder: (context, i) => ListTile(
                         dense: true,
+                        leading: widget.leadingFor?.call(shown[i]),
                         title: Text(
                           shown[i],
                           style: const TextStyle(fontWeight: FontWeight.w600),

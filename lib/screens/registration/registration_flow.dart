@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/registration_data.dart';
+import '../../data/dial_data.dart';
 import '../../data/world_data.dart';
+import '../../widgets/dial_code_picker.dart';
+import '../../widgets/flag.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/language_dropdown.dart';
 import '../events/events_widgets.dart' show fullDate;
+import '../login_screen.dart';
 import 'registration_video.dart';
 import 'uploads.dart';
 import 'registration_widgets.dart';
@@ -65,7 +69,12 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
     if (_step > 0) {
       setState(() => _step--);
     } else {
-      Navigator.of(context).pop();
+      // This flow replaced the OTP page, so there is nothing to pop to:
+      // go back to the login page instead.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
     }
   }
 
@@ -87,50 +96,57 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
   @override
   Widget build(BuildContext context) {
     final last = _step == 5;
-    return ListenableBuilder(
-      listenable: registration,
-      builder: (context, _) {
-        final stepName = tr(context, 'reg_s${_step + 1}');
-        return AuthScaffold(
-          key: ValueKey(_step), // a new step starts scrolled to the top
-          icon: last ? null : _stepIcons[_step],
-          title: last ? '' : tr(context, 'reg_h${_step + 1}'),
-          subtitle: last ? '' : tr(context, 'reg_h${_step + 1}s'),
-          headerHeight: last ? 58 : 270,
-          topRight: last ? null : const LanguageDropdown(),
-          onBack: last ? null : _back,
-          footer: last
-              ? null
-              : GradientButton(
-                  label: tr(
-                    context,
-                    _step == 4 ? 'reg_continue_video' : 'continue',
-                  ),
-                  onPressed: registration.stepValid(_step) ? _next : null,
-                ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RegProgress(step: _step + 1),
-              const SizedBox(height: 14),
-              Text(
-                tr(
-                  context,
-                  'reg_step',
-                  args: {'n': '${_step + 1}', 'name': stepName},
-                ),
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              _content(_step),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
+    // The phone's back gesture steps back through the form like the button.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
       },
+      child: ListenableBuilder(
+        listenable: registration,
+        builder: (context, _) {
+          final stepName = tr(context, 'reg_s${_step + 1}');
+          return AuthScaffold(
+            key: ValueKey(_step), // a new step starts scrolled to the top
+            icon: last ? null : _stepIcons[_step],
+            title: last ? '' : tr(context, 'reg_h${_step + 1}'),
+            subtitle: last ? '' : tr(context, 'reg_h${_step + 1}s'),
+            headerHeight: last ? 58 : 270,
+            topRight: last ? null : const LanguageDropdown(),
+            onBack: last ? null : _back,
+            footer: last
+                ? null
+                : GradientButton(
+                    label: tr(
+                      context,
+                      _step == 4 ? 'reg_continue_video' : 'continue',
+                    ),
+                    onPressed: registration.stepValid(_step) ? _next : null,
+                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RegProgress(step: _step + 1),
+                const SizedBox(height: 14),
+                Text(
+                  tr(
+                    context,
+                    'reg_step',
+                    args: {'n': '${_step + 1}', 'name': stepName},
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                _content(_step),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -147,15 +163,26 @@ class _DetailsStep extends StatefulWidget {
 }
 
 class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
+  @override
+  void initState() {
+    super.initState();
+    if (World.ready == null) World.load().then((_) => _tick());
+  }
+
   final _first = TextEditingController(text: registration.firstName);
   final _middle = TextEditingController(text: registration.middleName);
   final _last = TextEditingController(text: registration.lastName);
   final _email = TextEditingController(text: registration.email);
   final _ref = TextEditingController(text: registration.reference);
+  final _refPhone = TextEditingController(text: registration.referencePhone);
+  late DialCountry _refDial = DialData.countries.firstWhere(
+    (c) => c.dial == registration.referenceDial,
+    orElse: () => DialData.fallback.first,
+  );
 
   @override
   void dispose() {
-    for (final c in [_first, _middle, _last, _email, _ref]) {
+    for (final c in [_first, _middle, _last, _email, _ref, _refPhone]) {
       c.dispose();
     }
     super.dispose();
@@ -176,15 +203,84 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
     }
   }
 
+  Future<void> _pickAnniversary() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate:
+          registration.anniversary ??
+          DateTime(now.year - 5, now.month, now.day),
+      firstDate: DateTime(1940),
+      lastDate: now,
+    );
+    if (picked != null) {
+      registration.anniversary = picked;
+      registration.touch();
+    }
+  }
+
+  /// dd-mm-yyyy box that opens a date picker.
+  Widget _dateBox(DateTime? value, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              value == null ? 'dd-mm-yyyy' : _fmt(value),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: value == null ? FontWeight.w400 : FontWeight.w600,
+                color: value == null ? AppColors.muted : AppColors.ink,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.calendar_today_outlined,
+            size: 18,
+            color: AppColors.ink,
+          ),
+        ],
+      ),
+    ),
+  );
+
   String _fmt(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
 
   @override
   Widget build(BuildContext context) {
     final r = registration;
+    final world = World.ready;
+    final maritalLabels = {
+      'single': tr(context, 'reg_single'),
+      'married': tr(context, 'reg_married'),
+      'widow': tr(context, 'reg_widow'),
+      'widower': tr(context, 'reg_widower'),
+      'separated': tr(context, 'reg_separated'),
+      'divorced': tr(context, 'reg_divorced'),
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        RegLabel(tr(context, 'reg_sal'), required: true),
+        RegPicker(
+          value: r.salutation,
+          hint: tr(context, 'reg_sal_ph'),
+          title: tr(context, 'reg_sal'),
+          items: kSalutations,
+          searchable: false,
+          onSelect: (v) {
+            r.salutation = v;
+            r.touch();
+          },
+        ),
         RegLabel(tr(context, 'reg_first'), required: true),
         RegInput(
           controller: _first,
@@ -233,6 +329,19 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
             r.touch();
           },
         ),
+        RegLabel(tr(context, 'reg_nationality'), required: true),
+        RegPicker(
+          value: r.nationality,
+          hint: tr(context, 'reg_pick_country'),
+          title: tr(context, 'reg_nationality'),
+          items: world?.countries ?? const [],
+          loading: world == null,
+          leadingFor: (c) => CountryFlag(world?.codeOf(c) ?? ''),
+          onSelect: (v) {
+            r.nationality = v;
+            r.touch();
+          },
+        ),
         RegLabel(tr(context, 'reg_gender'), required: true),
         RegChips(
           options: [
@@ -247,69 +356,87 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
           },
         ),
         RegLabel(tr(context, 'reg_dob'), required: true),
-        GestureDetector(
-          onTap: _pickDob,
-          child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    r.dob == null ? 'dd-mm-yyyy' : _fmt(r.dob!),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: r.dob == null
-                          ? FontWeight.w400
-                          : FontWeight.w600,
-                      color: r.dob == null ? AppColors.muted : AppColors.ink,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 18,
-                  color: AppColors.ink,
-                ),
-              ],
-            ),
-          ),
-        ),
+        _dateBox(r.dob, _pickDob),
         if (dobError(r.dob) != null) RegError(tr(context, dobError(r.dob)!)),
         RegLabel(tr(context, 'reg_marital'), required: true),
-        RegChips(
-          options: [
-            ('single', tr(context, 'reg_single')),
-            ('married', tr(context, 'reg_married')),
-            ('widow', tr(context, 'reg_widow')),
-            ('widower', tr(context, 'reg_widower')),
-            ('separated', tr(context, 'reg_separated')),
-            ('divorced', tr(context, 'reg_divorced')),
-          ],
-          value: r.marital,
-          onSelect: (v) {
-            r.marital = v;
+        RegPicker(
+          value: r.marital.isEmpty ? '' : maritalLabels[r.marital]!,
+          hint: tr(context, 'reg_marital_ph'),
+          title: tr(context, 'reg_marital'),
+          items: maritalLabels.values.toList(),
+          searchable: false,
+          onSelect: (label) {
+            r.marital = maritalLabels.entries
+                .firstWhere((e) => e.value == label)
+                .key;
+            if (r.marital != 'married') r.anniversary = null;
             r.touch();
           },
         ),
+        if (r.marital == 'married') ...[
+          RegLabel(tr(context, 'reg_anniv'), required: true),
+          _dateBox(r.anniversary, _pickAnniversary),
+          if (anniversaryError(r.anniversary, r.dob) != null)
+            RegError(tr(context, anniversaryError(r.anniversary, r.dob)!)),
+        ],
         RegLabel(tr(context, 'reg_ref')),
         RegInput(
           controller: _ref,
-          error: _err(
-            context,
-            r.reference,
-            nameError(r.reference, required: false),
-          ),
+          error:
+              r.reference.trim().isEmpty && r.referencePhone.trim().isNotEmpty
+              ? tr(context, 'reg_err_ref_both')
+              : _err(
+                  context,
+                  r.reference,
+                  nameError(r.reference, required: false),
+                ),
           hint: tr(context, 'reg_ref_ph'),
           textCapitalization: TextCapitalization.words,
           onChanged: (v) {
             r.reference = v;
             r.touch();
           },
+        ),
+        RegLabel(tr(context, 'reg_ref_phone')),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DialCodePicker(
+              value: _refDial,
+              fill: Colors.white,
+              height: 50,
+              onChanged: (c) {
+                setState(() => _refDial = c);
+                r.referenceDial = c.dial;
+                r.touch();
+              },
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: RegInput(
+                controller: _refPhone,
+                error: r.referencePhone.trim().isNotEmpty
+                    ? _err(
+                        context,
+                        r.referencePhone,
+                        phoneError(r.referencePhone),
+                      )
+                    : (r.reference.trim().isNotEmpty
+                          ? tr(context, 'reg_err_ref_both')
+                          : null),
+                hint: tr(context, 'reg_ref_phone_ph'),
+                keyboardType: TextInputType.phone,
+                formatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9\s-]')),
+                  LengthLimitingTextInputFormatter(_refDial.maxDigits + 3),
+                ],
+                onChanged: (v) {
+                  r.referencePhone = v;
+                  r.touch();
+                },
+              ),
+            ),
+          ],
         ),
         Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -511,6 +638,11 @@ List<TextInputFormatter> _idFormatters(String? type) => switch (type) {
     LengthLimitingTextInputFormatter(8),
     _UpperFormatter(),
   ],
+  'emirates' => [
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(15),
+    _EmiratesFormatter(),
+  ],
   'voter' => [
     FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
     LengthLimitingTextInputFormatter(10),
@@ -529,6 +661,27 @@ class _UpperFormatter extends TextInputFormatter {
     TextEditingValue old,
     TextEditingValue value,
   ) => value.copyWith(text: value.text.toUpperCase());
+}
+
+/// Emirates ID layout: 784-YYYY-NNNNNNN-C.
+class _EmiratesFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue old,
+    TextEditingValue value,
+  ) {
+    final d = value.text.replaceAll('-', '');
+    final out = StringBuffer();
+    for (var i = 0; i < d.length; i++) {
+      if (i == 3 || i == 7 || i == 14) out.write('-');
+      out.write(d[i]);
+    }
+    final text = out.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
 }
 
 /// Groups digits with spaces (e.g. Aadhaar 1234 5678 9012).
@@ -566,6 +719,7 @@ const _idIcons = {
   'passport': Icons.public,
   'dl': Icons.directions_car_outlined,
   'voter': Icons.people_outline,
+  'emirates': Icons.badge_outlined,
 };
 
 class _IdStep extends StatefulWidget {
@@ -579,6 +733,18 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
   final _number = TextEditingController(text: registration.idNumber);
 
   String? _uploadError;
+
+  @override
+  void initState() {
+    super.initState();
+    final r = registration;
+    // The Emirates ID only applies to UAE addresses.
+    if (r.idType == 'emirates' && r.country != kUaeCountry) {
+      r.idType = null;
+      r.idNumber = '';
+      _number.clear();
+    }
+  }
 
   @override
   void dispose() {
@@ -615,7 +781,7 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final t in kIdTypes)
+                for (final t in idTypesFor(r.country))
                   GestureDetector(
                     onTap: () {
                       if (r.idType != t.$1) {
@@ -917,6 +1083,35 @@ class _DeclarationStepState extends State<_DeclarationStep>
     super.dispose();
   }
 
+  /// "I, Mr … aged … years, resident of …" with the member's own details.
+  InlineSpan _intro(AppLang doc) {
+    final r = registration;
+    final raw = trIn(doc, 'reg_decl_intro');
+    final values = {
+      '{name}': r.displayName.isEmpty ? '………' : r.displayName,
+      '{age}': r.age?.toString() ?? '……',
+      '{place}': [r.city, r.country].where((e) => e.isNotEmpty).join(', '),
+    };
+    final spans = <InlineSpan>[];
+    raw.splitMapJoin(
+      RegExp(r'\{(name|age|place)\}'),
+      onMatch: (m) {
+        spans.add(
+          TextSpan(
+            text: values[m[0]!],
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        );
+        return '';
+      },
+      onNonMatch: (t) {
+        spans.add(TextSpan(text: t));
+        return '';
+      },
+    );
+    return TextSpan(children: spans);
+  }
+
   void _openPdf() => showDialog<void>(
     context: context,
     builder: (dialog) => AlertDialog(
@@ -1003,27 +1198,20 @@ class _DeclarationStepState extends State<_DeclarationStep>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    trIn(doc, 'reg_s5'),
+                    trIn(doc, 'reg_decl_title'),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '${trIn(doc, 'reg_decl_by')} ',
-                          style: const TextStyle(color: AppColors.muted),
-                        ),
-                        TextSpan(
-                          text: r.displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ],
+                    _intro(doc),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.45,
+                      color: Color(0xFF3B3D55),
                     ),
-                    style: const TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 10),
                   for (final p in paragraphs)

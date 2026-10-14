@@ -112,6 +112,10 @@ New-member data to persist: name parts, email, gender, date of birth, marital st
 
 The video KYC is recorded on the device (front camera, 10–30 s, mp4) and must be uploaded; the app plays back the local file. Country/state/city values come from a bundled dataset (`assets/data/world.json`); the server should validate against its own list. The declaration is shown in English, Hindi and Marathi: store which language was displayed with the acceptance.
 
+Step 1 also collects salutation (Mr, Mrs, Ms, Miss, Dr, Rev, Ps), nationality (a country) and, when marital status is *married*, a mandatory anniversary date (after the member turned 18, not in the future). The declaration text is the ministry's *Form of Declaration* in English, Hindi and Marathi, filled with the member's name, age and place; store the language shown and the signing time.
+
+Video size: the app re-encodes the recording to 480p / 24 fps before upload (`video_compress`, phones only). The backend must not rely on that: enforce a maximum file size and duration, and re-encode server-side (e.g. ffmpeg in a Catalyst function) before keeping it in File Store.
+
 Office workflow: status is `pending` → `approved` or `videoReturned` (re-record). The app's "Prototype controls" (*Simulate: admin approves / returns the video*) must be removed and replaced by polling or a push notification. Access to the app must stay locked server-side until approved. Office phone/contact (`kOfficePhone`) should come from config.
 
 ## 4. Payments (Razorpay)

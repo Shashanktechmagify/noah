@@ -20,11 +20,23 @@ const kIdTypes = [
   ('passport', 'reg_id_passport', 'A1234567'),
   ('dl', 'reg_id_dl', 'MH12 20110012345'),
   ('voter', 'reg_id_voter', 'ABC1234567'),
+  ('emirates', 'reg_id_emirates', '784-1990-1234567-1'),
+];
+
+/// The Emirates ID is only offered to members whose address is in the UAE.
+const kUaeCountry = 'United Arab Emirates';
+
+List<(String, String, String)> idTypesFor(String country) => [
+  for (final t in kIdTypes)
+    if (t.$1 != 'emirates' || country == kUaeCountry) t,
 ];
 
 const kMinVideoSeconds = 10;
 const kMaxVideoSeconds = 30;
 const kOfficePhone = '+91 98200 00000';
+
+/// Salutations offered in step 1.
+const kSalutations = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Rev', 'Ps'];
 
 /// Largest document or photo accepted, in bytes.
 const kMaxUploadBytes = 5 * 1024 * 1024;
@@ -56,6 +68,22 @@ String? dobError(DateTime? d) {
   return age >= 18 ? null : 'reg_err_dob18';
 }
 
+/// Anniversary must be a past date after the member turned 18.
+String? anniversaryError(DateTime? a, DateTime? dob) {
+  if (a == null) return null;
+  if (a.isAfter(DateTime.now())) return 'reg_err_anniv_future';
+  if (dob != null && a.isBefore(DateTime(dob.year + 18, dob.month, dob.day))) {
+    return 'reg_err_anniv_early';
+  }
+  return null;
+}
+
+/// Contact number: 7 to 15 digits, optional leading +.
+String? phoneError(String v) =>
+    RegExp(r'^\+?\d{7,15}$').hasMatch(v.replaceAll(RegExp(r'[\s-]'), ''))
+    ? null
+    : 'reg_err_phone';
+
 String? pinError(String v) =>
     RegExp(r'^[1-9]\d{5}$').hasMatch(v.trim()) ? null : 'reg_err_pin';
 
@@ -70,6 +98,7 @@ String? idNumberError(String? type, String v) {
     'passport' => RegExp(r'^[A-PR-WY][1-9]\d{5}[1-9]$').hasMatch(c),
     'dl' => RegExp(r'^[A-Z]{2}\d{2}(19|20)\d{2}\d{7}$').hasMatch(c),
     'voter' => RegExp(r'^[A-Z]{3}\d{7}$').hasMatch(c),
+    'emirates' => RegExp(r'^784\d{12}$').hasMatch(c),
     _ => false,
   };
   return ok ? null : 'reg_err_$type';
@@ -77,6 +106,8 @@ String? idNumberError(String? type, String v) {
 
 class RegistrationState extends ChangeNotifier {
   // Step 1: details
+  String salutation = '';
+  String nationality = 'India';
   String firstName = '';
   String middleName = '';
   String lastName = '';
@@ -85,7 +116,10 @@ class RegistrationState extends ChangeNotifier {
   DateTime? dob;
   String marital =
       ''; // single | married | widow | widower | separated | divorced
+  DateTime? anniversary; // required when married
   String reference = '';
+  String referenceDial = '+91'; // country code of the reference number
+  String referencePhone = ''; // the number without the country code
 
   // Step 2: address
   String address1 = '';
@@ -112,6 +146,8 @@ class RegistrationState extends ChangeNotifier {
 
   // Step 6: video
   int? videoSeconds;
+  int? videoBytes; // size of the file that will be uploaded (compressed)
+  int? videoOriginalBytes; // size as recorded
   String? videoPath; // the recorded file (null in the demo fallback)
 
   // Outcome
@@ -124,16 +160,22 @@ class RegistrationState extends ChangeNotifier {
 
   void start(String phoneNumber) {
     phone = phoneNumber;
-    firstName = middleName = lastName = email = gender = marital = '';
-    reference = address1 = address2 = city = pin = idNumber = signature = '';
+    firstName = middleName = lastName = email = gender = marital = salutation =
+        '';
+    nationality = 'India';
+    anniversary = null;
+    reference = referencePhone = address1 = address2 = city = pin = idNumber =
+        signature = '';
     dob = null;
     country = 'India';
+    referenceDial = '+91';
     state = '';
     idType = idFile = idPath = photoFile = photoPath = null;
     agreed = false;
     signedOn = null;
     videoSeconds = null;
     videoPath = null;
+    videoBytes = videoOriginalBytes = null;
     completed = false;
     status = RegStatus.pending;
     notifyListeners();
@@ -146,14 +188,18 @@ class RegistrationState extends ChangeNotifier {
     lastName,
   ].map((p) => p.trim()).where((p) => p.isNotEmpty).join(' ');
 
-  String get honorific => switch (gender) {
-    'male' => 'Mr',
-    'female' => marital == 'married' ? 'Mrs' : 'Ms',
-    _ => '',
-  };
-
   /// e.g. "Mr Shashank Sanjay Gupta".
-  String get displayName => '$honorific $fullName'.trim();
+  String get displayName => '$salutation $fullName'.trim();
+
+  /// Whole years since [dob].
+  int? get age {
+    final d = dob;
+    if (d == null) return null;
+    final now = DateTime.now();
+    var a = now.year - d.year;
+    if (now.month < d.month || (now.month == d.month && now.day < d.day)) a--;
+    return a;
+  }
 
   bool get signatureMatches =>
       signature.trim().isNotEmpty &&
@@ -164,11 +210,25 @@ class RegistrationState extends ChangeNotifier {
       nameError(middleName, required: false) == null &&
       nameError(lastName) == null &&
       emailError(email) == null &&
+      salutation.isNotEmpty &&
+      nationality.isNotEmpty &&
       gender.isNotEmpty &&
       dob != null &&
       dobError(dob) == null &&
       marital.isNotEmpty &&
-      nameError(reference, required: false) == null;
+      (marital != 'married' ||
+          (anniversary != null &&
+              anniversaryError(anniversary, dob) == null)) &&
+      nameError(reference, required: false) == null &&
+      referenceValid;
+
+  /// The reference person is optional, but name and number go together.
+  bool get referenceValid {
+    final hasName = reference.trim().isNotEmpty;
+    final hasPhone = referencePhone.trim().isNotEmpty;
+    if (!hasName && !hasPhone) return true;
+    return hasName && hasPhone && phoneError(referencePhone) == null;
+  }
 
   bool get addressValid =>
       addressError(address1) == null &&
@@ -225,6 +285,7 @@ class RegistrationState extends ChangeNotifier {
     status = RegStatus.videoReturned;
     videoSeconds = null;
     videoPath = null;
+    videoBytes = videoOriginalBytes = null;
     notifyListeners();
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/me_data.dart';
 import '../data/ministry_data.dart';
 import '../data/noahgram_data.dart';
+import '../data/profile_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
@@ -15,6 +16,7 @@ import 'me/language_screen.dart';
 import 'me/location_screen.dart';
 import 'me/messages_screen.dart';
 import 'me/notifications_screen.dart';
+import 'me/profile_info_screen.dart';
 import 'me/profile_photo_screen.dart';
 import 'me/rewards_screen.dart';
 import 'me/store_screen.dart';
@@ -42,7 +44,7 @@ class MeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([noahgram, ministry, meState]),
+      listenable: Listenable.merge([noahgram, ministry, meState, profile]),
       builder: (context, _) {
         final me = noahgram.me;
         final rec = ministry.record;
@@ -134,12 +136,68 @@ class MeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (profile.missingRequired > 0) ...[
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () => _open(context, const ProfileInfoScreen()),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDEBD3),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Color(0xFFC2620A),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          tr(
+                            context,
+                            'pf_banner',
+                            args: {'n': '${profile.missingRequired}'},
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFFC2620A),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Color(0xFFC2620A)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
 
             SectionTitle(title: tr(context, 'me2_record')),
             const SizedBox(height: 12),
             _Group(
               rows: [
+                _Row(
+                  icon: Icons.badge_outlined,
+                  title: tr(context, 'pf_title'),
+                  subtitle: tr(context, 'pf_row_sub'),
+                  pill: profile.missingRequired > 0
+                      ? _Pill(
+                          tr(
+                            context,
+                            'pf_n_missing',
+                            args: {'n': '${profile.missingRequired}'},
+                          ),
+                          StatusPill.soon,
+                        )
+                      : null,
+                  onTap: () => _open(context, const ProfileInfoScreen()),
+                ),
                 _Row(
                   icon: Icons.group_outlined,
                   title: tr(context, 'me2_family'),

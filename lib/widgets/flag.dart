@@ -23,6 +23,31 @@ class Flag extends StatelessWidget {
   );
 }
 
+/// A flag for any ISO country code: painted for the six we draw, otherwise
+/// the flag emoji (shown as letters on platforms without a flag font).
+class CountryFlag extends StatelessWidget {
+  const CountryFlag(this.code, {super.key, this.width = 24});
+
+  final String code;
+  final double width;
+
+  static const _painted = {'IN', 'US', 'GB', 'AE', 'SG', 'AU'};
+
+  @override
+  Widget build(BuildContext context) {
+    if (_painted.contains(code)) return Flag(code, width: width);
+    final emoji = code.length == 2
+        ? String.fromCharCodes(
+            code.toUpperCase().codeUnits.map((c) => 0x1F1E6 + c - 65),
+          )
+        : '';
+    return SizedBox(
+      width: width,
+      child: Text(emoji, style: TextStyle(fontSize: width * 0.8)),
+    );
+  }
+}
+
 class _FlagPainter extends CustomPainter {
   _FlagPainter(this.code);
 

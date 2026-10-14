@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,32 +6,10 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/language_dropdown.dart';
-import '../widgets/flag.dart';
+import '../data/dial_data.dart';
+import '../widgets/dial_code_picker.dart';
+import 'me/terms_screen.dart';
 import 'otp_screen.dart';
-
-class _Country {
-  const _Country(this.name, this.dial, this.digits, this.code);
-
-  final String name;
-  final String dial;
-
-  /// ISO country code, used to draw the flag.
-  final String code;
-
-  /// Digits expected in the national number.
-  final int digits;
-
-  bool get isIndia => dial == '+91';
-}
-
-const _countries = [
-  _Country('India', '+91', 10, 'IN'),
-  _Country('United States', '+1', 10, 'US'),
-  _Country('United Kingdom', '+44', 10, 'GB'),
-  _Country('UAE', '+971', 9, 'AE'),
-  _Country('Singapore', '+65', 8, 'SG'),
-  _Country('Australia', '+61', 9, 'AU'),
-];
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,10 +20,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _controller = TextEditingController(text: '98765 43210');
-  _Country _country = _countries.first;
+  DialCountry _country = DialData.fallback.first;
 
   bool get _valid =>
-      _controller.text.replaceAll(' ', '').length == _country.digits;
+      _country.validLength(_controller.text.replaceAll(' ', '').length);
 
   @override
   void initState() {
@@ -58,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _pickCountry(_Country c) {
+  void _pickCountry(DialCountry c) {
     setState(() => _country = c);
     // The demo number only makes sense for India.
     _controller.text = c.isIndia ? '98765 43210' : '';
@@ -79,19 +58,19 @@ class _LoginScreenState extends State<LoginScreen> {
     return AuthScaffold(
       icon: Icons.home_outlined,
       title: tr(context, 'welcome_title'),
-      subtitle: tr(context, 'welcome_sub'),
+      subtitle: tr(context, ''),
       headerHeight: 312,
       topRight: const LanguageDropdown(),
-      footer: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _Badge(
-            icon: Icons.verified_user_outlined,
-            label: tr(context, 'badge_aadhaar'),
-          ),
-          _Badge(icon: Icons.lock_outline, label: tr(context, 'badge_data')),
-        ],
-      ),
+      // footer: Row(
+      //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      //   children: [
+      //     _Badge(
+      //       icon: Icons.verified_user_outlined,
+      //       label: tr(context, 'badge_aadhaar'),
+      //     ),
+      //     _Badge(icon: Icons.lock_outline, label: tr(context, 'badge_data')),
+      //   ],
+      // ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -107,64 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Container(
-                height: 52,
-                padding: const EdgeInsets.only(left: 14, right: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.tint,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: PopupMenuButton<_Country>(
-                  tooltip: '',
-                  position: PopupMenuPosition.under,
-                  color: Colors.white,
-                  surfaceTintColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  onSelected: _pickCountry,
-                  itemBuilder: (_) => [
-                    for (final c in _countries)
-                      PopupMenuItem(
-                        value: c,
-                        child: Row(
-                          children: [
-                            Flag(c.code),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${c.name}  ${c.dial}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                  // Closed state: flag and dial code.
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flag(_country.code),
-                      const SizedBox(width: 8),
-                      Text(
-                        _country.dial,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: AppColors.muted,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              DialCodePicker(value: _country, onChanged: _pickCountry),
               const SizedBox(width: 10),
               Expanded(
                 child: Container(
@@ -180,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.phone,
                     inputFormatters: [
                       _PhoneFormatter(
-                        maxDigits: _country.digits,
+                        maxDigits: _country.maxDigits,
                         group: _country.isIndia,
                       ),
                     ],
@@ -203,30 +125,32 @@ class _LoginScreenState extends State<LoginScreen> {
             label: tr(context, 'continue'),
             onPressed: _valid ? _continue : null,
           ),
+          const SizedBox(height: 16),
+          const _TermsNote(),
           const SizedBox(height: 18),
-          Center(
-            child: Text(
-              tr(context, 'otp_note'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              tr(context, 'demo_note'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ),
+          // Center(
+          //   child: Text(
+          //     tr(context, 'otp_note'),
+          //     textAlign: TextAlign.center,
+          //     style: const TextStyle(
+          //       color: AppColors.muted,
+          //       fontSize: 12,
+          //       height: 1.4,
+          //     ),
+          //   ),
+          // ),
+          // const SizedBox(height: 8),
+          // Center(
+          //   child: Text(
+          //     tr(context, 'demo_note'),
+          //     textAlign: TextAlign.center,
+          //     style: const TextStyle(
+          //       color: AppColors.muted,
+          //       fontSize: 12,
+          //       height: 1.4,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -280,6 +204,68 @@ class _PhoneFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+/// "By continuing, you agree to our Terms & Conditions and Privacy Policy."
+/// Both links open the terms page.
+class _TermsNote extends StatefulWidget {
+  const _TermsNote();
+
+  @override
+  State<_TermsNote> createState() => _TermsNoteState();
+}
+
+class _TermsNoteState extends State<_TermsNote> {
+  late final _open = TapGestureRecognizer()..onTap = _showTerms;
+  late final _open2 = TapGestureRecognizer()..onTap = _showTerms;
+
+  void _showTerms() =>
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const TermsScreen()));
+
+  @override
+  void dispose() {
+    _open.dispose();
+    _open2.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const link = TextStyle(
+      color: AppColors.magenta,
+      fontWeight: FontWeight.w700,
+      decoration: TextDecoration.underline,
+    );
+    final spans = <InlineSpan>[];
+    tr(context, 'lg_terms').splitMapJoin(
+      RegExp(r'\{[tp]\}'),
+      onMatch: (m) {
+        final isTerms = m[0] == '{t}';
+        spans.add(
+          TextSpan(
+            text: tr(context, isTerms ? 'lg_terms_t' : 'lg_terms_p'),
+            style: link,
+            recognizer: isTerms ? _open : _open2,
+          ),
+        );
+        return '';
+      },
+      onNonMatch: (t) {
+        spans.add(TextSpan(text: t));
+        return '';
+      },
+    );
+    return Text.rich(
+      TextSpan(children: spans),
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 12.5,
+        height: 1.5,
+      ),
     );
   }
 }

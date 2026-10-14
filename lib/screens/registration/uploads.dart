@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_compress/video_compress.dart';
 
 import '../../data/registration_data.dart';
 import '../../l10n/app_strings.dart';
@@ -117,3 +118,38 @@ Future<PickedUpload?> pickPhoto(BuildContext context) async {
     return const PickedUpload(errorKey: 'reg_err_file_read');
   }
 }
+
+/// Result of [compressVideo]: the file to upload and its sizes in bytes.
+class CompressedVideo {
+  const CompressedVideo(this.path, this.before, this.after);
+
+  final String path;
+  final int before;
+  final int after;
+}
+
+/// Shrinks the recorded video (480p, 24 fps) before it is uploaded so it does
+/// not fill up storage. Falls back to the original when the platform has no
+/// compressor (desktop) or it fails. The backend should also cap and re-encode.
+Future<CompressedVideo> compressVideo(String path) async {
+  final before = await File(path).length();
+  try {
+    final info = await VideoCompress.compressVideo(
+      path,
+      quality: VideoQuality.Res640x480Quality,
+      frameRate: 24,
+      includeAudio: true,
+      deleteOrigin: false,
+    );
+    final out = info?.path;
+    if (out != null && info!.filesize != null && info.filesize! < before) {
+      return CompressedVideo(out, before, info.filesize!);
+    }
+  } catch (_) {}
+  return CompressedVideo(path, before, before);
+}
+
+/// "3.2 MB" / "850 KB".
+String formatBytes(int bytes) => bytes >= 1024 * 1024
+    ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+    : '${(bytes / 1024).round()} KB';

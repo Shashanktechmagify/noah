@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/profile_data.dart';
 import '../../data/registration_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
@@ -142,6 +143,7 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   Future<void> _approve() async {
     registration.approve();
+    profile.loadFromRegistration(registration);
     // Tell the member, using the number they registered with.
     await showDialog<void>(
       context: context,

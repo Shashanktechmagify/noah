@@ -3,20 +3,20 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 /// Every country with its states and cities (bundled, offline).
-/// Source: assets/data/world.json, `[country, [[state, [cities]]]]`.
+/// Source: assets/data/world.json, `[country, isoCode, [[state, [cities]]]]`.
 class World {
   World._(this._data);
 
   final List<dynamic> _data;
 
   static World? _instance;
-  static Future<World>? _loading;
 
   /// Loaded once, on first use.
-  static Future<World> load() => _loading ??= () async {
+  static Future<World> load() async {
+    if (_instance != null) return _instance!;
     final raw = await rootBundle.loadString('assets/data/world.json');
     return _instance = World._(jsonDecode(raw) as List<dynamic>);
-  }();
+  }
 
   /// Already-loaded data, or null while loading.
   static World? get ready => _instance;
@@ -27,9 +27,17 @@ class World {
 
   List<dynamic> _states(String country) {
     for (final c in _data) {
-      if ((c as List)[0] == country) return c[1] as List<dynamic>;
+      if ((c as List)[0] == country) return c[2] as List<dynamic>;
     }
     return const [];
+  }
+
+  /// Two-letter ISO code of [country] (empty when unknown).
+  String codeOf(String country) {
+    for (final c in _data) {
+      if ((c as List)[0] == country) return c[1] as String;
+    }
+    return '';
   }
 
   /// States of [country] (empty for countries without any).

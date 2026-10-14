@@ -6,7 +6,10 @@ import 'package:noah_frontend_flutter/data/events_data.dart';
 import 'package:noah_frontend_flutter/data/jodie_data.dart';
 import 'package:noah_frontend_flutter/data/me_data.dart';
 import 'package:noah_frontend_flutter/data/ministry_data.dart';
+import 'package:noah_frontend_flutter/data/dial_data.dart';
 import 'package:noah_frontend_flutter/data/prayer_data.dart';
+import 'package:noah_frontend_flutter/data/profile_data.dart';
+import 'package:noah_frontend_flutter/screens/me/profile_info_screen.dart';
 import 'package:noah_frontend_flutter/data/world_data.dart';
 import 'package:noah_frontend_flutter/data/registration_data.dart';
 import 'package:noah_frontend_flutter/screens/registration/registration_flow.dart';
@@ -17,7 +20,8 @@ import 'package:noah_frontend_flutter/screens/events/events_widgets.dart';
 import 'package:noah_frontend_flutter/screens/main_shell.dart';
 import 'package:noah_frontend_flutter/screens/noahgram/noahgram_widgets.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
-import 'package:noah_frontend_flutter/widgets/event_carousel.dart' show EventCarousel, enableCardIdleSway;
+import 'package:noah_frontend_flutter/widgets/event_carousel.dart'
+    show EventCarousel, enableCardIdleSway;
 
 void main() {
   enableCardIdleSway = false; // a forever-running animation never settles
@@ -523,7 +527,10 @@ void main() {
     // Another country: the demo number is cleared, so Continue stays off.
     await tester.tap(find.text('+91'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('United States  +1').last);
+    expect(find.text('Choose country code'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'united st');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('United States'));
     await tester.pumpAndSettle();
     expect(find.text('+1'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '5551234567');
@@ -531,7 +538,10 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Sent to +1 5551234567'), findsOneWidget);
-    expect(find.text('English'), findsOneWidget); // language dropdown on OTP too
+    expect(
+      find.text('English'),
+      findsOneWidget,
+    ); // language dropdown on OTP too
 
     // Back, then switch language from the popup.
     await tester.tap(find.byIcon(Icons.chevron_left));
@@ -676,7 +686,8 @@ void main() {
       await tester.tap(find.text('Community terms and how your data is held'));
       await settle();
       expect(find.text('Version 1.0'), findsOneWidget);
-      expect(find.text('Your data'), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsWidgets);
+      expect(find.text('About'), findsWidgets);
       await back();
 
       // Log out returns to the login page (the root navigator).
@@ -709,6 +720,23 @@ void main() {
     expect(find.text('Step 1 of 6 · Your details'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
 
+    // Back on step 1 returns to the login page (nothing is behind this page).
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome to Noah'), findsOneWidget);
+    registration.start('+91 90000 00001');
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(
+          key: UniqueKey(),
+          theme: buildTheme(),
+          home: const RegistrationFlow(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
     // Fill the model directly; each step's Continue unlocks when valid.
     final r = registration;
     Future<void> next(String label) async {
@@ -717,6 +745,7 @@ void main() {
     }
 
     r
+      ..salutation = 'Mr'
       ..firstName = 'Shashank'
       ..lastName = 'Gupta'
       ..email = 'shashank@example.com'
@@ -791,12 +820,70 @@ void main() {
     await tester.pumpAndSettle();
     // The popup names the number used at registration.
     expect(find.text('Registration approved'), findsOneWidget);
-    expect(find.textContaining('approved the registration for +91 90000 00001'), findsOneWidget);
+    expect(
+      find.textContaining('approved the registration for +91 90000 00001'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('OK'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
     expect(r.status, RegStatus.approved);
     expect(find.text('Karuna Sadan'), findsOneWidget);
+  });
+
+  test('married members must give an anniversary', () {
+    final r = registration;
+    r.start('+91 90000 00002');
+    r
+      ..salutation = 'Mrs'
+      ..firstName = 'Anita'
+      ..lastName = 'Rao'
+      ..email = 'a@b.co'
+      ..gender = 'female'
+      ..dob = DateTime(1990, 1, 1)
+      ..marital = 'single';
+    expect(r.detailsValid, isTrue);
+    r.marital = 'married';
+    expect(r.detailsValid, isFalse); // anniversary missing
+    r.anniversary = DateTime(2005, 6, 1); // before she turned 18
+    expect(anniversaryError(r.anniversary, r.dob), isNotNull);
+    expect(r.detailsValid, isFalse);
+    r.anniversary = DateTime(2015, 6, 1);
+    expect(r.detailsValid, isTrue);
+    expect(r.displayName, 'Mrs Anita Rao');
+    expect(r.age, greaterThan(30));
+  });
+
+  test('Emirates ID and reference contact', () {
+    expect(idNumberError('emirates', '784-1990-1234567-1'), isNull);
+    expect(idNumberError('emirates', '784199012345671'), isNull);
+    expect(idNumberError('emirates', '123-1990-1234567-1'), isNotNull);
+    expect(idNumberError('emirates', '784-1990-123456-1'), isNotNull);
+    // Only UAE addresses are offered the Emirates ID.
+    expect(
+      idTypesFor('United Arab Emirates').map((t) => t.$1),
+      contains('emirates'),
+    );
+    expect(idTypesFor('India').map((t) => t.$1), isNot(contains('emirates')));
+    expect(phoneError('+971 50 123 4567'), isNull);
+    expect(phoneError('12345'), isNotNull);
+    final r = registration;
+    r.start('+91 90000 00003');
+    r
+      ..salutation = 'Mr'
+      ..firstName = 'Ravi'
+      ..lastName = 'Kumar'
+      ..email = 'r@k.co'
+      ..gender = 'male'
+      ..dob = DateTime(1990, 1, 1)
+      ..marital = 'single';
+    expect(r.detailsValid, isTrue); // reference is optional
+    r.reference = 'Pastor John';
+    expect(r.detailsValid, isFalse); // number missing
+    r.referencePhone = '+91 98200 11111';
+    expect(r.detailsValid, isTrue);
+    r.reference = '';
+    expect(r.detailsValid, isFalse); // number without a name
   });
 
   test('registration field validation', () {
@@ -818,8 +905,10 @@ void main() {
     expect(emailError('a@b'), isNotNull);
     expect(nameError('Shashank'), isNull);
     expect(nameError('R2D2'), isNotNull);
-    expect(dobError(DateTime.now().subtract(const Duration(days: 365 * 10))),
-        isNotNull);
+    expect(
+      dobError(DateTime.now().subtract(const Duration(days: 365 * 10))),
+      isNotNull,
+    );
     expect(dobError(DateTime(1990, 1, 1)), isNull);
   });
 
@@ -891,5 +980,93 @@ void main() {
     await settle();
     expect(find.text('Who should pray?'), findsOneWidget);
     expect(find.text('Prayer warriors'), findsOneWidget);
+  });
+
+  testWidgets('me: my information asks for missing details', (tester) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    profile.seedDemo(); // blood group is the one required detail missing
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(
+          theme: buildTheme(),
+          home: const ProfileInfoScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('My information'), findsOneWidget);
+    expect(
+      find.text(
+        'Please fill in the 1 missing details to complete your profile.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Please fill this in'), findsOneWidget);
+    expect(find.text('Daniel'), findsOneWidget);
+    // Optional details are listed too, with a gentler prompt.
+    expect(find.text('Not added · tap to add'), findsWidgets);
+    expect(find.text('Emirates ID'), findsOneWidget);
+    expect(find.text('Deceased date'), findsOneWidget);
+    expect(find.text('Correspondence address'), findsOneWidget);
+
+    // Fill the missing blood group.
+    await tester.tap(find.text('Please fill this in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('O+'));
+    await tester.pumpAndSettle();
+    expect(profile.get('blood_group'), 'O+');
+    expect(
+      find.text('All required details are filled in. Thank you!'),
+      findsOneWidget,
+    );
+
+    // Marking the member married makes the anniversary required.
+    profile.set('marital', 'married');
+    await tester.pump();
+    expect(profile.missingRequired, 1);
+    profile.set('marital', 'single');
+    expect(profile.missingRequired, 0);
+  });
+
+  testWidgets('login: terms and conditions note after the button', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const NoahApp());
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('By continuing, you agree to our'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('dial codes: every country has a flag code and dial code', (
+    tester,
+  ) async {
+    final all = await tester.runAsync(DialData.load);
+    expect(all!.length, greaterThan(235));
+    expect(
+      all.every((c) => c.code.length == 2 && c.dial.startsWith('+')),
+      isTrue,
+    );
+    expect(DialData.byCode('AE').dial, '+971');
+    expect(DialData.byCode('JP').dial, '+81');
+    expect(DialData.byCode('IN').validLength(10), isTrue);
+    expect(DialData.byCode('JP').validLength(10), isTrue); // generic range
+    expect(DialData.byCode('JP').validLength(3), isFalse);
   });
 }
