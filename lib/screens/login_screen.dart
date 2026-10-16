@@ -6,6 +6,7 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/language_dropdown.dart';
+import '../data/api_client.dart';
 import '../data/dial_data.dart';
 import '../widgets/dial_code_picker.dart';
 import 'me/terms_screen.dart';
@@ -43,14 +44,40 @@ class _LoginScreenState extends State<LoginScreen> {
     _controller.text = c.isIndia ? '98765 43210' : '';
   }
 
-  void _continue() {
+  bool _sending = false;
+
+  Future<void> _continue() async {
     FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            OtpScreen(phone: '${_country.dial} ${_controller.text}'),
-      ),
-    );
+    final phone = '${_country.dial} ${_controller.text}';
+    if (!liveApi) {
+      _openOtp(OtpScreen(phone: phone));
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final sent = await api.sendOtp(_country.dial, _controller.text);
+      if (!mounted) return;
+      _openOtp(
+        OtpScreen(
+          phone: phone,
+          dial: _country.dial,
+          number: _controller.text,
+          otpLength: sent.otpLength,
+          resendSeconds: sent.resendAfter,
+          devOtp: sent.devOtp,
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _openOtp(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -123,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 18),
           GradientButton(
             label: tr(context, 'continue'),
-            onPressed: _valid ? _continue : null,
+            onPressed: _valid && !_sending ? _continue : null,
           ),
           const SizedBox(height: 16),
           const _TermsNote(),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/api_client.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
@@ -10,9 +11,26 @@ import '../widgets/language_dropdown.dart';
 import 'registration/registration_router.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone});
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.dial,
+    this.number,
+    this.otpLength = 4,
+    this.resendSeconds = 24,
+    this.devOtp,
+  });
 
   final String phone;
+
+  /// Set when the code was sent by the real API (otherwise the demo code is used).
+  final String? dial;
+  final String? number;
+  final int otpLength;
+  final int resendSeconds;
+
+  /// The code the server echoes back while testing (OTP_DEV_ECHO).
+  final String? devOtp;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -25,11 +43,20 @@ class _OtpScreenState extends State<OtpScreen> {
   Timer? _timer;
   int _seconds = 24;
   bool _error = false;
+  bool _busy = false;
+  String? _message;
+
+  bool get _live => widget.dial != null;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() => setState(() => _error = false));
+    _controller.addListener(
+      () => setState(() {
+        _error = false;
+        _message = null;
+      }),
+    );
     _startTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
@@ -38,7 +65,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   void _startTimer() {
     _timer?.cancel();
-    _seconds = 24;
+    _seconds = widget.resendSeconds;
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       if (_seconds <= 1) t.cancel();
@@ -54,17 +81,59 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  void _verify() {
-    if (_controller.text != _demoCode) {
-      setState(() => _error = true);
+  Future<void> _verify() async {
+    if (!_live) {
+      if (_controller.text != _demoCode) {
+        setState(() => _error = true);
+        return;
+      }
+      routeAfterOtp(context, widget.phone);
       return;
     }
-    routeAfterOtp(context, widget.phone);
+    setState(() => _busy = true);
+    try {
+      final r = await api.verifyOtp(
+        widget.dial!,
+        widget.number!,
+        _controller.text,
+      );
+      if (!mounted) return;
+      await routeAfterServer(context, widget.phone, r.next);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _message = e.message;
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    if (!_live) {
+      setState(_startTimer);
+      return;
+    }
+    try {
+      final sent = await api.sendOtp(widget.dial!, widget.number!);
+      if (!mounted) return;
+      _controller.clear();
+      setState(_startTimer);
+      if (sent.devOtp != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Test code: ${sent.devOtp}')));
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _message = e.message);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final code = _controller.text;
+    final len = _live ? widget.otpLength : 4;
     final timerText = '0:${_seconds.toString().padLeft(2, '0')}';
     return AuthScaffold(
       icon: Icons.lock_outline,
@@ -80,14 +149,14 @@ class _OtpScreenState extends State<OtpScreen> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(4, (i) {
+                children: List.generate(len, (i) {
                   final filled = i < code.length;
                   final active = i == code.length;
                   return GestureDetector(
                     onTap: _focus.requestFocus,
                     child: Container(
-                      width: 62,
-                      height: 62,
+                      width: len > 4 ? 46 : 62,
+                      height: len > 4 ? 54 : 62,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -121,7 +190,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
+                      LengthLimitingTextInputFormatter(len),
                     ],
                     showCursor: false,
                     enableInteractiveSelection: false,
@@ -133,13 +202,13 @@ class _OtpScreenState extends State<OtpScreen> {
           const SizedBox(height: 16),
           GradientButton(
             label: tr(context, 'verify'),
-            onPressed: code.length == 4 ? _verify : null,
+            onPressed: code.length == len && !_busy ? _verify : null,
           ),
           if (_error)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                tr(context, 'bad_code'),
+                _message ?? tr(context, 'bad_code'),
                 style: const TextStyle(color: Colors.redAccent, fontSize: 12),
               ),
             ),
@@ -151,7 +220,7 @@ class _OtpScreenState extends State<OtpScreen> {
             )
           else
             GestureDetector(
-              onTap: () => setState(_startTimer),
+              onTap: _resend,
               child: Text(
                 tr(context, 'resend_code'),
                 style: const TextStyle(
@@ -162,14 +231,15 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
           const SizedBox(height: 8),
-          Text(
-            tr(context, 'demo_code'),
-            style: const TextStyle(
-              color: Color(0xFF555770),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+          if (!_live || widget.devOtp != null)
+            Text(
+              _live ? 'Test code: ${widget.devOtp}' : tr(context, 'demo_code'),
+              style: const TextStyle(
+                color: Color(0xFF555770),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),

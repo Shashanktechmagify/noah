@@ -153,6 +153,14 @@ class RegistrationState extends ChangeNotifier {
   int? videoOriginalBytes; // size as recorded
   String? videoPath; // the recorded file (null in the demo fallback)
 
+  // Files stored on the server (live mode), and which local file each came from
+  String? idProofFileId;
+  String? photoFileId;
+  String? videoFileId;
+  String? idUploadedFrom;
+  String? photoUploadedFrom;
+  String? videoUploadedFrom;
+
   // Outcome
   String phone = '';
   bool completed = false;
@@ -181,6 +189,8 @@ class RegistrationState extends ChangeNotifier {
     videoPath = null;
     videoLang = AppLang.en;
     videoBytes = videoOriginalBytes = null;
+    idProofFileId = photoFileId = videoFileId = null;
+    idUploadedFrom = photoUploadedFrom = videoUploadedFrom = null;
     completed = false;
     registeredOn = null;
     status = RegStatus.pending;
@@ -294,6 +304,138 @@ class RegistrationState extends ChangeNotifier {
     videoPath = null;
     videoBytes = videoOriginalBytes = null;
     notifyListeners();
+  }
+
+  // ── Server (live mode) ─────────────────────────────────────────────────
+  static String _day(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// What the API stores. Empty fields are left out so a save never wipes
+  /// something the member filled in earlier.
+  Map<String, dynamic> toApi() {
+    final m = <String, dynamic>{};
+    void put(String k, String v) {
+      if (v.trim().isNotEmpty) m[k] = v.trim();
+    }
+
+    put('salutation', salutation);
+    put('nationality', nationality);
+    put('firstName', firstName);
+    put('middleName', middleName);
+    put('lastName', lastName);
+    put('email', email);
+    put('gender', gender);
+    if (dob != null) m['dob'] = _day(dob!);
+    put('marital', marital);
+    if (marital == 'married' && anniversary != null) {
+      m['anniversary'] = _day(anniversary!);
+    }
+    put('reference', reference);
+    put('referenceDial', referenceDial);
+    put('referencePhone', referencePhone);
+    put('address1', address1);
+    put('address2', address2);
+    put('country', country);
+    put('state', state);
+    put('city', city);
+    put('pin', pin);
+    if (idType != null) m['idType'] = idType;
+    put('idNumber', idNumber.replaceAll(RegExp(r'[\s-]'), '').toUpperCase());
+    if (idProofFileId != null) m['idProofFileId'] = idProofFileId;
+    if (photoFileId != null) m['photoFileId'] = photoFileId;
+    if (agreed || signature.trim().isNotEmpty) {
+      m['declaration'] = {
+        'agreed': agreed,
+        'signature': signature.trim(),
+        'language': 'en',
+      };
+    }
+    if (videoSeconds != null || videoFileId != null) {
+      m['video'] = {
+        'fileId': ?videoFileId,
+        'seconds': ?videoSeconds,
+        'bytes': ?videoBytes,
+        'language': videoLang.name,
+      };
+    }
+    return m;
+  }
+
+  /// Fills the form from what the server holds (resuming after sign-in).
+  void loadFromServer(Map<String, dynamic> m, String phoneNumber) {
+    String s(String k, [String fallback = '']) {
+      final v = m[k];
+      return v == null || '$v'.isEmpty ? fallback : '$v';
+    }
+
+    DateTime? d(String k) => m[k] == null ? null : DateTime.tryParse('${m[k]}');
+    phone = phoneNumber;
+    salutation = s('salutation');
+    nationality = s('nationality', 'India');
+    firstName = s('firstName');
+    middleName = s('middleName');
+    lastName = s('lastName');
+    email = s('email');
+    gender = s('gender');
+    dob = d('dob');
+    marital = s('marital');
+    anniversary = d('anniversary');
+    reference = s('reference');
+    referenceDial = s('referenceDial', '+91');
+    referencePhone = s('referencePhone');
+    address1 = s('address1');
+    address2 = s('address2');
+    country = s('country', 'India');
+    state = s('state');
+    city = s('city');
+    pin = s('pin');
+    idType = m['idType'] as String?;
+    idNumber = s('idNumber');
+
+    final idProof = m['idProof'] as Map<String, dynamic>?;
+    idProofFileId = idProof?['id'] as String?;
+    idFile = idProofFileId == null ? null : 'Uploaded';
+    idPath = null;
+    idUploadedFrom = null;
+
+    final photo = m['photo'] as Map<String, dynamic>?;
+    photoFileId = photo?['id'] as String?;
+    photoFile = photoFileId == null ? null : 'Uploaded';
+    photoPath = null;
+    photoUploadedFrom = null;
+
+    final decl = (m['declaration'] as Map<String, dynamic>?) ?? const {};
+    agreed = decl['agreed'] == true;
+    signature = '${decl['signature'] ?? ''}';
+    signedOn = agreed ? DateTime.now() : null;
+
+    final video = (m['video'] as Map<String, dynamic>?) ?? const {};
+    final vf = video['file'] as Map<String, dynamic>?;
+    videoFileId = vf?['id'] as String?;
+    videoSeconds = (video['seconds'] as num?)?.toInt();
+    videoBytes = (video['bytes'] as num?)?.toInt();
+    videoPath = null;
+    videoUploadedFrom = null;
+
+    final submitted = m['submittedAt'] == null
+        ? null
+        : DateTime.tryParse('${m['submittedAt']}');
+    registeredOn = submitted;
+    completed = submitted != null && '${m['status']}' != 'draft';
+    status = switch ('${m['status']}') {
+      'approved' => RegStatus.approved,
+      'videoReturned' => RegStatus.videoReturned,
+      _ => RegStatus.pending,
+    };
+    notifyListeners();
+  }
+
+  /// The first step that still needs work (where a returning member resumes).
+  int get firstIncompleteStep {
+    for (var i = 0; i < 6; i++) {
+      if (!stepValid(i)) return i;
+    }
+    return 5;
   }
 }
 

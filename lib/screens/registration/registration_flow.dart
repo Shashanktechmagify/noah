@@ -1,3 +1,6 @@
+import '../../data/api_client.dart';
+import '../../data/registration_sync.dart';
+
 import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
@@ -78,10 +81,26 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
     }
   }
 
-  void _next() {
+  bool _saving = false;
+
+  Future<void> _next() async {
     // Accepting the declaration fixes the signing date.
     if (_step == 4) registration.sign();
-    setState(() => _step++);
+    if (liveApi) {
+      setState(() => _saving = true);
+      try {
+        await pushRegistration();
+      } on ApiException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(describeApiError(e))));
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _saving = false);
+      }
+    }
+    if (mounted) setState(() => _step++);
   }
 
   Widget _content(int step) => switch (step) {
@@ -121,7 +140,9 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
                       context,
                       _step == 4 ? 'reg_continue_video' : 'continue',
                     ),
-                    onPressed: registration.stepValid(_step) ? _next : null,
+                    onPressed: registration.stepValid(_step) && !_saving
+                        ? _next
+                        : null,
                   ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

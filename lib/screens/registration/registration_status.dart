@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/profile_data.dart';
 import '../../data/registration_data.dart';
+import '../../data/server_sync.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/hex_pattern.dart';
@@ -143,7 +145,8 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   Future<void> _approve() async {
     registration.approve();
-    profile.loadFromRegistration(registration);
+    // In live mode the profile was just loaded from the server.
+    if (!liveApi) profile.loadFromRegistration(registration);
     // Tell the member, using the number they registered with.
     await showDialog<void>(
       context: context,
@@ -219,6 +222,38 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
       MaterialPageRoute(builder: (_) => const MainShell()),
       (_) => false,
     );
+  }
+
+  bool _checking = false;
+
+  /// Live mode: asks the server whether the office has decided yet.
+  Future<void> _checkStatus() async {
+    setState(() => _checking = true);
+    try {
+      final me = await api.me();
+      await loadMemberFromServer(registration.phone);
+      if (!mounted) return;
+      switch (me['next']) {
+        case 'home':
+          await _approve();
+        case 'registration':
+          await Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const RegistrationFlow(initialStep: 5),
+            ),
+          );
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr(context, 'reg_still_pending'))),
+          );
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
   }
 
   void _returnVideo() {
@@ -466,25 +501,32 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
-                Text(
-                  tr(context, 'reg_proto').toUpperCase(),
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: spacing(context, 0.5),
+                if (liveApi)
+                  _ProtoButton(
+                    label: _checking ? '...' : tr(context, 'reg_check_status'),
+                    onTap: _checking ? () {} : _checkStatus,
+                  )
+                else ...[
+                  Text(
+                    tr(context, 'reg_proto').toUpperCase(),
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: spacing(context, 0.5),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _ProtoButton(
-                  label: tr(context, 'reg_sim_approve'),
-                  onTap: _approve,
-                ),
-                const SizedBox(height: 8),
-                _ProtoButton(
-                  label: tr(context, 'reg_sim_return'),
-                  onTap: _returnVideo,
-                ),
+                  const SizedBox(height: 8),
+                  _ProtoButton(
+                    label: tr(context, 'reg_sim_approve'),
+                    onTap: _approve,
+                  ),
+                  const SizedBox(height: 8),
+                  _ProtoButton(
+                    label: tr(context, 'reg_sim_return'),
+                    onTap: _returnVideo,
+                  ),
+                ],
               ],
             ),
           ),

@@ -1,3 +1,6 @@
+import '../../data/api_client.dart';
+import '../../data/registration_sync.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -303,7 +306,22 @@ class _VideoStepState extends State<VideoStep> {
     setState(() => _seconds = 0);
   }
 
-  void _complete() {
+  bool _submitting = false;
+
+  Future<void> _complete() async {
+    if (liveApi) {
+      setState(() => _submitting = true);
+      try {
+        await submitRegistrationToServer();
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(describeApiError(e))));
+        return;
+      }
+      if (!mounted) return;
+    }
     registration.complete();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -543,7 +561,9 @@ class _VideoStepState extends State<VideoStep> {
             ),
           GradientButton(
             label: tr(context, 'reg_complete'),
-            onPressed: r.videoValid && !_compressing ? _complete : null,
+            onPressed: r.videoValid && !_compressing && !_submitting
+                ? _complete
+                : null,
           ),
           const SizedBox(height: 10),
           GestureDetector(

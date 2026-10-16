@@ -41,6 +41,7 @@ dependencies:
   camera: ^0.12.1
   video_player: ^2.14.1
   video_compress: ^3.1.4
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3

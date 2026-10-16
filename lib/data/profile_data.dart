@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'api_client.dart';
 import 'registration_data.dart';
 
 /// The member's full profile shown in Me → My information. Demo data; the
@@ -223,7 +224,9 @@ class ChangeRequest {
     required this.fieldId,
     required this.oldValue,
     required this.newValue,
-  }) : at = DateTime.now();
+    DateTime? at,
+    this.status = RequestStatus.pending,
+  }) : at = at ?? DateTime.now();
 
   final String fieldId;
 
@@ -231,11 +234,14 @@ class ChangeRequest {
   final String oldValue;
   final String newValue;
   final DateTime at;
-  RequestStatus status = RequestStatus.pending;
+  RequestStatus status;
 }
 
 class ProfileState extends ChangeNotifier {
   final _values = <String, String>{};
+
+  /// Id of the member's photo on the server (live mode), shown on the Me page.
+  String? photoId;
 
   /// Requests raised with the admin, newest first (demo store; the backend
   /// keeps these and the admin accepts or rejects them).
@@ -266,6 +272,51 @@ class ProfileState extends ChangeNotifier {
         newValue: newValue.trim(),
       ),
     );
+    notifyListeners();
+    if (liveApi) _sendToServer(fieldId, newValue.trim());
+  }
+
+  /// Live mode: the request goes to the office. If the server refuses it, the
+  /// app shows what the server holds again.
+  Future<void> _sendToServer(String fieldId, String value) async {
+    try {
+      await api.requestChange(fieldId, value);
+    } on ApiException {
+      try {
+        loadFromServer(await api.getProfile());
+      } on ApiException {
+        // Offline: keep what is on screen.
+      }
+    }
+  }
+
+  /// Replaces everything with what the server holds for the signed-in member.
+  void loadFromServer(Map<String, dynamic> data) {
+    _values.clear();
+    photoId = (data['photo'] as Map<String, dynamic>?)?['id'] as String?;
+    final fields = (data['fields'] as Map<String, dynamic>?) ?? const {};
+    fields.forEach((id, value) {
+      final v = '$value'.trim();
+      if (v.isNotEmpty) _values[id] = v;
+    });
+    requests
+      ..clear()
+      ..addAll(
+        ((data['requests'] as List?) ?? const []).map((r) {
+          final m = r as Map<String, dynamic>;
+          return ChangeRequest(
+            fieldId: '${m['fieldId']}',
+            oldValue: '${m['oldValue'] ?? ''}',
+            newValue: '${m['newValue'] ?? ''}',
+            at: DateTime.tryParse('${m['createdAt']}')?.toLocal(),
+            status: switch ('${m['status']}') {
+              'approved' => RequestStatus.approved,
+              'rejected' => RequestStatus.rejected,
+              _ => RequestStatus.pending,
+            },
+          );
+        }),
+      );
     notifyListeners();
   }
 

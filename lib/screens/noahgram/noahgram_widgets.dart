@@ -1,3 +1,6 @@
+import '../../data/api_client.dart';
+import '../../data/profile_data.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../data/noahgram_data.dart';
@@ -40,6 +43,18 @@ class Avatar extends StatelessWidget {
   final double size;
   final int ring;
 
+  /// The signed-in member's own photo from the server, when there is one.
+  Widget? _memberPhoto(Person who) {
+    final id = profile.photoId;
+    if (!liveApi || id == null || !identical(who, noahgram.me)) return null;
+    return Image.network(
+      api.fileUrl(id),
+      headers: api.authHeaders,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final core = ClipOval(
@@ -48,24 +63,25 @@ class Avatar extends StatelessWidget {
         height: size,
         child: person.isChurch
             ? Image.asset('assets/images/noah.png', fit: BoxFit.cover)
-            : Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: person.colors,
+            : _memberPhoto(person) ??
+                  Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: person.colors,
+                      ),
+                    ),
+                    child: Text(
+                      person.initials,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: size * 0.36,
+                      ),
+                    ),
                   ),
-                ),
-                child: Text(
-                  person.initials,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: size * 0.36,
-                  ),
-                ),
-              ),
       ),
     );
     if (ring == 0) return core;

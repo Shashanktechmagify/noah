@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart';
 import '../data/me_data.dart';
 import '../data/ministry_data.dart';
 import '../data/noahgram_data.dart';
@@ -34,6 +35,7 @@ class MeScreen extends StatelessWidget {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
   void _signOut(BuildContext context) {
+    if (liveApi) api.logout();
     // The root navigator, so the login page replaces the whole app shell.
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),

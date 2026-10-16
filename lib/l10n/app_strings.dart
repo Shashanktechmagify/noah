@@ -5471,4 +5471,13 @@ const Map<String, List<String>> _strings = {
     'യഥാർത്ഥ തീയതി dd/mm/yyyy ആയി നൽകുക, ഭാവിയിലേത് പാടില്ല',
     'నిజమైన తేదీని dd/mm/yyyy లో నమోదు చేయండి, భవిష్యత్తుది కాదు',
   ],
+  'reg_check_status': ['Check approval status', '', '', '', '', ''],
+  'reg_still_pending': [
+    'Still waiting for the office to approve your registration.',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ],
 };
