@@ -20,7 +20,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _tabKeys = ['tab_prayers', 'tab_confessions', 'tab_commentary'];
+  static const _tabKeys = [
+    'tab_prayers',
+    'tab_confessions',
+    'tab_commentary',
+    'tab_ebooks',
+    'tab_praises',
+  ];
   int _tab = 0;
   final _scroll = ScrollController();
 
@@ -70,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => _push(const WordsOfFaithScreen()),
           ),
         ];
-      default:
+      case 2:
         return [
           for (var i = 0; i < 3; i++)
             _WordTile(
@@ -83,6 +89,36 @@ class _HomeScreenState extends State<HomeScreen> {
           _ViewAllTile(
             label: tr(context, 'all_commentary'),
             onTap: () => _push(const CommentaryScreen()),
+          ),
+        ];
+      case 3:
+        return [
+          for (var i = 0; i < 3; i++)
+            _WordTile(
+              icon: Icons.menu_book_outlined,
+              title: kEbooks[i].title,
+              sub: kEbooks[i].author,
+              colors: _tileColors[i],
+              onTap: () => _push(const EbooksScreen()),
+            ),
+          _ViewAllTile(
+            label: tr(context, 'all_ebooks'),
+            onTap: () => _push(const EbooksScreen()),
+          ),
+        ];
+      default:
+        return [
+          for (var i = 0; i < 3; i++)
+            _WordTile(
+              icon: Icons.favorite_border,
+              title: kPraises[i].title,
+              sub: '${kPraises[i].author} · ${kPraises[i].place}',
+              colors: _tileColors[i],
+              onTap: () => _push(const PraisesScreen()),
+            ),
+          _ViewAllTile(
+            label: tr(context, 'all_praises'),
+            onTap: () => _push(const PraisesScreen()),
           ),
         ];
     }

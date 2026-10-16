@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_strings.dart' show AppLang;
 import 'noahgram_data.dart';
 import 'world_data.dart';
 
@@ -31,8 +32,9 @@ List<(String, String, String)> idTypesFor(String country) => [
     if (t.$1 != 'emirates' || country == kUaeCountry) t,
 ];
 
-const kMinVideoSeconds = 10;
-const kMaxVideoSeconds = 30;
+/// Allowed length (min, max seconds) of the video, which is the member reading
+/// the whole declaration aloud: 1 to 2 minutes in every language.
+(int, int) videoLimits(AppLang lang) => (60, 120);
 const kOfficePhone = '+91 98200 00000';
 
 /// Salutations offered in step 1.
@@ -145,6 +147,7 @@ class RegistrationState extends ChangeNotifier {
   DateTime? signedOn;
 
   // Step 6: video
+  AppLang videoLang = AppLang.en; // language the declaration was read in
   int? videoSeconds;
   int? videoBytes; // size of the file that will be uploaded (compressed)
   int? videoOriginalBytes; // size as recorded
@@ -153,6 +156,7 @@ class RegistrationState extends ChangeNotifier {
   // Outcome
   String phone = '';
   bool completed = false;
+  DateTime? registeredOn; // when the registration was submitted
   RegStatus status = RegStatus.pending;
 
   /// Call after changing a field so listeners (the footer button) refresh.
@@ -175,8 +179,10 @@ class RegistrationState extends ChangeNotifier {
     signedOn = null;
     videoSeconds = null;
     videoPath = null;
+    videoLang = AppLang.en;
     videoBytes = videoOriginalBytes = null;
     completed = false;
+    registeredOn = null;
     status = RegStatus.pending;
     notifyListeners();
   }
@@ -246,10 +252,10 @@ class RegistrationState extends ChangeNotifier {
 
   bool get declarationValid => agreed && signatureMatches;
 
-  bool get videoValid =>
-      videoSeconds != null &&
-      videoSeconds! >= kMinVideoSeconds &&
-      videoSeconds! <= kMaxVideoSeconds;
+  bool get videoValid {
+    final (min, max) = videoLimits(videoLang);
+    return videoSeconds != null && videoSeconds! >= min && videoSeconds! <= max;
+  }
 
   bool stepValid(int step) => switch (step) {
     0 => detailsValid,
@@ -269,6 +275,7 @@ class RegistrationState extends ChangeNotifier {
 
   void complete() {
     completed = true;
+    registeredOn = DateTime.now();
     status = RegStatus.pending;
     notifyListeners();
   }

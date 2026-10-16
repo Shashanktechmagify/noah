@@ -243,6 +243,7 @@ class _PrayerDialogState extends State<_PrayerDialog> {
               controller: _text,
               minLines: 4,
               maxLines: 6,
+              maxLength: 300, // keeps requests short for the prayer team
               decoration: InputDecoration(
                 hintText: tr(context, 'pr_hint'),
                 hintStyle: const TextStyle(color: AppColors.muted),

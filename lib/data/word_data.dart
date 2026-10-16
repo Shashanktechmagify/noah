@@ -138,3 +138,101 @@ const kCommentary = [
   CommentaryEntry(ref: 'Joel 2:18–27', title: 'The years restored'),
   CommentaryEntry(ref: 'Joel 2:28–32', title: 'The Spirit poured out'),
 ];
+
+class Ebook {
+  const Ebook({required this.title, required this.author, required this.pages});
+
+  final String title;
+  final String author;
+  final int pages;
+}
+
+const kEbooks = [
+  Ebook(
+    title: 'Walking in Compassion',
+    author: 'Pastor Michael Fernandes',
+    pages: 142,
+  ),
+  Ebook(
+    title: 'The Power of Prayer',
+    author: 'Pastor Anita Fernandes',
+    pages: 96,
+  ),
+  Ebook(
+    title: 'Restored: Joel for Today',
+    author: 'Pastor Samuel Thomas',
+    pages: 120,
+  ),
+  Ebook(
+    title: 'Faith in Hard Seasons',
+    author: 'Karuna Sadan Ministries',
+    pages: 78,
+  ),
+  Ebook(
+    title: 'A Family at the Altar',
+    author: 'Pastor Anita Fernandes',
+    pages: 64,
+  ),
+];
+
+class Praise {
+  const Praise({
+    required this.title,
+    required this.body,
+    required this.author,
+    required this.place,
+    required this.daysAgo,
+  });
+
+  final String title;
+  final String body;
+  final String author;
+  final String place;
+  final int daysAgo;
+}
+
+/// Testimonies shared by members. The server will supply these.
+const kPraises = [
+  Praise(
+    title: 'Healing after eight months',
+    body: 'The scan came back clear on Tuesday. We had prayed since February with Cell 4 and the pastoral team.',
+    author: 'Anil Thomas',
+    place: 'Pune Camp',
+    daysAgo: 2,
+  ),
+  Praise(
+    title: 'A job after redundancy',
+    body: 'After five months without work, an offer arrived the very week our cell fasted together. God is faithful.',
+    author: 'Grace Fernandes',
+    place: 'Andheri West',
+    daysAgo: 3,
+  ),
+  Praise(
+    title: 'Safe delivery',
+    body: 'Our baby girl arrived safely after a difficult pregnancy. Thank you to everyone who stood with us in prayer.',
+    author: 'Sharon Ninan',
+    place: 'Kochi',
+    daysAgo: 4,
+  ),
+  Praise(
+    title: 'Reconciled with my brother',
+    body: 'We had not spoken for six years. After the Night of Worship he called me, and we wept together.',
+    author: 'Joel Mathew',
+    place: 'Thane',
+    daysAgo: 6,
+  ),
+  Praise(
+    title: 'Freedom from fear',
+    body: 'I slept through the night for the first time in years after the pastor prayed with me. Praise God.',
+    author: 'Neha Pinto',
+    place: 'Bandra',
+    daysAgo: 8,
+  ),
+  Praise(
+    title: 'Exam results',
+    body: 'I had failed twice. This time I passed with distinction. Thank you for praying for my studies.',
+    author: 'Rohan D\'Souza',
+    place: 'Vasai',
+    daysAgo: 9,
+  ),
+];

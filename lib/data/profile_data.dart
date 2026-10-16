@@ -131,7 +131,8 @@ const kProfileSections = [
     PfField('phone2', 'pf_phone2', PfKind.phone),
     PfField('landline', 'pf_landline', PfKind.phone),
     PfField('occupation', 'pf_occupation', PfKind.text),
-    PfField('joined', 'pf_joined', PfKind.date),
+    // Set automatically from the registration date; members cannot change it.
+    PfField('joined', 'pf_joined', PfKind.readOnly),
   ]),
   PfSection('pf_sec_address', [
     PfField('address', 'pf_address', PfKind.text, required: true),
@@ -196,23 +197,91 @@ const kProfileSections = [
     PfField('drink', 'pf_drink', PfKind.choice, options: _yesNo),
     PfField('income', 'pf_income', PfKind.text),
     PfField('reference', 'reg_ref', PfKind.text),
+    PfField('reference_phone', 'pf_ref_phone', PfKind.phone),
     PfField('education', 'pf_education', PfKind.text),
     PfField('employed', 'pf_employed', PfKind.text),
   ]),
 ];
 
-/// dd-mm-yyyy from an ISO date string.
+/// dd/mm/yyyy from an ISO date string.
 String displayDate(String iso) {
   final d = DateTime.tryParse(iso);
   if (d == null) return iso;
-  return '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
+  return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 }
 
 String _iso(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+enum RequestStatus { pending, approved, rejected }
+
+/// A member's request to change or add one detail. Members cannot edit their
+/// details themselves: the admin sees the request and the detail changes only
+/// if the admin accepts it.
+class ChangeRequest {
+  ChangeRequest({
+    required this.fieldId,
+    required this.oldValue,
+    required this.newValue,
+  }) : at = DateTime.now();
+
+  final String fieldId;
+
+  /// What the detail was when the request was made (empty if it was missing).
+  final String oldValue;
+  final String newValue;
+  final DateTime at;
+  RequestStatus status = RequestStatus.pending;
+}
+
 class ProfileState extends ChangeNotifier {
   final _values = <String, String>{};
+
+  /// Requests raised with the admin, newest first (demo store; the backend
+  /// keeps these and the admin accepts or rejects them).
+  final requests = <ChangeRequest>[];
+
+  /// The open request for [fieldId], if any.
+  ChangeRequest? pendingFor(String fieldId) {
+    for (final r in requests) {
+      if (r.fieldId == fieldId && r.status == RequestStatus.pending) return r;
+    }
+    return null;
+  }
+
+  int get pendingCount =>
+      requests.where((r) => r.status == RequestStatus.pending).length;
+
+  /// Sends a change to the admin. The detail itself does not change yet. A new
+  /// request for the same detail replaces the open one.
+  void requestChange(String fieldId, String newValue) {
+    requests.removeWhere(
+      (r) => r.fieldId == fieldId && r.status == RequestStatus.pending,
+    );
+    requests.insert(
+      0,
+      ChangeRequest(
+        fieldId: fieldId,
+        oldValue: get(fieldId),
+        newValue: newValue.trim(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  /// Admin accepts: the detail is updated.
+  void approveRequest(ChangeRequest r) {
+    if (r.status != RequestStatus.pending) return;
+    r.status = RequestStatus.approved;
+    set(r.fieldId, r.newValue);
+  }
+
+  /// Admin rejects: the detail stays as it was.
+  void rejectRequest(ChangeRequest r) {
+    if (r.status != RequestStatus.pending) return;
+    r.status = RequestStatus.rejected;
+    notifyListeners();
+  }
 
   String get(String id) => _values[id] ?? '';
 
@@ -265,6 +334,8 @@ class ProfileState extends ChangeNotifier {
     if (r.dob != null) put('dob', _iso(r.dob!));
     put('marital', r.marital);
     if (r.anniversary != null) put('anniversary', _iso(r.anniversary!));
+    // The member joined the day the registration was submitted.
+    put('joined', _iso(r.registeredOn ?? DateTime.now()));
     put('phone1', r.phone);
     put('email', r.email);
     put(
@@ -277,6 +348,9 @@ class ProfileState extends ChangeNotifier {
     );
     put('pin', r.pin);
     put('reference', r.reference);
+    if (r.referencePhone.trim().isNotEmpty) {
+      put('reference_phone', '${r.referenceDial} ${r.referencePhone}');
+    }
     if (r.idType != null) put(r.idType!, r.idNumber);
     notifyListeners();
   }
@@ -297,7 +371,8 @@ class ProfileState extends ChangeNotifier {
       ..['pin'] = '400601'
       ..['mother_tongue'] = 'Konkani'
       ..['comm_language'] = 'English'
-      ..['religion'] = 'Christian';
+      ..['religion'] = 'Christian'
+      ..['joined'] = '2019-06-02';
   }
 }
 

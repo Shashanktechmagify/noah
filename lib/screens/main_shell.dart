@@ -13,6 +13,7 @@ import 'menu_sheet.dart';
 import 'me_screen.dart';
 import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
+import 'word_screens.dart';
 import '../widgets/tab_navigator.dart';
 
 class _NavItem {
@@ -110,6 +111,23 @@ class _MainShellState extends State<MainShell> {
       case 'manna':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const MannaScreen()));
+      case 'ebooks':
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const EbooksScreen()));
+      case 'praises':
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PraisesScreen()));
+      case 'daily_prayer':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const DailyPrayersScreen()));
+      case 'confessions':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const WordsOfFaithScreen()));
+      case 'commentary':
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const CommentaryScreen()));
       case 'prayer_request':
         showPrayerDialog(context);
       default:

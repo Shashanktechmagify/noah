@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
 import 'l10n/app_strings.dart';
@@ -40,6 +41,14 @@ class _NoahAppState extends State<NoahApp> {
         title: 'Noah',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
+        // Dates are typed and shown day first (dd/mm/yyyy), not month first.
+        locale: const Locale('en', 'GB'),
+        supportedLocales: const [Locale('en', 'GB')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: const SplashScreen(),
       ),
     );

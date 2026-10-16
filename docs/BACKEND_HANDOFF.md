@@ -114,6 +114,10 @@ The video KYC is recorded on the device (front camera, 10–30 s, mp4) and must 
 
 Step 1 also collects salutation (Mr, Mrs, Ms, Miss, Dr, Rev, Ps), nationality (a country) and, when marital status is *married*, a mandatory anniversary date (after the member turned 18, not in the future). The declaration text is the ministry's *Form of Declaration* in English, Hindi and Marathi, filled with the member's name, age and place; store the language shown and the signing time.
 
+Video length: the member reads the whole declaration aloud in English, Hindi or Marathi. The app accepts 1 to 2 minutes (60–120 s); store the language and validate the same limits on the server.
+
+Profile changes: members cannot edit their details (Me → My information). They tap a detail, enter the new value and press *Request admin*; the app sends a change request `{fieldId, oldValue, newValue}` (status `pending`). The detail stays unchanged until the admin accepts (status `approved`, the server applies `newValue`) or rejects (status `rejected`, nothing changes). One open request per field: a new one replaces it. The app lists them under *My requests*; its *Simulate: admin accepts / rejects* buttons are prototype controls to be replaced by a real admin queue and push/e-mail notification. Prayer requests are limited to 300 characters (enforce on the server too).
+
 Video size: the app re-encodes the recording to 480p / 24 fps before upload (`video_compress`, phones only). The backend must not rely on that: enforce a maximum file size and duration, and re-encode server-side (e.g. ffmpeg in a Catalyst function) before keeping it in File Store.
 
 Office workflow: status is `pending` → `approved` or `videoReturned` (re-record). The app's "Prototype controls" (*Simulate: admin approves / returns the video*) must be removed and replaced by polling or a push notification. Access to the app must stay locked server-side until approved. Office phone/contact (`kOfficePhone`) should come from config.

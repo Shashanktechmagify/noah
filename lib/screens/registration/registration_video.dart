@@ -9,7 +9,7 @@ import '../../data/registration_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart';
-import '../events/events_widgets.dart' show fullDate;
+import 'registration_widgets.dart' show declarationIntro;
 import 'uploads.dart';
 import 'registration_status.dart';
 
@@ -193,6 +193,20 @@ class _VideoStepState extends State<VideoStep> {
     _initCamera();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_langSet) {
+      _langSet = true;
+      final app = AppLocale.of(context).lang;
+      _lang = app == AppLang.hi || app == AppLang.mr ? app : AppLang.en;
+      registration.videoLang = _lang;
+    }
+  }
+
+  bool _langSet = false;
+  final _scriptScroll = ScrollController();
+
   Future<void> _initCamera() async {
     try {
       final cams = await availableCameras();
@@ -219,6 +233,7 @@ class _VideoStepState extends State<VideoStep> {
 
   @override
   void dispose() {
+    _scriptScroll.dispose();
     _timer?.cancel();
     final cam = _cam;
     if (cam != null) {
@@ -249,7 +264,7 @@ class _VideoStepState extends State<VideoStep> {
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _seconds++);
-      if (_seconds >= kMaxVideoSeconds) _stop();
+      if (_seconds >= videoLimits(_lang).$2) _stop();
     });
   }
 
@@ -297,34 +312,42 @@ class _VideoStepState extends State<VideoStep> {
     );
   }
 
-  /// The read-aloud script, with the name and place highlighted.
-  InlineSpan _script(BuildContext context) {
-    final r = registration;
-    final signed = r.signedOn ?? DateTime.now();
-    final raw = tr(
-      context,
-      'reg_script',
-      args: {'date': fullDate(context, signed)},
+  AppLang _lang = AppLang.en;
+
+  /// The whole declaration, read aloud in the chosen language.
+  Widget _script(BuildContext context) {
+    final paragraphs = trIn(_lang, 'reg_decl_body').split('\n\n');
+    const body = TextStyle(
+      fontSize: 15,
+      height: 1.5,
+      fontWeight: FontWeight.w600,
     );
-    final parts = raw.split(RegExp(r'(\{name\}|\{place\})'));
-    final marks = RegExp(r'\{name\}|\{place\}').allMatches(raw).toList();
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < parts.length; i++) {
-      spans.add(TextSpan(text: parts[i]));
-      if (i < marks.length) {
-        final isName = marks[i].group(0) == '{name}';
-        spans.add(
-          TextSpan(
-            text: isName ? r.displayName : '${r.city}, ${r.country}',
-            style: const TextStyle(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          trIn(_lang, 'reg_decl_title'),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text.rich(
+          declarationIntro(
+            _lang,
+            highlight: const TextStyle(
               color: AppColors.magenta,
               fontWeight: FontWeight.w800,
             ),
           ),
-        );
-      }
-    }
-    return TextSpan(children: spans);
+          style: body,
+        ),
+        const SizedBox(height: 10),
+        for (final p in paragraphs)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(p, style: body),
+          ),
+      ],
+    );
   }
 
   Widget _preview() {
@@ -467,7 +490,11 @@ class _VideoStepState extends State<VideoStep> {
                   label: tr(
                     context,
                     'reg_chk_len',
-                    args: {'len': clock(shown)},
+                    args: {
+                      'len': clock(shown),
+                      'min': '${videoLimits(r.videoLang).$1}',
+                      'max': '${videoLimits(r.videoLang).$2}',
+                    },
                   ),
                   ok: r.videoValid,
                 ),
@@ -539,47 +566,70 @@ class _VideoStepState extends State<VideoStep> {
             ),
           ),
         ] else ...[
+          // Read the declaration in English, Hindi or Marathi.
+          Row(
+            children: [
+              for (final l in [AppLang.en, AppLang.hi, AppLang.mr])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: _recording
+                        ? null
+                        : () => setState(() {
+                            _lang = l;
+                            registration.videoLang = l;
+                          }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: l == _lang ? AppColors.magenta : AppColors.tint,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Text(
+                        l.native,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: l == _lang ? Colors.white : AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            height: 260,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tr(context, 'reg_read_aloud').toUpperCase(),
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: spacing(context, 0.5),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text.rich(
-                  _script(context),
-                  style: const TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w700,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  tr(context, 'reg_script_note'),
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                ),
-              ],
+            child: Scrollbar(
+              controller: _scriptScroll,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scriptScroll,
+                padding: const EdgeInsets.all(16),
+                child: _script(context),
+              ),
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            tr(context, 'reg_vid_note'),
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: _seconds / kMaxVideoSeconds,
+              value: _seconds / videoLimits(_lang).$2,
               minHeight: 5,
               backgroundColor: const Color(0xFFE3DDF1),
               color: AppColors.magenta,
@@ -588,7 +638,14 @@ class _VideoStepState extends State<VideoStep> {
           const SizedBox(height: 6),
           Center(
             child: Text(
-              tr(context, 'reg_secs'),
+              tr(
+                context,
+                'reg_secs',
+                args: {
+                  'min': '${videoLimits(_lang).$1}',
+                  'max': '${videoLimits(_lang).$2}',
+                },
+              ),
               style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -363,7 +365,7 @@ void main() {
     // Menu items without a screen yet say so.
     await tester.tap(find.text('Menu'));
     await settle();
-    await tester.tap(find.text('eBooks'));
+    await tester.tap(find.text('Podcast'));
     // Look before the snackbar auto-dismisses (pumpAndSettle would wait it out).
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump(const Duration(milliseconds: 600));
@@ -801,7 +803,7 @@ void main() {
     // Record for the minimum length, then complete.
     await tester.tap(find.text('Start recording'));
     await tester.pump();
-    for (var i = 0; i < kMinVideoSeconds; i++) {
+    for (var i = 0; i < videoLimits(AppLang.en).$1; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
     await tester.tap(find.text('Stop recording'));
@@ -982,14 +984,17 @@ void main() {
     expect(find.text('Prayer warriors'), findsOneWidget);
   });
 
-  testWidgets('me: my information asks for missing details', (tester) async {
+  testWidgets('me: details change only when the admin accepts a request', (
+    tester,
+  ) async {
     final loader = FontLoader('PlusJakartaSans')
       ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
     await tester.runAsync(loader.load);
-    tester.view.physicalSize = const Size(390, 3000);
+    tester.view.physicalSize = const Size(390, 3600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     profile.seedDemo(); // blood group is the one required detail missing
+    profile.requests.clear();
 
     await tester.pumpWidget(
       AppLocale(
@@ -1001,38 +1006,92 @@ void main() {
       ),
     );
     await tester.pump();
+    Future<void> settle() => tester.pumpAndSettle();
+
     expect(find.text('My information'), findsOneWidget);
     expect(
       find.text(
-        'Please fill in the 1 missing details to complete your profile.',
+        '1 details are missing. Please raise a request to the admin to add them.',
       ),
       findsOneWidget,
     );
-    expect(find.text('Please fill this in'), findsOneWidget);
-    expect(find.text('Daniel'), findsOneWidget);
-    // Optional details are listed too, with a gentler prompt.
-    expect(find.text('Not added · tap to add'), findsWidgets);
+    expect(find.text('Not added yet'), findsOneWidget);
+    expect(find.text('Reference contact number'), findsOneWidget);
     expect(find.text('Emirates ID'), findsOneWidget);
-    expect(find.text('Deceased date'), findsOneWidget);
-    expect(find.text('Correspondence address'), findsOneWidget);
 
-    // Fill the missing blood group.
-    await tester.tap(find.text('Please fill this in'));
-    await tester.pumpAndSettle();
+    // 1. Tap a missing detail, choose the value and request the admin.
+    await tester.tap(find.text('Not added yet'));
+    await settle();
+    expect(find.text('Request a change'), findsOneWidget);
+    expect(find.text('Current: (empty)'), findsOneWidget);
+    // Nothing chosen yet: the button is off.
     await tester.tap(find.text('O+'));
-    await tester.pumpAndSettle();
-    expect(profile.get('blood_group'), 'O+');
-    expect(
-      find.text('All required details are filled in. Thank you!'),
-      findsOneWidget,
-    );
-
-    // Marking the member married makes the anniversary required.
-    profile.set('marital', 'married');
     await tester.pump();
-    expect(profile.missingRequired, 1);
-    profile.set('marital', 'single');
+    await tester.tap(find.text('Request admin'));
+    await settle();
+    // The detail itself has not changed: the admin has to accept it first.
+    expect(profile.get('blood_group'), '');
+    expect(profile.pendingFor('blood_group')!.newValue, 'O+');
+    expect(find.text('Requested: O+'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5)); // let the toast leave
+    await settle();
+
+    // 2. The admin rejects: nothing changes.
+    await tester.scrollUntilVisible(
+      find.textContaining('My requests'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await settle();
+    await tester.tap(find.textContaining('My requests'), warnIfMissed: false);
+    await settle();
+    expect(find.text('Waiting for admin'), findsOneWidget);
+    await tester.tap(find.text('Simulate: admin rejects'));
+    await settle();
+    expect(find.text('Rejected · detail unchanged'), findsOneWidget);
+    expect(profile.get('blood_group'), '');
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+
+    // 3. A second request is accepted: the detail is updated.
+    await tester.tap(find.text('Not added yet'));
+    await settle();
+    await tester.tap(find.text('A+'));
+    await tester.pump();
+    await tester.tap(find.text('Request admin'));
+    await settle();
+    await tester.pump(const Duration(seconds: 5));
+    await settle();
+    await tester.scrollUntilVisible(
+      find.textContaining('My requests'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await settle();
+    await tester.tap(find.textContaining('My requests'), warnIfMissed: false);
+    await settle();
+    await tester.tap(find.text('Simulate: admin accepts'));
+    await settle();
+    expect(find.text('Accepted · detail updated'), findsOneWidget);
+    expect(profile.get('blood_group'), 'A+');
     expect(profile.missingRequired, 0);
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    expect(find.text('A+'), findsOneWidget);
+
+    // 4. Typed details are checked before they can be sent.
+    await tester.tap(find.text('daniel.fernandes@example.com'));
+    await settle();
+    await tester.enterText(find.byType(TextField), 'not-an-email');
+    await tester.pump();
+    expect(find.text('Enter a valid email address'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'daniel@new.com');
+    await tester.pump();
+    await tester.tap(find.text('Request admin'));
+    await settle();
+    expect(profile.get('email'), 'daniel.fernandes@example.com');
+    expect(profile.pendingFor('email')!.newValue, 'daniel@new.com');
   });
 
   testWidgets('login: terms and conditions note after the button', (
@@ -1068,5 +1127,193 @@ void main() {
     expect(DialData.byCode('IN').validLength(10), isTrue);
     expect(DialData.byCode('JP').validLength(10), isTrue); // generic range
     expect(DialData.byCode('JP').validLength(3), isFalse);
+  });
+
+  test('every literal translation key used in lib/ exists', () {
+    final used = <String, String>{};
+    for (final f in Directory('lib').listSync(recursive: true)) {
+      if (f is! File || !f.path.endsWith('.dart')) continue;
+      if (f.path.endsWith('app_strings.dart')) continue;
+      final text = f.readAsStringSync();
+      final re = RegExp(
+        r"tr(?:In)?\(\s*(?:[A-Za-z_.]+,\s*)?'([a-zA-Z0-9_]+)'",
+      );
+      for (final m in re.allMatches(text)) {
+        used.putIfAbsent(m[1]!, () => f.path);
+      }
+    }
+    final missing = [
+      for (final e in used.entries)
+        if (trIn(AppLang.en, e.key) == e.key) '${e.key} (${e.value})',
+    ];
+    expect(missing, isEmpty); // a missing key shows as raw text like "reg_h2"
+    for (var i = 1; i <= 5; i++) {
+      expect(trIn(AppLang.en, 'reg_h$i'), isNot('reg_h$i'));
+      expect(trIn(AppLang.en, 'reg_h${i}s'), isNot('reg_h${i}s'));
+    }
+  });
+
+  test('video must be between 1 and 2 minutes', () {
+    for (final l in [AppLang.en, AppLang.hi, AppLang.mr]) {
+      expect(videoLimits(l), (60, 120));
+    }
+    final r = registration;
+    r.videoLang = AppLang.en;
+    r.videoSeconds = 50; // under a minute
+    expect(r.videoValid, isFalse);
+    r.videoSeconds = 60;
+    expect(r.videoValid, isTrue);
+    r.videoLang = AppLang.hi;
+    r.videoSeconds = 120;
+    expect(r.videoValid, isTrue);
+    r.videoSeconds = 121; // over two minutes
+    expect(r.videoValid, isFalse);
+  });
+
+  testWidgets('home: eBooks and Praises tabs, praises page, 300-char prayer', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const MainShell()),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() =>
+        tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    // The tab chips scroll sideways: bring the last ones into view.
+    await tester.drag(find.text('Bible commentary'), const Offset(-400, 0));
+    await settle();
+    await tester.tap(find.text('eBooks'));
+    await settle();
+    expect(find.text('Walking in Compassion'), findsOneWidget);
+    expect(find.text('All eBooks'), findsOneWidget);
+    await tester.tap(find.text('Praises'));
+    await settle();
+    expect(find.text('Healing after eight months'), findsOneWidget);
+    expect(find.text('Anil Thomas · Pune Camp'), findsOneWidget);
+    await tester.tap(find.text('All praises'));
+    await settle();
+    expect(find.text('Swipe to read the next testimony'), findsOneWidget);
+    expect(find.text('PRAISE REPORT'), findsOneWidget);
+    expect(find.text('1/6'), findsOneWidget);
+    await tester.tap(find.text('Pause'));
+    await settle();
+    expect(find.text('Paused'), findsOneWidget);
+    await tester.drag(
+      find.text('Healing after eight months'),
+      const Offset(-300, 0),
+    );
+    await settle();
+    expect(find.text('2/6'), findsOneWidget);
+    await tester.tap(find.text('Read all praise reports'));
+    await settle();
+    expect(find.text('Safe delivery'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await settle();
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await settle();
+
+    // The Menu no longer lists David's Shields; eBooks opens its page.
+    await tester.tap(find.text('Menu'));
+    await settle();
+    expect(find.text("David's Shields"), findsNothing);
+    await tester.tap(find.text('eBooks').last);
+    await settle();
+    expect(find.text('Read and keep your favourites'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await settle();
+
+    // A prayer request is limited to 300 characters.
+    await tester.scrollUntilVisible(
+      find.text('Do you need prayers?'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Start typing your prayer request'));
+    await settle();
+    await tester.enterText(find.byType(TextField).last, 'x' * 350);
+    await tester.pump();
+    expect(find.text('300/300'), findsOneWidget);
+  });
+
+  testWidgets('dates are typed as digits and shown as dd/mm/yyyy', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    registration.start('+91 90000 00009');
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(theme: buildTheme(), home: const RegistrationFlow()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final dob = find.widgetWithText(TextField, '').last;
+    final field = find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == 'dd/mm/yyyy',
+    );
+    await tester.ensureVisible(field);
+    await tester.enterText(field, '10092005');
+    await tester.pump();
+    expect(find.text('10/09/2005'), findsOneWidget);
+    expect(registration.dob, DateTime(2005, 9, 10));
+    expect(dob, findsWidgets);
+
+    // Not a real date: no date is stored and an error is shown.
+    await tester.enterText(field, '31022005');
+    await tester.pump();
+    expect(find.text('31/02/2005'), findsOneWidget);
+    expect(registration.dob, isNull);
+    expect(
+      find.text('Enter a real date as dd/mm/yyyy, not in the future'),
+      findsOneWidget,
+    );
+
+    // Under 18 is still refused.
+    await tester.enterText(field, '10092015');
+    await tester.pump();
+    expect(find.text('You must be at least 18 years old'), findsOneWidget);
+  });
+
+  test('date of joining is set automatically from the registration date', () {
+    final r = registration;
+    r.start('+91 90000 00007');
+    r
+      ..salutation = 'Mr'
+      ..firstName = 'Ravi'
+      ..lastName = 'Kumar'
+      ..email = 'r@k.co'
+      ..gender = 'male'
+      ..dob = DateTime(1990, 1, 1)
+      ..marital = 'single';
+    expect(r.registeredOn, isNull);
+    r.complete(); // the registration is submitted
+    final day = r.registeredOn!;
+    profile.loadFromRegistration(r); // runs when the admin approves
+    final iso =
+        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+    expect(profile.get('joined'), iso);
+    // It is read only: the member cannot ask to change it.
+    final joined = kProfileSections
+        .expand((s) => s.fields)
+        .firstWhere((f) => f.id == 'joined');
+    expect(joined.kind, PfKind.readOnly);
+    expect(profile.isRequired(joined), isFalse);
   });
 }

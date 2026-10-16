@@ -39,7 +39,6 @@ const kMenuItems = [
     Icons.import_contacts_outlined,
     key: 'mn_bible_study',
   ),
-  MenuItem('shields', Icons.shield_outlined, key: 'mn_shields'),
   MenuItem('gallery', Icons.photo_library_outlined, key: 'mn_gallery'),
   MenuItem('daily_prayer', Icons.self_improvement, key: 'mn_daily_prayer'),
   MenuItem('dream', Icons.nights_stay_outlined, key: 'mn_dream'),

@@ -3,6 +3,7 @@ import 'dart:ui' show PathMetric;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/registration_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 
@@ -449,6 +450,194 @@ class _PickerSheetState extends State<_PickerSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "I, Mr … aged … years, resident of …" in [doc], with the member's own
+/// name, age and place highlighted.
+InlineSpan declarationIntro(
+  AppLang doc, {
+  TextStyle highlight = const TextStyle(fontWeight: FontWeight.w800),
+}) {
+  final r = registration;
+  final values = {
+    '{name}': r.displayName.isEmpty ? '………' : r.displayName,
+    '{age}': r.age?.toString() ?? '……',
+    '{place}': [r.city, r.country].where((e) => e.isNotEmpty).join(', '),
+  };
+  final spans = <InlineSpan>[];
+  trIn(doc, 'reg_decl_intro').splitMapJoin(
+    RegExp(r'\{(name|age|place)\}'),
+    onMatch: (m) {
+      spans.add(TextSpan(text: values[m[0]!], style: highlight));
+      return '';
+    },
+    onNonMatch: (t) {
+      spans.add(TextSpan(text: t));
+      return '';
+    },
+  );
+  return TextSpan(children: spans);
+}
+
+/// dd/mm/yyyy text for [d].
+String formatDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+/// Turns typed digits into dd/mm/yyyy as you type: 10092005 becomes 10/09/2005.
+class DateSlashFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue old,
+    TextEditingValue value,
+  ) {
+    final digits = value.text.replaceAll(RegExp(r'\D'), '');
+    final d = digits.length > 8 ? digits.substring(0, 8) : digits;
+    final out = StringBuffer();
+    for (var i = 0; i < d.length; i++) {
+      if (i == 2 || i == 4) out.write('/');
+      out.write(d[i]);
+    }
+    final text = out.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+/// Parses dd/mm/yyyy; null for anything incomplete or not a real date
+/// (such as 31/02/2005).
+DateTime? parseDate(String text) {
+  final m = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(text);
+  if (m == null) return null;
+  final day = int.parse(m[1]!);
+  final month = int.parse(m[2]!);
+  final year = int.parse(m[3]!);
+  final d = DateTime(year, month, day);
+  return d.day == day && d.month == month && d.year == year ? d : null;
+}
+
+/// A date you can type (slashes are added for you) or pick from a calendar.
+/// [onChanged] gets the date, or null while it is incomplete or invalid.
+class DateInputField extends StatefulWidget {
+  const DateInputField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.firstYear = 1900,
+    this.error,
+  });
+
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+  final int firstYear;
+
+  /// Extra message from the caller (e.g. "must be at least 18").
+  final String? error;
+
+  @override
+  State<DateInputField> createState() => _DateInputFieldState();
+}
+
+class _DateInputFieldState extends State<DateInputField> {
+  late final _c = TextEditingController(
+    text: widget.value == null ? '' : formatDate(widget.value!),
+  );
+
+  /// Typed text that is complete but not an acceptable date.
+  bool get _badDate {
+    if (_c.text.length < 10) return false;
+    final d = parseDate(_c.text);
+    return d == null || d.year < widget.firstYear || d.isAfter(DateTime.now());
+  }
+
+  @override
+  void didUpdateWidget(DateInputField old) {
+    super.didUpdateWidget(old);
+    // The model changed from outside (e.g. the calendar): show it.
+    final v = widget.value;
+    if (v != null && parseDate(_c.text) != v) _c.text = formatDate(v);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _changed(String text) {
+    final d = parseDate(text);
+    final ok =
+        d != null && d.year >= widget.firstYear && !d.isAfter(DateTime.now());
+    setState(() {});
+    widget.onChanged(ok ? d : null);
+  }
+
+  Future<void> _pick() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      locale: const Locale('en', 'GB'),
+      fieldHintText: 'dd/mm/yyyy',
+      initialDate: widget.value ?? DateTime(now.year - 30, now.month, now.day),
+      firstDate: DateTime(widget.firstYear),
+      lastDate: now,
+    );
+    if (picked != null) {
+      _c.text = formatDate(picked);
+      _changed(_c.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _badDate ? tr(context, 'reg_err_date') : widget.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 50,
+          padding: const EdgeInsets.only(left: 16, right: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: error == null ? AppColors.border : _errorRed,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _c,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [DateSlashFormatter()],
+                  onChanged: _changed,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    hintText: 'dd/mm/yyyy',
+                    hintStyle: TextStyle(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: _pick,
+                icon: const Icon(Icons.calendar_today_outlined, size: 18),
+              ),
+            ],
+          ),
+        ),
+        if (error != null) RegError(error),
+      ],
     );
   }
 }

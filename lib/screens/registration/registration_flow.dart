@@ -188,72 +188,6 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
     super.dispose();
   }
 
-  Future<void> _pickDob() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate:
-          registration.dob ?? DateTime(now.year - 30, now.month, now.day),
-      firstDate: DateTime(1920),
-      lastDate: now,
-    );
-    if (picked != null) {
-      registration.dob = picked;
-      registration.touch();
-    }
-  }
-
-  Future<void> _pickAnniversary() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate:
-          registration.anniversary ??
-          DateTime(now.year - 5, now.month, now.day),
-      firstDate: DateTime(1940),
-      lastDate: now,
-    );
-    if (picked != null) {
-      registration.anniversary = picked;
-      registration.touch();
-    }
-  }
-
-  /// dd-mm-yyyy box that opens a date picker.
-  Widget _dateBox(DateTime? value, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              value == null ? 'dd-mm-yyyy' : _fmt(value),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: value == null ? FontWeight.w400 : FontWeight.w600,
-                color: value == null ? AppColors.muted : AppColors.ink,
-              ),
-            ),
-          ),
-          const Icon(
-            Icons.calendar_today_outlined,
-            size: 18,
-            color: AppColors.ink,
-          ),
-        ],
-      ),
-    ),
-  );
-
-  String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
-
   @override
   Widget build(BuildContext context) {
     final r = registration;
@@ -356,8 +290,15 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
           },
         ),
         RegLabel(tr(context, 'reg_dob'), required: true),
-        _dateBox(r.dob, _pickDob),
-        if (dobError(r.dob) != null) RegError(tr(context, dobError(r.dob)!)),
+        DateInputField(
+          value: r.dob,
+          firstYear: 1920,
+          error: dobError(r.dob) == null ? null : tr(context, dobError(r.dob)!),
+          onChanged: (d) {
+            r.dob = d;
+            r.touch();
+          },
+        ),
         RegLabel(tr(context, 'reg_marital'), required: true),
         RegPicker(
           value: r.marital.isEmpty ? '' : maritalLabels[r.marital]!,
@@ -375,9 +316,17 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
         ),
         if (r.marital == 'married') ...[
           RegLabel(tr(context, 'reg_anniv'), required: true),
-          _dateBox(r.anniversary, _pickAnniversary),
-          if (anniversaryError(r.anniversary, r.dob) != null)
-            RegError(tr(context, anniversaryError(r.anniversary, r.dob)!)),
+          DateInputField(
+            value: r.anniversary,
+            firstYear: 1940,
+            error: anniversaryError(r.anniversary, r.dob) == null
+                ? null
+                : tr(context, anniversaryError(r.anniversary, r.dob)!),
+            onChanged: (d) {
+              r.anniversary = d;
+              r.touch();
+            },
+          ),
         ],
         RegLabel(tr(context, 'reg_ref')),
         RegInput(
@@ -1083,35 +1032,6 @@ class _DeclarationStepState extends State<_DeclarationStep>
     super.dispose();
   }
 
-  /// "I, Mr … aged … years, resident of …" with the member's own details.
-  InlineSpan _intro(AppLang doc) {
-    final r = registration;
-    final raw = trIn(doc, 'reg_decl_intro');
-    final values = {
-      '{name}': r.displayName.isEmpty ? '………' : r.displayName,
-      '{age}': r.age?.toString() ?? '……',
-      '{place}': [r.city, r.country].where((e) => e.isNotEmpty).join(', '),
-    };
-    final spans = <InlineSpan>[];
-    raw.splitMapJoin(
-      RegExp(r'\{(name|age|place)\}'),
-      onMatch: (m) {
-        spans.add(
-          TextSpan(
-            text: values[m[0]!],
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-        );
-        return '';
-      },
-      onNonMatch: (t) {
-        spans.add(TextSpan(text: t));
-        return '';
-      },
-    );
-    return TextSpan(children: spans);
-  }
-
   void _openPdf() => showDialog<void>(
     context: context,
     builder: (dialog) => AlertDialog(
@@ -1206,7 +1126,7 @@ class _DeclarationStepState extends State<_DeclarationStep>
                   ),
                   const SizedBox(height: 8),
                   Text.rich(
-                    _intro(doc),
+                    declarationIntro(doc),
                     style: const TextStyle(
                       fontSize: 13.5,
                       height: 1.45,
