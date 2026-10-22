@@ -226,6 +226,21 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   bool _checking = false;
 
+  /// What the last check found, shown under the button (a snackbar alone is easy to miss).
+  String? _note;
+  bool _noteIsError = false;
+
+  void _say(String text, {bool error = false}) {
+    if (!mounted) return;
+    setState(() {
+      final t = TimeOfDay.now();
+      final hh = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+      final mm = t.minute.toString().padLeft(2, '0');
+      _note = '$text ($hh:$mm ${t.period == DayPeriod.am ? 'am' : 'pm'})';
+      _noteIsError = error;
+    });
+  }
+
   /// Live mode: asks the server whether the office has decided yet.
   Future<void> _checkStatus() async {
     setState(() => _checking = true);
@@ -243,14 +258,13 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
             ),
           );
         default:
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr(context, 'reg_still_pending'))),
-          );
+          _say(tr(context, 'reg_still_pending'));
       }
     } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      _say(e.message, error: true);
+    } catch (e) {
+      // Anything unexpected is shown too, instead of the button seeming to do nothing.
+      _say('Could not check: $e', error: true);
     } finally {
       if (mounted) setState(() => _checking = false);
     }
@@ -501,12 +515,24 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
-                if (liveApi)
+                if (liveApi) ...[
                   _ProtoButton(
                     label: _checking ? '...' : tr(context, 'reg_check_status'),
                     onTap: _checking ? () {} : _checkStatus,
-                  )
-                else ...[
+                  ),
+                  if (_note != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _note!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _noteIsError ? Colors.red : AppColors.muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ] else ...[
                   Text(
                     tr(context, 'reg_proto').toUpperCase(),
                     style: TextStyle(

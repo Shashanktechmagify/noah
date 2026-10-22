@@ -1316,4 +1316,21 @@ void main() {
     expect(joined.kind, PfKind.readOnly);
     expect(profile.isRequired(joined), isFalse);
   });
+
+  test('chat ticks: sending, sent, delivered and read from message ids', () {
+    const mine = '27145000000076004';
+    const older = '27145000000076003';
+    const newer = '27145000000076005';
+    // No server id yet: still being sent.
+    expect(ChatMessage.receiptFor(null, null, null), Receipt.sending);
+    // Saved on the server only: one tick.
+    expect(ChatMessage.receiptFor(mine, null, null), Receipt.sent);
+    expect(ChatMessage.receiptFor(mine, older, older), Receipt.sent);
+    // Their phone has it: two grey ticks.
+    expect(ChatMessage.receiptFor(mine, mine, older), Receipt.delivered);
+    expect(ChatMessage.receiptFor(mine, newer, null), Receipt.delivered);
+    // They opened the chat: two blue ticks (and a read message was also delivered).
+    expect(ChatMessage.receiptFor(mine, null, mine), Receipt.read);
+    expect(ChatMessage.receiptFor(mine, mine, newer), Receipt.read);
+  });
 }

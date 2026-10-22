@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart';
 import '../data/manna_data.dart';
+import '../data/ministry_data.dart';
+import '../data/notifications_data.dart';
+import '../data/pastor_data.dart';
 import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
@@ -10,6 +14,7 @@ import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import 'events/events_widgets.dart' show monthShort;
 import 'manna_screen.dart';
+import 'me/notifications_screen.dart';
 import 'word_screens.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -255,19 +260,7 @@ class _Header extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.notifications_none,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
+          const _Bell(),
         ],
       ),
     );
@@ -573,4 +566,79 @@ class _PrayerRequestCard extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The bell in the Home header: opens the notification list, with a count of what is new
+/// (unread notifications plus unread chat messages).
+class _Bell extends StatelessWidget {
+  const _Bell();
+
+  int get _count => !liveApi
+      ? 0
+      : notificationsState.unread +
+            (api.isStaff ? pastorInbox.totalUnread : ministry.unreadTotal);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([notificationsState, ministry, pastorInbox]),
+      builder: (context, _) {
+        final n = _count;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          ),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    n > 0 ? Icons.notifications : Icons.notifications_none,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                if (n > 0)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 18),
+                      height: 18,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5334B),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: Text(
+                        n > 9 ? '9+' : '$n',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

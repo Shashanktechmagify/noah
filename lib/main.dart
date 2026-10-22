@@ -2,12 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
+import 'data/api_client.dart';
+import 'data/ministry_data.dart';
+import 'data/notifications_data.dart';
+import 'data/pastor_data.dart';
 import 'l10n/app_strings.dart';
+import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
+/// Lets code outside the widget tree change page (e.g. back to sign-in when the saved sign-in expires).
+final appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  api.onSessionLost = () {
+    ministry.stopPolling();
+    pastorInbox.stop();
+    notificationsState.clear();
+    appNavigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  };
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -39,6 +56,7 @@ class _NoahAppState extends State<NoahApp> {
       controller: _locale,
       child: MaterialApp(
         title: 'Noah',
+        navigatorKey: appNavigatorKey,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
         // Dates are typed and shown day first (dd/mm/yyyy), not month first.

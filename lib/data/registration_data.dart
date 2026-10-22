@@ -412,8 +412,10 @@ class RegistrationState extends ChangeNotifier {
     final video = (m['video'] as Map<String, dynamic>?) ?? const {};
     final vf = video['file'] as Map<String, dynamic>?;
     videoFileId = vf?['id'] as String?;
-    videoSeconds = (video['seconds'] as num?)?.toInt();
-    videoBytes = (video['bytes'] as num?)?.toInt();
+    // The server sends numbers, but accept text too so a stray string cannot crash sign-in.
+    int? whole(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}');
+    videoSeconds = whole(video['seconds']);
+    videoBytes = whole(video['bytes']);
     videoPath = null;
     videoUploadedFrom = null;
 

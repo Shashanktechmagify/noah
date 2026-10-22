@@ -3,16 +3,20 @@ import 'package:flutter/material.dart';
 /// Gives a tab its own [Navigator], so pages pushed from it open inside the
 /// tab and the app's bottom navigation bar stays visible underneath.
 class TabNavigator extends StatefulWidget {
-  const TabNavigator({super.key, required this.root});
+  const TabNavigator({super.key, required this.root, this.navigatorKey});
 
   final Widget root;
+
+  /// Lets the shell push pages into this tab (e.g. when a notification is tapped).
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   State<TabNavigator> createState() => _TabNavigatorState();
 }
 
 class _TabNavigatorState extends State<TabNavigator> {
-  final _key = GlobalKey<NavigatorState>();
+  late final GlobalKey<NavigatorState> _key =
+      widget.navigatorKey ?? GlobalKey<NavigatorState>();
   late final _observer = _StackObserver(_sync);
   bool _canPop = false;
 

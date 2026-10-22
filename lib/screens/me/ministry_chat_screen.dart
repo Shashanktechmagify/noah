@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../data/adaptive_poll.dart';
+import '../../data/api_client.dart';
+import '../../data/open_target.dart';
 import '../../data/ministry_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
@@ -20,28 +25,63 @@ class MinistryChatScreen extends StatefulWidget {
 class _MinistryChatScreenState extends State<MinistryChatScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
+  AdaptivePoll? _poll;
+  bool _sending = false;
 
   @override
   void initState() {
     super.initState();
     // Notifying during initState would rebuild listeners mid-build.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ministry.markRead(widget.contact),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ministry.markRead(widget.contact);
+      if (liveApi) ministry.loadMessages(widget.contact);
+    });
+    // Live mode: look for new messages while the chat is open.
+    if (liveApi) {
+      _poll = AdaptivePoll(
+        task: () => ministry.loadMessages(widget.contact),
+        // A push asks for an immediate look (below), so this is only a safety net.
+        fast: const Duration(seconds: 45),
+        slow: const Duration(seconds: 180),
+        backoffAfter: 2,
+      )..start();
+      pushTick.addListener(_onPush);
+    }
     _controller.addListener(() => setState(() {}));
   }
 
+  void _onPush() => _poll?.refreshNow();
+
   @override
   void dispose() {
+    pushTick.removeListener(_onPush);
+    _poll?.stop();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  void _send() {
-    if (_controller.text.trim().isEmpty) return;
-    ministry.send(widget.contact, _controller.text);
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _sending) return;
+    if (!liveApi) {
+      ministry.send(widget.contact, text);
+      _controller.clear();
+      return;
+    }
     _controller.clear();
+    setState(() => _sending = true);
+    try {
+      await ministry.sendLive(widget.contact, text);
+      _poll?.nudge();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _controller.text = text; // keep what was typed
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   void _toBottom() {

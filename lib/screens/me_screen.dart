@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import '../data/live_session.dart';
+import '../data/pastor_data.dart';
 import '../data/me_data.dart';
 import '../data/ministry_data.dart';
 import '../data/noahgram_data.dart';
@@ -16,6 +18,7 @@ import 'me/identity_screen.dart';
 import 'me/language_screen.dart';
 import 'me/location_screen.dart';
 import 'me/messages_screen.dart';
+import 'me/pastor_inbox_screen.dart';
 import 'me/notifications_screen.dart';
 import 'me/profile_info_screen.dart';
 import 'me/profile_photo_screen.dart';
@@ -35,7 +38,7 @@ class MeScreen extends StatelessWidget {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
   void _signOut(BuildContext context) {
-    if (liveApi) api.logout();
+    endLiveSession();
     // The root navigator, so the login page replaces the whole app shell.
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -46,7 +49,13 @@ class MeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([noahgram, ministry, meState, profile]),
+      listenable: Listenable.merge([
+        noahgram,
+        ministry,
+        meState,
+        profile,
+        pastorInbox,
+      ]),
       builder: (context, _) {
         final me = noahgram.me;
         final rec = ministry.record;
@@ -73,54 +82,67 @@ class MeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _Fact(
-                          label: tr(context, 'me2_pastor'),
-                          value: ministry.pastor.name,
+                  // A pastor does not chat with themselves and uses the Pastor inbox instead.
+                  // An office admin still messages the pastors like a member does.
+                  if (!api.isPastor) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Fact(
+                            label: tr(context, 'me2_pastor'),
+                            value:
+                                (liveApi ? ministry.myPastor : ministry.pastor)
+                                    ?.name ??
+                                '-',
+                          ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () => openMinistryChat(context, ministry.pastor),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.buttonGradient,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.chat_bubble_outline,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tr(context, 'me2_chat_pastor'),
-                                style: const TextStyle(
+                        GestureDetector(
+                          onTap: () => ministry.myPastor == null
+                              ? _open(context, const MessagesScreen())
+                              : openMinistryChat(context, ministry.myPastor!),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 11,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.buttonGradient,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.chat_bubble_outline,
                                   color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  size: 16,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  tr(context, 'me2_chat_pastor'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24, color: AppColors.border),
+                      ],
+                    ),
+                    const Divider(height: 24, color: AppColors.border),
+                  ],
                   Align(
                     alignment: Alignment.centerLeft,
                     child: _Fact(
                       label: tr(context, 'me2_cell_leader'),
-                      value: '${ministry.leader.name} · ${rec.cellArea}',
+                      value: liveApi
+                          ? (ministry.leader.available
+                                ? ministry.leader.name
+                                : '-')
+                          : '${ministry.leader.name} · ${rec.cellArea}',
                     ),
                   ),
                   const Divider(height: 24, color: AppColors.border),
@@ -257,20 +279,42 @@ class MeScreen extends StatelessWidget {
                   ),
                   onTap: () => shell?.openMenu(),
                 ),
-                _Row(
-                  icon: Icons.chat_bubble_outline,
-                  title: tr(context, 'me2_messages'),
-                  subtitle: tr(context, 'me2_messages_sub'),
-                  pill: unread > 0
-                      ? _Pill(
-                          tr(context, 'me2_new', args: {'n': '$unread'}),
-                          StatusPill.book,
-                        )
-                      : null,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MessagesScreen()),
+                if (api.isStaff)
+                  _Row(
+                    icon: Icons.inbox_outlined,
+                    title: tr(context, 'pastor_inbox'),
+                    subtitle: tr(context, 'pastor_inbox_sub'),
+                    pill: pastorInbox.totalUnread > 0
+                        ? _Pill(
+                            tr(
+                              context,
+                              'me2_new',
+                              args: {'n': '${pastorInbox.totalUnread}'},
+                            ),
+                            StatusPill.book,
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PastorInboxScreen(),
+                      ),
+                    ),
                   ),
-                ),
+                if (!api.isPastor)
+                  _Row(
+                    icon: Icons.chat_bubble_outline,
+                    title: tr(context, 'me2_messages'),
+                    subtitle: tr(context, 'me2_messages_sub'),
+                    pill: unread > 0
+                        ? _Pill(
+                            tr(context, 'me2_new', args: {'n': '$unread'}),
+                            StatusPill.book,
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MessagesScreen()),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 22),

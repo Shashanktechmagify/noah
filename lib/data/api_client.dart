@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+import 'session_store.dart';
 
 /// Base URL of the Noah API (the Catalyst function). Set it when running:
 ///   flutter run --dart-define=NOAH_API=https://YOUR-PROJECT.development.catalystserverless.in/server/noah_api
@@ -77,24 +79,59 @@ class UploadedFile {
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
+  int _sessionReads = 0;
+  int _sessionWrites = 0;
+
   final http.Client _client;
   String? accessToken;
   String? refreshToken;
   Future<bool>? _refreshing;
 
+  /// `pastor`, `admin` ... for staff accounts; empty for members.
+  List<String> roles = [];
+
+  /// Staff who can use the pastor inbox.
+  bool get isStaff =>
+      roles.any((r) => const {'pastor', 'admin', 'superAdmin'}.contains(r));
+
+  /// A pastor answers messages instead of sending them to a pastor.
+  bool get isPastor => roles.contains('pastor');
+
   bool get signedIn => accessToken != null;
 
   void clear() {
+    final wasSignedIn = accessToken != null || refreshToken != null;
     accessToken = null;
     refreshToken = null;
+    roles = [];
+    sessionStore.clear();
+    // Signed out without the member asking (the saved sign-in expired): the app shows the sign-in page.
+    if (wasSignedIn && !_signingOut) onSessionLost?.call();
+  }
+
+  bool _signingOut = false;
+
+  /// Called when the server no longer accepts the saved sign-in.
+  void Function()? onSessionLost;
+
+  /// Puts back a sign-in saved on this phone (see session_restore.dart).
+  void restore({required String accessToken, required String refreshToken, required List<String> roles}) {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    this.roles = roles;
   }
 
   /// Address of a stored file, and the header that lets the member read it.
   String fileUrl(String id) => '$kApiBase/files/$id';
   Map<String, String> get authHeaders => {
     // Not "Authorization": Catalyst's gateway intercepts that header.
-    if (accessToken != null) 'X-Noah-Token': accessToken!,
+    'X-Noah-Token': ?accessToken,
+    // Which phone is calling, so a message you send never buzzes your own phone.
+    'X-Noah-Device': ?deviceId,
   };
+
+  /// Set by the push service once this install has an id.
+  String? deviceId;
 
   // ── Plumbing ──────────────────────────────────────────────────────────
 
@@ -129,6 +166,23 @@ class ApiClient {
         'network',
         'Could not reach the server. Check your internet.',
       );
+    }
+
+    // Development: what each call cost the server's database, and the total since the app started.
+    if (kDebugMode) {
+      final reads = int.tryParse(res.headers['x-noah-reads'] ?? '') ?? 0;
+      final writes = int.tryParse(res.headers['x-noah-writes'] ?? '') ?? 0;
+      _sessionReads += reads;
+      _sessionWrites += writes;
+      debugPrint(
+        '[api] $method $path -> ${res.statusCode}  reads=$reads writes=$writes  '
+        '(since start: reads=$_sessionReads writes=$_sessionWrites)',
+      );
+    }
+
+    if (method != 'GET' && res.statusCode < 400 &&
+        (path.startsWith('/registration') || path.startsWith('/profile') || path.startsWith('/files') || path == '/notifications/read')) {
+      sessionStore.markStale();
     }
 
     final text = res.body.isEmpty ? '{}' : res.body;
@@ -180,6 +234,9 @@ class ApiClient {
       );
       accessToken = d['accessToken'] as String?;
       refreshToken = d['refreshToken'] as String?;
+      if (accessToken != null && refreshToken != null) {
+        sessionStore.saveTokens(accessToken: accessToken!, refreshToken: refreshToken!);
+      }
       return accessToken != null;
     } on ApiException {
       clear();
@@ -225,6 +282,10 @@ class ApiClient {
     );
     accessToken = d['accessToken'] as String?;
     refreshToken = d['refreshToken'] as String?;
+    roles = ((d['roles'] as List?) ?? const []).map((e) => '$e').toList();
+    if (accessToken != null && refreshToken != null) {
+      sessionStore.saveTokens(accessToken: accessToken!, refreshToken: refreshToken!, roles: roles);
+    }
     return SignedIn(
       next: '${d['next']}',
       isNewMember: d['isNewMember'] == true,
@@ -235,7 +296,9 @@ class ApiClient {
 
   Future<void> logout() async {
     final token = refreshToken;
+    _signingOut = true;
     clear();
+    _signingOut = false;
     if (token == null) return;
     try {
       await _send(
@@ -253,6 +316,11 @@ class ApiClient {
   Future<Map<String, dynamic>> me() => _send('GET', '/me');
 
   // ── Registration ──────────────────────────────────────────────────────
+
+  /// `{ registration, profile }` in one call (sign-in needs both).
+  /// Registration and profile in one call; [notifications] adds the notification list too.
+  Future<Map<String, dynamic>> bootstrap({bool notifications = false}) =>
+      _send('GET', notifications ? '/me/bootstrap?notifications=1' : '/me/bootstrap');
 
   Future<Map<String, dynamic>> getRegistration() =>
       _send('GET', '/registration');
@@ -285,6 +353,89 @@ class ApiClient {
     );
     return UploadedFile('${d['id']}', '${d['name']}');
   }
+
+  // ── Chat with the church ─────────────────────────────────────────────
+
+  /// `{ contacts: [{kind, name, available, lastMessage, unread}], totalUnread }`.
+  /// [since] is the `activity` token of the last answer: while nothing has changed the server
+  /// replies `{unchanged: true}` without reading its database.
+  Future<Map<String, dynamic>> chatContacts({String? since}) =>
+      _send('GET', '/chat/contacts${since == null ? '' : '?since=$since'}');
+
+  /// `{ messages: [{id, text, fromMe, isFromMinistry, createdAt}] }`. With
+  /// [after] only newer messages come back. Reading marks them read.
+  /// [contactId] is the pastor's member id (not needed for the leader or office).
+  Future<Map<String, dynamic>> chatMessages(
+    String kind, {
+    String? contactId,
+    String? after,
+    String? since,
+  }) {
+    final query = [
+      if (contactId != null) 'contact=$contactId',
+      if (after != null) 'after=$after',
+      if (since != null) 'since=$since',
+    ].join('&');
+    return _send(
+      'GET',
+      '/chat/$kind/messages${query.isEmpty ? '' : '?$query'}',
+    );
+  }
+
+  Future<Map<String, dynamic>> chatSend(
+    String kind,
+    String text, {
+    String? contactId,
+  }) => _send(
+    'POST',
+    '/chat/$kind/messages',
+    json: {'text': text, 'contactId': ?contactId},
+  );
+
+  // ── Pastor inbox (staff only) ────────────────────────────────────────
+
+  Future<Map<String, dynamic>> pastorThreads({String? since}) =>
+      _send('GET', '/pastor/threads${since == null ? '' : '?since=$since'}');
+
+  Future<Map<String, dynamic>> pastorMessages(
+    String threadId, {
+    String? after,
+    String? since,
+  }) {
+    final query = [
+      if (after != null) 'after=$after',
+      if (since != null) 'since=$since',
+    ].join('&');
+    return _send(
+      'GET',
+      '/pastor/threads/$threadId/messages${query.isEmpty ? '' : '?$query'}',
+    );
+  }
+
+  Future<Map<String, dynamic>> pastorReply(String threadId, String text) =>
+      _send('POST', '/pastor/threads/$threadId/messages', json: {'text': text});
+
+  // ── Push and notifications ───────────────────────────────────────────
+
+  Future<void> registerDevice(
+    String deviceId,
+    String pushToken,
+    String platform,
+  ) => _send(
+    'PUT',
+    '/devices',
+    json: {'deviceId': deviceId, 'pushToken': pushToken, 'platform': platform},
+  );
+
+  Future<void> unregisterDevice(String deviceId) =>
+      _send('DELETE', '/devices/${Uri.encodeComponent(deviceId)}');
+
+  /// `{ unread, notifications: [{id, type, title, body, isRead, createdAt}] }`.
+  Future<Map<String, dynamic>> notifications() =>
+      _send('GET', '/notifications');
+
+  Future<void> markNotificationsRead() =>
+      _send('POST', '/notifications/read', json: {});
 
   // ── Profile ───────────────────────────────────────────────────────────
 

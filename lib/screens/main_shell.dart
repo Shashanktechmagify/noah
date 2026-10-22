@@ -15,6 +15,12 @@ import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
 import 'word_screens.dart';
 import '../widgets/tab_navigator.dart';
+import '../data/ministry_data.dart';
+import '../data/pastor_data.dart';
+import '../data/api_client.dart';
+import '../data/open_target.dart';
+import 'me/ministry_chat_screen.dart';
+import 'me/pastor_inbox_screen.dart';
 
 class _NavItem {
   const _NavItem({this.icon, this.key, this.brand});
@@ -83,15 +89,82 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _page = 0;
   bool _menuOpen = false;
+  final _meNav = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    openRequest.addListener(_handleOpen);
+    // A push that launched the app may already be waiting.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleOpen());
+  }
+
+  @override
+  void dispose() {
+    openRequest.removeListener(_handleOpen);
+    super.dispose();
+  }
+
+  /// A notification was tapped: go to the Me tab and open the page it is about.
+  Future<void> _handleOpen() async {
+    final target = openRequest.value;
+    if (target == null || !mounted) return;
+    openRequest.value = null;
+    setState(() => _page = 4);
+    _loadLazy(4);
+    // The Me tab's navigator may only just have been built.
+    await WidgetsBinding.instance.endOfFrame;
+    final nav = _meNav.currentState;
+    if (nav == null || !mounted) return;
+    nav.popUntil((r) => r.isFirst);
+
+    if (target.isChat) {
+      // Staff: a member wrote to them (their inbox). Otherwise (or if it is not in the inbox,
+      // e.g. an admin who is messaged like a member) it is one of the member's own chats.
+      if (api.isStaff) {
+        await pastorInbox.load();
+        final thread = pastorInbox.threads
+            .where((t) => t.id == target.threadId)
+            .firstOrNull;
+        if (thread != null && mounted) {
+          nav.push(MaterialPageRoute(builder: (_) => const PastorInboxScreen()));
+          nav.push(
+            MaterialPageRoute(builder: (_) => PastorChatScreen(thread: thread)),
+          );
+          return;
+        }
+      }
+      await ministry.refreshContacts();
+      final kind = target.kind;
+      final contact = kind == 'pastor'
+          ? ministry.myPastor
+          : ministry.contacts.where((c) => c.kind == kind).firstOrNull;
+      if (contact != null && mounted) {
+        nav.push(
+          MaterialPageRoute(builder: (_) => MinistryChatScreen(contact: contact)),
+        );
+      }
+    }
+    // Anything else (registration decisions, ...) lands on the Me tab, where that lives.
+  }
 
   /// While the Menu sheet is open the circle sits on Menu.
   int get _slot => _menuOpen ? _menuSlot : _pageToSlot[_page];
+
+  /// The chats and the pastor inbox are read from the server when the Me tab is first shown.
+  void _loadLazy(int page) {
+    if (page == 4) {
+      ministry.ensureLoaded();
+      pastorInbox.ensureLoaded();
+    }
+  }
 
   void _onSelect(int slot) {
     if (slot == _menuSlot) {
       _openMenu();
     } else {
       setState(() => _page = _slotToPage[slot]!);
+      _loadLazy(_page);
     }
   }
 
@@ -108,6 +181,7 @@ class _MainShellState extends State<MainShell> {
         setState(() => _page = 2);
       case 'info' || 'notifications':
         setState(() => _page = 4);
+        _loadLazy(4);
       case 'manna':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const MannaScreen()));
@@ -155,12 +229,12 @@ class _MainShellState extends State<MainShell> {
         extendBody: true,
         body: IndexedStack(
           index: _page,
-          children: const [
-            HomeScreen(),
-            NoahgramScreen(),
-            TabNavigator(root: EventsScreen()),
-            JodieScreen(),
-            TabNavigator(root: MeScreen()),
+          children: [
+            const HomeScreen(),
+            const NoahgramScreen(),
+            const TabNavigator(root: EventsScreen()),
+            const JodieScreen(),
+            TabNavigator(root: const MeScreen(), navigatorKey: _meNav),
             NoahtubeScreen(),
           ],
         ),

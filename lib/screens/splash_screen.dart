@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../data/session_restore.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
@@ -23,12 +24,16 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(milliseconds: 2800), () {
+    // Still signed in on this phone: the saved details are read now (no server call) and the app
+    // opens straight to Home; otherwise the sign-in page.
+    final restored = restoreSavedSession().catchError((_) => null);
+    _timer = Timer(const Duration(milliseconds: 2800), () async {
+      final home = await restored;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (_, _, _) => const LoginScreen(),
+          pageBuilder: (_, _, _) => home ?? const LoginScreen(),
           transitionsBuilder: (_, a, _, child) =>
               FadeTransition(opacity: a, child: child),
         ),

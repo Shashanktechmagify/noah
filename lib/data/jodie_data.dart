@@ -69,13 +69,45 @@ class MyJodie {
   Set<String> interests = {'worship', 'music', 'volunteering'};
 }
 
+/// Ticks under a message you sent: none (not tracked), a clock while it is being
+/// sent, one tick when saved, two when delivered to their phone, blue when read.
+enum Receipt { none, sending, sent, delivered, read }
+
 class ChatMessage {
-  ChatMessage(this.text, {required this.mine, DateTime? at})
-    : at = at ?? DateTime.now();
+  ChatMessage(
+    this.text, {
+    required this.mine,
+    DateTime? at,
+    this.id,
+    this.receipt = Receipt.none,
+  }) : at = at ?? DateTime.now();
 
   final String text;
   final bool mine;
   final DateTime at;
+
+  /// Server id (live chats) and the ticks to show for it.
+  final String? id;
+  Receipt receipt;
+
+  /// Works out the ticks of one of my messages from how far the other person
+  /// has got ([deliveredUpTo] and [readUpTo] are message ids from the server).
+  static Receipt receiptFor(
+    String? id,
+    String? deliveredUpTo,
+    String? readUpTo,
+  ) {
+    final mine = id == null ? null : BigInt.tryParse(id);
+    if (mine == null) return Receipt.sending;
+    bool covers(String? upTo) {
+      final n = upTo == null ? null : BigInt.tryParse(upTo);
+      return n != null && n >= mine;
+    }
+
+    if (covers(readUpTo)) return Receipt.read;
+    if (covers(deliveredUpTo)) return Receipt.delivered;
+    return Receipt.sent;
+  }
 }
 
 class JodieMatch {

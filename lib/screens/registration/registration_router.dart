@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/registration_data.dart';
+import '../../data/live_session.dart';
 import '../../data/server_sync.dart';
 import '../main_shell.dart';
 import 'registration_flow.dart';
@@ -35,7 +36,8 @@ Future<void> routeAfterServer(
   String phone,
   String next,
 ) async {
-  await loadMemberFromServer(phone);
+  await loadMemberFromServer(phone, withNotifications: true);
+  await startLiveSession();
   if (!context.mounted) return;
   final Widget screen;
   switch (next) {

@@ -240,18 +240,50 @@ class ChatBubble extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 3),
-            Text(
-              clock(message.at),
-              style: TextStyle(
-                color: mine
-                    ? Colors.white.withValues(alpha: 0.75)
-                    : AppColors.muted,
-                fontSize: 10.5,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  clock(message.at),
+                  style: TextStyle(
+                    color: mine
+                        ? Colors.white.withValues(alpha: 0.75)
+                        : AppColors.muted,
+                    fontSize: 10.5,
+                  ),
+                ),
+                if (mine && message.receipt != Receipt.none) ...[
+                  const SizedBox(width: 4),
+                  _Ticks(message.receipt),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// The ticks after the time: clock, one tick, two ticks, two blue ticks.
+class _Ticks extends StatelessWidget {
+  const _Ticks(this.receipt);
+
+  final Receipt receipt;
+
+  @override
+  Widget build(BuildContext context) {
+    final white = Colors.white.withValues(alpha: 0.75);
+    return switch (receipt) {
+      Receipt.sending => Icon(Icons.access_time, size: 12, color: white),
+      Receipt.sent => Icon(Icons.done, size: 15, color: white),
+      Receipt.delivered => Icon(Icons.done_all, size: 15, color: white),
+      Receipt.read => const Icon(
+        Icons.done_all,
+        size: 15,
+        color: Color(0xFF7FE3FF),
+      ),
+      Receipt.none => const SizedBox.shrink(),
+    };
   }
 }

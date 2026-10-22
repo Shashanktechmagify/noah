@@ -5480,4 +5480,14 @@ const Map<String, List<String>> _strings = {
     '',
     '',
   ],
+  'pastor_inbox': ['Pastor inbox', '', '', '', '', ''],
+  'pastor_inbox_sub': ['Messages from members', '', '', '', '', ''],
+  'pastor_inbox_empty': [
+    'No messages yet. When a member writes to you, it will appear here.',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ],
 };
