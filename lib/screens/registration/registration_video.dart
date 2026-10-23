@@ -219,15 +219,15 @@ class _VideoStepState extends State<VideoStep> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cams.first,
       );
-      // Recorded small to begin with (about 1 Mbps, 480p), so a 2 minute video is ~15 MB and rarely
-      // needs compressing afterwards.
+      // Recorded small to begin with (low resolution, about 0.6 Mbps), so a 2 minute video is ~9 MB
+      // and uploads quickly. Enough to see the face and hear the declaration.
       final controller = CameraController(
         cam,
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
         enableAudio: true,
         fps: 24,
-        videoBitrate: 1000000,
-        audioBitrate: 64000,
+        videoBitrate: 600000,
+        audioBitrate: 48000,
       );
       await controller.initialize();
       if (!mounted) {
