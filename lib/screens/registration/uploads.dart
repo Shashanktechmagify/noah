@@ -128,8 +128,9 @@ class CompressedVideo {
   final int after;
 }
 
-/// Videos up to this size are uploaded as recorded.
-const kSkipCompressionBytes = 20 * 1024 * 1024;
+/// Videos up to this size are uploaded as recorded (the server accepts up to 100 MB; re-encoding a
+/// 2 minute video on the phone takes longer than uploading it).
+const kSkipCompressionBytes = 80 * 1024 * 1024;
 
 /// Shrinks the recorded video (480p, 24 fps) before it is uploaded so it does
 /// not fill up storage. Falls back to the original when the platform has no
