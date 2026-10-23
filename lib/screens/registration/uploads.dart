@@ -128,11 +128,16 @@ class CompressedVideo {
   final int after;
 }
 
+/// Videos up to this size are uploaded as recorded.
+const kSkipCompressionBytes = 20 * 1024 * 1024;
+
 /// Shrinks the recorded video (480p, 24 fps) before it is uploaded so it does
 /// not fill up storage. Falls back to the original when the platform has no
 /// compressor (desktop) or it fails. The backend should also cap and re-encode.
 Future<CompressedVideo> compressVideo(String path) async {
   final before = await File(path).length();
+  // Recorded at a low bitrate already: re-encoding would only make the member wait.
+  if (before <= kSkipCompressionBytes) return CompressedVideo(path, before, before);
   try {
     final info = await VideoCompress.compressVideo(
       path,

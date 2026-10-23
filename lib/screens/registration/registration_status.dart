@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/api_client.dart';
+import '../../data/open_target.dart';
 import '../../data/profile_data.dart';
 import '../../data/registration_data.dart';
 import '../../data/server_sync.dart';
@@ -32,11 +33,27 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
   @override
   void initState() {
     super.initState();
+    // The "Application Approved!" push was tapped (or launched the app): look at the status at once.
+    openRequest.addListener(_onApprovalPush);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onApprovalPush());
     if (widget.showSuccess) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showSuccess();
       });
     }
+  }
+
+  void _onApprovalPush() {
+    final t = openRequest.value;
+    if (t == null || t.type != 'registration_approved' || !mounted) return;
+    openRequest.value = null;
+    if (liveApi && !_checking) _checkStatus();
+  }
+
+  @override
+  void dispose() {
+    openRequest.removeListener(_onApprovalPush);
+    super.dispose();
   }
 
   void _showSuccess() => showDialog<void>(
@@ -88,16 +105,6 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  tr(dialog, 'reg_success_body'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 13.5,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Text(
                   tr(dialog, 'reg_success_call', args: {'phone': kOfficePhone}),
                   textAlign: TextAlign.center,
@@ -286,8 +293,8 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
     final rows = <(IconData, String, String, String, bool)>[
       (
         Icons.person_outline,
-        tr(context, 'reg_row_details'),
-        '${r.displayName}${r.phone.isEmpty ? '' : ' · ${r.phone}'}',
+        tr(context, 'reg_row_details', args: {'name': r.displayName}),
+        r.phone,
         '',
         true,
       ),
@@ -333,20 +340,6 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
         ),
         '',
         true,
-      ),
-      (
-        Icons.shield_outlined,
-        tr(context, 'reg_row_office'),
-        tr(context, 'reg_row_office_sub'),
-        '',
-        false,
-      ),
-      (
-        Icons.lock_outline,
-        tr(context, 'reg_row_access'),
-        tr(context, 'reg_row_locked'),
-        '',
-        false,
       ),
     ];
     final top = MediaQuery.of(context).padding.top;
@@ -480,18 +473,6 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    tr(context, 'reg_wait_note'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                      height: 1.4,
-                    ),
                   ),
                 ),
                 const SizedBox(height: 14),

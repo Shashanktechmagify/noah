@@ -12,6 +12,7 @@ import '../../data/registration_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart';
+import '../../widgets/blocking_task.dart';
 import 'registration_widgets.dart' show declarationIntro;
 import 'uploads.dart';
 import 'registration_status.dart';
@@ -218,10 +219,15 @@ class _VideoStepState extends State<VideoStep> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cams.first,
       );
+      // Recorded small to begin with (about 1 Mbps, 480p), so a 2 minute video is ~15 MB and rarely
+      // needs compressing afterwards.
       final controller = CameraController(
         cam,
         ResolutionPreset.medium,
         enableAudio: true,
+        fps: 24,
+        videoBitrate: 1000000,
+        audioBitrate: 64000,
       );
       await controller.initialize();
       if (!mounted) {
@@ -311,16 +317,14 @@ class _VideoStepState extends State<VideoStep> {
   Future<void> _complete() async {
     if (liveApi) {
       setState(() => _submitting = true);
-      try {
-        await submitRegistrationToServer();
-      } on ApiException catch (e) {
-        if (!mounted) return;
-        setState(() => _submitting = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(describeApiError(e))));
-        return;
-      }
+      // A full-screen page blocks the app until the upload is done (or fails and is retried / closed).
+      final done = await runBlockingTask(
+        context,
+        (status) => submitRegistrationToServer(onStatus: status),
+      );
       if (!mounted) return;
+      setState(() => _submitting = false);
+      if (!done) return;
     }
     registration.complete();
     Navigator.of(context).pushReplacement(
