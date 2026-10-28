@@ -6,6 +6,7 @@ import '../data/manna_data.dart' show Manna;
 import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
+import '../widgets/content_card.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/rich_html.dart';
 import 'events/events_widgets.dart' show monthShort;
@@ -229,17 +230,8 @@ class DailyPrayersScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                WhiteCard(
-                  child: Column(
-                    children: [
-                      for (var i = 1; i < prayers.length; i++) ...[
-                        if (i > 1)
-                          const Divider(height: 1, color: AppColors.border),
-                        _EarlierPrayer(prayer: prayers[i], now: now),
-                      ],
-                    ],
-                  ),
-                ),
+                for (var i = 1; i < prayers.length; i++)
+                  _prayerCard(context, prayers[i], now),
               ],
             ],
           );
@@ -253,8 +245,9 @@ String _dayLabel(BuildContext context, DateTime d) =>
     '${d.day} ${tr(context, 'mo_${d.month}')}';
 
 /// The Daily Manna a prayer ends, when it came from one and that Manna is in the list.
-Manna? _mannaOf(DailyPrayer p) {
-  final id = p.mannaId;
+Manna? _mannaOf(DailyPrayer p) => _mannaFor(p.mannaId);
+
+Manna? _mannaFor(String? id) {
   if (id == null) return null;
   for (final m in contentState.mannas) {
     if (m.id == id) return m;
@@ -262,122 +255,28 @@ Manna? _mannaOf(DailyPrayer p) {
   return null;
 }
 
-/// One earlier prayer: opens to read it in full.
-class _EarlierPrayer extends StatelessWidget {
-  const _EarlierPrayer({required this.prayer, required this.now});
-
-  final DailyPrayer prayer;
-  final DateTime now;
-
-  @override
-  Widget build(BuildContext context) {
-    final date = _shortDate(
+/// One earlier prayer as a picture card; opens to read it in full.
+Widget _prayerCard(BuildContext context, DailyPrayer prayer, DateTime now) {
+  final date = _shortDate(
+    context,
+    now.subtract(Duration(days: prayer.daysAgo)),
+  );
+  final manna = _mannaOf(prayer);
+  return ContentCard(
+    image: prayer.image,
+    title: prayer.title,
+    meta: prayer.ref.isEmpty ? date : '$date · ${prayer.ref}',
+    preview: plainPreview(prayer.body),
+    icon: Icons.self_improvement,
+    onTap: () => showContentSheet(
       context,
-      now.subtract(Duration(days: prayer.daysAgo)),
-    );
-    return InkWell(
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-        ),
-        builder: (_) => SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  date,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  prayer.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                EntryImage(prayer.image),
-                RichHtml(
-                  prayer.body,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-                // A prayer that ends a Daily Manna can open that Manna.
-                if (_mannaOf(prayer) != null) ...[
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      final manna = _mannaOf(prayer)!;
-                      Navigator.of(context).pop();
-                      openManna(context, manna);
-                    },
-                    child: Text(tr(context, 'open_manna')),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.tint,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.self_improvement,
-                color: Color(0xFF55576F),
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prayer.title,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    prayer.ref.isEmpty ? date : '$date · ${prayer.ref}',
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            StatusPill(
-              text: tr(context, 'dp_read'),
-              background: const Color(0xFFDDF3E4),
-              foreground: const Color(0xFF1F8A4C),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      title: prayer.title,
+      date: date,
+      body: prayer.body,
+      image: prayer.image,
+      onOpenManna: manna == null ? null : () => openManna(context, manna),
+    ),
+  );
 }
 
 const _themeIcons = {
@@ -508,53 +407,25 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
             ),
           const SizedBox(height: 12),
           for (final c in rest)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: WhiteCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (c.ref.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        c.ref,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12.5,
-                        ),
-                      ),
-                    ],
-                    // The office's confessions are short: show the confession and its prayer in the list.
-                    if (c.body.isNotEmpty && liveApi) ...[
-                      const SizedBox(height: 8),
-                      RichHtml(
-                        c.body,
-                        style: const TextStyle(fontSize: 14, height: 1.45),
-                      ),
-                    ],
-                    if (c.prayer.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      RichHtml(
-                        c.prayer,
-                        style: const TextStyle(
-                          color: Color(0xFF55576F),
-                          fontSize: 13.5,
-                          height: 1.4,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            ContentCard(
+              image: c.image,
+              title: c.title,
+              meta: c.ref,
+              preview: plainPreview(c.body),
+              icon: Icons.favorite_border,
+              onTap: () {
+                final manna = _mannaFor(c.mannaId);
+                showContentSheet(
+                  context,
+                  title: c.title,
+                  body: c.body,
+                  prayer: c.prayer,
+                  image: c.image,
+                  onOpenManna: manna == null
+                      ? null
+                      : () => openManna(context, manna),
+                );
+              },
             ),
         ],
       ),

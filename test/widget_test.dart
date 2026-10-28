@@ -300,7 +300,18 @@ void main() {
     await settle();
     expect(find.text('Daily Manna'), findsOneWidget);
     expect(find.text('Peace that guards your heart'), findsOneWidget);
+    // The list is picture cards now, so later ones are reached by scrolling.
+    await tester.scrollUntilVisible(
+      find.text('Walking by faith'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Walking by faith'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Strength for today'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Strength for today'));
     await settle();
     expect(find.text('Reflection'), findsOneWidget);
@@ -327,6 +338,9 @@ void main() {
     expect(prayer.requests.first.everyone, isFalse);
     expect(prayer.requests.first.mannaTitleKey, 'manna_3');
     await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+    // The list was scrolled to reach the card: back to its top to reach the arrow.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
     await settle();
     await tester.tap(find.byIcon(Icons.arrow_back));
     await settle();
@@ -968,7 +982,20 @@ void main() {
     await settle();
     expect(find.text('Daily prayers'), findsOneWidget);
     expect(find.text('Earlier this week'), findsOneWidget);
-    expect(find.text('Read'), findsNWidgets(3));
+    // The earlier prayers are picture cards; one opens to be read in full.
+    await tester.scrollUntilVisible(
+      find.text('For the sick'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('For the city'), findsWidgets);
+    await tester.tap(find.text('For the sick'));
+    await settle();
+    expect(find.textContaining('Healer of all'), findsWidgets); // the card's preview and the sheet
+    await tester.tapAt(const Offset(10, 10)); // closes the sheet
+    await settle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
+    await settle();
     await tester.tap(find.byIcon(Icons.chevron_left).first);
     await settle();
 

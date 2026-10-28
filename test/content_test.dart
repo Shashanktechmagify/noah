@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:noah_frontend_flutter/widgets/content_card.dart';
 import 'package:noah_frontend_flutter/widgets/rich_html.dart';
 import 'package:noah_frontend_flutter/data/content_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
@@ -96,5 +97,32 @@ void main() {
     expect(has(rich.text, (st) => st?.fontWeight == FontWeight.bold || st?.fontWeight == FontWeight.w700), isTrue);
     expect(has(rich.text, (st) => st?.fontStyle == FontStyle.italic), isTrue);
     expect(find.text('Older entry\nsecond line'), findsOneWidget);
+  });
+
+  testWidgets('a View all card shows its title and details; a broken or missing picture does not break it', (tester) async {
+    var tapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              ContentCard(title: 'Nothing can separate us', meta: 'Hope · 3 min', badge: 'Today', onTap: () => tapped = true),
+              const ContentCard(title: 'Second', image: 'https://invalid.invalid/not-a-picture.jpg', preview: 'A line of text'),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Nothing can separate us'), findsOneWidget);
+    expect(find.text('Hope · 3 min'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('A line of text'), findsOneWidget);
+    await tester.tap(find.text('Nothing can separate us'));
+    expect(tapped, isTrue);
+  });
+
+  test('previews drop the formatting tags', () {
+    expect(plainPreview('<p>Hello <strong>bold</strong></p><p>Second&nbsp;line &amp; more</p>'), 'Hello bold Second line & more');
   });
 }

@@ -5,6 +5,7 @@ import '../data/manna_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart' show GradientButton;
+import '../widgets/content_card.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import '../widgets/rich_html.dart';
@@ -20,7 +21,7 @@ void openManna(BuildContext context, Manna manna) {
       .push(MaterialPageRoute(builder: (_) => MannaDetailScreen(manna: manna)));
 }
 
-/// "View full": the last few daily Mannas.
+/// "View full": the last few daily Mannas, as picture cards.
 class MannaScreen extends StatelessWidget {
   const MannaScreen({super.key});
 
@@ -39,65 +40,13 @@ class MannaScreen extends StatelessWidget {
             if (contentState.mannas.isEmpty)
               ContentEmpty(loading: contentState.loading),
             for (final m in contentState.mannas)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
-                  onTap: () => openManna(context, m),
-                  child: WhiteCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        const IconTile(icon: Icons.menu_book_outlined),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr(context, m.titleKey),
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${m.ref.isEmpty ? '' : '${m.ref} · '}${m.minutes} ${tr(context, 'unit_min')}',
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: m.daysAgo == 0
-                                ? AppColors.tint
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            _whenText(context, m.daysAgo),
-                            style: TextStyle(
-                              color: m.daysAgo == 0
-                                  ? AppColors.magenta
-                                  : AppColors.muted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              ContentCard(
+                image: m.image,
+                title: tr(context, m.titleKey),
+                meta:
+                    '${m.ref.isEmpty ? '' : '${m.ref} · '}${m.minutes} ${tr(context, 'unit_min')}',
+                badge: _whenText(context, m.daysAgo),
+                onTap: () => openManna(context, m),
               ),
           ],
         ),
