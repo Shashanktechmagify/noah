@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart';
 import '../data/manna_data.dart';
 import '../data/prayer_data.dart';
 import '../l10n/app_strings.dart';
@@ -29,6 +30,8 @@ class _PrayerDialogState extends State<_PrayerDialog> {
 
   /// On: everyone sees it. Off (default): prayer warriors only.
   bool _everyone = false;
+  bool _sending = false;
+  String? _error;
 
   @override
   void initState() {
@@ -42,21 +45,48 @@ class _PrayerDialogState extends State<_PrayerDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    // Backend: POST the request here. `everyone == false` must be visible to
-    // the prayer warriors group only.
+  Future<void> _submit() async {
+    if (_sending) return;
+    final manna = widget.manna;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final sent = tr(context, 'pr_sent');
+    final mannaTitle = manna == null ? null : tr(context, manna.titleKey);
+
+    // Live: the request goes to the office's prayer inbox. The dialog stays open (with the reason) if it fails.
+    if (liveApi) {
+      setState(() {
+        _sending = true;
+        _error = null;
+      });
+      try {
+        await api.createPrayerRequest(
+          category: _category.replaceFirst('pr_cat_', ''),
+          text: _text.text,
+          anonymous: false,
+          everyone: _everyone,
+          mannaTitle: mannaTitle,
+        );
+      } on ApiException catch (e) {
+        if (mounted) {
+          setState(() {
+            _sending = false;
+            _error = e.message;
+          });
+        }
+        return;
+      }
+    }
     prayer.add(
       categoryKey: _category,
       text: _text.text,
       anonymous: false,
       everyone: _everyone,
-      mannaTitleKey: widget.manna?.titleKey,
+      mannaTitleKey: manna?.titleKey,
     );
-    final messenger = ScaffoldMessenger.of(context);
-    final message = tr(context, 'pr_sent');
-    Navigator.of(context).pop();
+    navigator.pop();
     messenger.showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text(sent), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -271,9 +301,17 @@ class _PrayerDialogState extends State<_PrayerDialog> {
               onTap: () => setState(() => _everyone = true),
             ),
             const SizedBox(height: 16),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Color(0xFFE5334B), fontSize: 13),
+                ),
+              ),
             GradientButton(
-              label: tr(context, 'pr_submit'),
-              onPressed: _text.text.trim().isEmpty ? null : _submit,
+              label: _sending ? '...' : tr(context, 'pr_submit'),
+              onPressed: _text.text.trim().isEmpty || _sending ? null : _submit,
             ),
           ],
         ),

@@ -462,6 +462,28 @@ class ApiClient {
     '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}',
   );
 
+  // ── Prayer requests ───────────────────────────────────────────────────
+
+  /// Sends a prayer request to the office's prayer inbox. [category] is `healing`, `family`, `guidance`,
+  /// `thanks` or `other`; [everyone] true means the open prayer wall, false the prayer warriors only.
+  Future<Map<String, dynamic>> createPrayerRequest({
+    required String category,
+    required String text,
+    required bool anonymous,
+    required bool everyone,
+    String? mannaTitle,
+  }) => _send(
+    'POST',
+    '/prayer-requests',
+    json: {
+      'category': category,
+      'text': text.trim(),
+      'anonymous': anonymous,
+      'everyone': everyone,
+      'mannaTitle': ?mannaTitle,
+    },
+  );
+
   // ── Push and notifications ───────────────────────────────────────────
 
   Future<void> registerDevice(
