@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
@@ -22,7 +23,8 @@ class RichHtml extends StatelessWidget {
     return HtmlWidget(
       html,
       textStyle: base,
-      customStylesBuilder: (e) => e.localName == 'a' ? {'color': '#A719C8'} : null,
+      customStylesBuilder: (e) =>
+          e.localName == 'a' ? {'color': '#A719C8'} : null,
       // No browser in the app: a tapped link is copied so it can be pasted where it can be opened.
       onTapUrl: (url) async {
         await Clipboard.setData(ClipboardData(text: url));
@@ -65,7 +67,22 @@ class EntryImage extends StatelessWidget {
                   alignment: Alignment.center,
                   child: const CircularProgressIndicator(strokeWidth: 2),
                 ),
-          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          errorBuilder: (_, _, _) {
+            // Staff see why in a debug build: the link must be the picture file itself (JPG, PNG or WebP),
+            // not a web page and not an SVG. Members just see nothing.
+            if (!kDebugMode) return const SizedBox.shrink();
+            debugPrint(
+              '[image] cannot show $u (use a direct JPG / PNG / WebP link)',
+            );
+            return Container(
+              padding: const EdgeInsets.all(12),
+              color: AppColors.tint,
+              child: const Text(
+                'Picture not shown: the link must be a direct JPG, PNG or WebP file.',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            );
+          },
         ),
       ),
     );
