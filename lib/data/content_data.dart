@@ -40,11 +40,17 @@ int _daysAgo(String? day) {
   return today.difference(d).inDays.clamp(0, 36500);
 }
 
-/// About 200 words a minute.
-int _minutes(String text) =>
-    (text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length / 200)
-        .ceil()
-        .clamp(1, 20);
+/// About 200 words a minute. The server sends the word count; otherwise it is counted here (without tags).
+int _minutes(String html, [int? wordCount]) {
+  final words = wordCount ??
+      html.replaceAll(RegExp(r'<[^>]*>'), ' ').split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+  return (words / 200).ceil().clamp(1, 20);
+}
+
+String? _img(Object? v) {
+  final s = _s(v).trim();
+  return s.isEmpty ? null : s;
+}
 
 String _s(Object? v) => v == null ? '' : '$v';
 
@@ -58,11 +64,14 @@ Manna mannaFromJson(Map<String, dynamic> j) {
     // A translation key falls back to its own text when it is not a key, so the live title is passed as the key.
     titleKey: _s(j['title']),
     ref: category,
-    minutes: _minutes(message),
+    minutes: _minutes(message, (j['wordCount'] as num?)?.toInt()),
     daysAgo: _daysAgo(_s(j['date'])),
     verse: '',
     reflection: message,
     prayer: _s(j['prayer']),
+    image: _img(j['image']),
+    closingConfession: j['closingType'] == 'confession',
+    writer: j['writer'] is Map ? _s((j['writer'] as Map)['name']) : '',
   );
 }
 
@@ -71,6 +80,9 @@ DailyPrayer prayerFromJson(Map<String, dynamic> j) => DailyPrayer(
   ref: '',
   body: _s(j['body']),
   daysAgo: _daysAgo(_s(j['date'])),
+  image: _img(j['image']),
+  // A prayer that is the ending of a Daily Manna opens that Manna.
+  mannaId: j['source'] == 'manna' ? _s(j['id']) : null,
 );
 
 Confession confessionFromJson(Map<String, dynamic> j) => Confession(
@@ -79,6 +91,8 @@ Confession confessionFromJson(Map<String, dynamic> j) => Confession(
   body: _s(j['body']),
   theme: '',
   prayer: _s(j['prayer']),
+  image: _img(j['image']),
+  mannaId: j['source'] == 'manna' ? _s(j['id']) : null,
 );
 
 class ContentState extends ChangeNotifier {

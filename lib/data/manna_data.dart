@@ -10,6 +10,9 @@ class Manna {
     required this.verse,
     required this.reflection,
     required this.prayer,
+    this.image,
+    this.closingConfession = false,
+    this.writer = '',
   });
 
   final String id;
@@ -22,6 +25,12 @@ class Manna {
   final String verse;
   final String reflection;
   final String prayer;
+
+  /// Live content: a picture the office attached (a link), the writer's name, and whether the closing
+  /// text is a confession rather than a prayer. `verse`, `reflection` and `prayer` may hold HTML.
+  final String? image;
+  final bool closingConfession;
+  final String writer;
 }
 
 /// Newest first. The first entry is "today's Manna".

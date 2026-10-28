@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:noah_frontend_flutter/widgets/rich_html.dart';
 import 'package:noah_frontend_flutter/data/content_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 
@@ -43,5 +45,56 @@ void main() {
     // 20:00 UTC on 27 Oct is already 28 Oct in India.
     expect(istDay(DateTime.utc(2026, 10, 27, 20)), '2026-10-28');
     expect(istDay(DateTime.utc(2026, 10, 27, 10)), '2026-10-27');
+  });
+
+  test('Manna keeps its picture, writer, word count and whether it ends in a confession', () {
+    final m = mannaFromJson({
+      'id': '1',
+      'date': istDay(),
+      'title': 'T',
+      'message': '<p>Hello <strong>world</strong></p>',
+      'prayer': '<p><em>I am free</em></p>',
+      'closingType': 'confession',
+      'writer': {'id': '9', 'name': 'Michael Fernandes'},
+      'wordCount': 400,
+      'image': 'https://example.com/a.jpg',
+    });
+    expect(m.closingConfession, true);
+    expect(m.writer, 'Michael Fernandes');
+    expect(m.image, 'https://example.com/a.jpg');
+    expect(m.minutes, 2);
+    expect(m.reflection, '<p>Hello <strong>world</strong></p>');
+    final p = prayerFromJson({'id': '5', 'source': 'manna', 'title': 'x', 'body': 'b', 'date': istDay()});
+    expect(p.mannaId, '5');
+    expect(prayerFromJson({'id': '6', 'source': 'prayers', 'title': 'x', 'body': 'b', 'date': istDay()}).mannaId, null);
+  });
+
+  testWidgets('bold written in the console is bold in the app; plain text is shown as it is', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              RichHtml('<p>Hello <strong>bold words</strong> and <em>slanted</em></p>'),
+              RichHtml('Older entry\nsecond line'),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    bool has(InlineSpan root, bool Function(TextStyle?) test) {
+      var found = false;
+      root.visitChildren((s) {
+        if (s is TextSpan && s.text != null && test(s.style)) found = true;
+        return true;
+      });
+      return found;
+    }
+
+    final rich = tester.widgetList<RichText>(find.byType(RichText)).where((w) => w.text.toPlainText().contains('bold words')).first;
+    expect(has(rich.text, (st) => st?.fontWeight == FontWeight.bold || st?.fontWeight == FontWeight.w700), isTrue);
+    expect(has(rich.text, (st) => st?.fontStyle == FontStyle.italic), isTrue);
+    expect(find.text('Older entry\nsecond line'), findsOneWidget);
   });
 }

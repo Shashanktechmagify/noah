@@ -7,7 +7,13 @@ class DailyPrayer {
     required this.ref,
     required this.body,
     required this.daysAgo,
+    this.image,
+    this.mannaId,
   });
+
+  /// A picture the office attached (a link), and the Daily Manna this prayer is the ending of, if any.
+  final String? image;
+  final String? mannaId;
 
   final String title;
   final String ref;
@@ -60,7 +66,12 @@ class Confession {
     required this.body,
     required this.theme,
     this.prayer = '',
+    this.image,
+    this.mannaId,
   });
+
+  final String? image;
+  final String? mannaId;
 
   final String title;
   final String ref;

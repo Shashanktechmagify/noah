@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart' show GradientButton;
 import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
+import '../widgets/rich_html.dart';
 
 String _whenText(BuildContext context, int daysAgo) => switch (daysAgo) {
   0 => tr(context, 'today'),
@@ -171,23 +172,47 @@ class MannaDetailScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (manna.writer.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Text(
+                tr(context, 'manna_writer', args: {'name': manna.writer}),
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
+          // A picture the office attached to this Manna.
+          if (manna.image != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: EntryImage(manna.image),
+            ),
           SectionTitle(title: tr(context, 'manna_reflection')),
           const SizedBox(height: 10),
           WhiteCard(
             padding: const EdgeInsets.all(16),
-            child: Text(
+            // Bold, italic, lists and links written in the admin console come through as formatted text.
+            child: RichHtml(
               manna.reflection,
               style: const TextStyle(fontSize: 14.5, height: 1.5),
             ),
           ),
           const SizedBox(height: 20),
           if (manna.prayer.isNotEmpty) ...[
-            SectionTitle(title: tr(context, 'manna_prayer')),
+            SectionTitle(
+              title: tr(
+                context,
+                manna.closingConfession ? 'manna_confession' : 'manna_prayer',
+              ),
+            ),
             const SizedBox(height: 10),
             WhiteCard(
               padding: const EdgeInsets.all(16),
-              child: Text(
+              child: RichHtml(
                 manna.prayer,
                 style: const TextStyle(
                   fontSize: 14.5,

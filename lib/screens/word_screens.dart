@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../data/api_client.dart' show liveApi;
 import '../data/content_data.dart';
+import '../data/manna_data.dart' show Manna;
 import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/rich_html.dart';
 import 'events/events_widgets.dart' show monthShort;
 import 'jodie/jodie_widgets.dart' show toast;
-import 'manna_screen.dart' show ContentEmpty;
+import 'manna_screen.dart' show ContentEmpty, openManna;
 
 String _shortDate(BuildContext context, DateTime d) =>
     '${d.day} ${monthShort(context, d.month)}';
@@ -46,8 +48,10 @@ class _FeatureCard extends StatelessWidget {
     required this.body,
     required this.ref,
     this.prayer = '',
+    this.image,
   });
 
+  final String? image;
   final String pill;
   final String title;
   final String body;
@@ -62,12 +66,13 @@ class _FeatureCard extends StatelessWidget {
       children: [
         _LabelPill(pill),
         const SizedBox(height: 14),
+        EntryImage(image),
         Text(
           title,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
-        Text(
+        RichHtml(
           body,
           style: const TextStyle(
             color: Color(0xFF55576F),
@@ -77,7 +82,7 @@ class _FeatureCard extends StatelessWidget {
         ),
         if (prayer.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text(
+          RichHtml(
             prayer,
             style: const TextStyle(
               color: Color(0xFF55576F),
@@ -208,6 +213,7 @@ class DailyPrayersScreen extends StatelessWidget {
                   title: today.title,
                   body: today.body,
                   ref: today.ref,
+                  image: today.image,
                 ),
                 const _SaveRow(),
               ],
@@ -244,6 +250,16 @@ class DailyPrayersScreen extends StatelessWidget {
 
 String _dayLabel(BuildContext context, DateTime d) =>
     '${d.day} ${tr(context, 'mo_${d.month}')}';
+
+/// The Daily Manna a prayer ends, when it came from one and that Manna is in the list.
+Manna? _mannaOf(DailyPrayer p) {
+  final id = p.mannaId;
+  if (id == null) return null;
+  for (final m in contentState.mannas) {
+    if (m.id == id) return m;
+  }
+  return null;
+}
 
 /// One earlier prayer: opens to read it in full.
 class _EarlierPrayer extends StatelessWidget {
@@ -289,10 +305,23 @@ class _EarlierPrayer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                EntryImage(prayer.image),
+                RichHtml(
                   prayer.body,
                   style: const TextStyle(fontSize: 15, height: 1.5),
                 ),
+                // A prayer that ends a Daily Manna can open that Manna.
+                if (_mannaOf(prayer) != null) ...[
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      final manna = _mannaOf(prayer)!;
+                      Navigator.of(context).pop();
+                      openManna(context, manna);
+                    },
+                    child: Text(tr(context, 'open_manna')),
+                  ),
+                ],
               ],
             ),
           ),
@@ -403,6 +432,7 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
               body: featured.body,
               ref: featured.ref,
               prayer: featured.prayer,
+              image: featured.image,
             ),
             const _SaveRow(),
           ],
@@ -503,14 +533,14 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
                     // The office's confessions are short: show the confession and its prayer in the list.
                     if (c.body.isNotEmpty && liveApi) ...[
                       const SizedBox(height: 8),
-                      Text(
+                      RichHtml(
                         c.body,
                         style: const TextStyle(fontSize: 14, height: 1.45),
                       ),
                     ],
                     if (c.prayer.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(
+                      RichHtml(
                         c.prayer,
                         style: const TextStyle(
                           color: Color(0xFF55576F),
