@@ -4891,6 +4891,22 @@ const Map<String, List<String>> _strings = {
     '',
     '',
   ],
+  'content_loading': [
+    'Loading…',
+    'लोड हो रहा है…',
+    'लोड होत आहे…',
+    '',
+    '',
+    '',
+  ],
+  'content_empty': [
+    'Nothing here yet. Pull down to refresh.',
+    'अभी कुछ नहीं है। रीफ़्रेश करने के लिए नीचे खींचें।',
+    'अजून काही नाही. रिफ्रेश करण्यासाठी खाली ओढा.',
+    '',
+    '',
+    '',
+  ],
   'reg_compressing': [
     'Compressing video…',
     'वीडियो संपीड़ित हो रहा है…',

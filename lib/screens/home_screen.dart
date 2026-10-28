@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
-import '../data/manna_data.dart';
+import '../data/content_data.dart';
 import '../data/ministry_data.dart';
 import '../data/notifications_data.dart';
 import '../data/pastor_data.dart';
@@ -36,7 +36,25 @@ class _HomeScreenState extends State<HomeScreen> {
   final _scroll = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    contentState.addListener(_onContent);
+  }
+
+  void _onContent() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Shows the saved Manna, prayers and confessions at once and reads the day's content once a day.
+    contentState.ensureFresh(AppLocale.of(context).lang);
+  }
+
+  @override
   void dispose() {
+    contentState.removeListener(_onContent);
     _scroll.dispose();
     super.dispose();
   }
@@ -49,15 +67,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     switch (_tab) {
       case 0:
+        final prayers = contentState.prayers;
         return [
-          for (var i = 0; i < 3; i++)
+          for (var i = 0; i < prayers.length && i < 3; i++)
             _WordTile(
               icon: Icons.self_improvement,
-              title: kPrayers[i].title,
+              title: prayers[i].title,
               sub:
-                  '${now.subtract(Duration(days: kPrayers[i].daysAgo)).day} '
-                  '${monthShort(context, now.subtract(Duration(days: kPrayers[i].daysAgo)).month)}'
-                  ' · ${kPrayers[i].ref}',
+                  '${now.subtract(Duration(days: prayers[i].daysAgo)).day} '
+                  '${monthShort(context, now.subtract(Duration(days: prayers[i].daysAgo)).month)}'
+                  '${prayers[i].ref.isEmpty ? '' : ' · ${prayers[i].ref}'}',
               colors: _tileColors[i],
               onTap: () => _push(const DailyPrayersScreen()),
             ),
@@ -67,12 +86,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ];
       case 1:
+        final confessions = contentState.confessions;
         return [
-          for (var i = 0; i < 3; i++)
+          for (var i = 0; i < confessions.length && i < 3; i++)
             _WordTile(
               icon: Icons.favorite_border,
-              title: kConfessions[i].title,
-              sub: kConfessions[i].ref,
+              title: confessions[i].title,
+              sub: confessions[i].ref.isEmpty
+                  ? tr(context, 'wf_cotd')
+                  : confessions[i].ref,
               colors: _tileColors[i],
               onTap: () => _push(const WordsOfFaithScreen()),
             ),
@@ -136,88 +158,91 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // Purple header band sits behind the top of the carousel.
         HeaderBand(controller: _scroll),
-        ListView(
-          controller: _scroll,
-          padding: EdgeInsets.only(top: top + 14, bottom: 120),
-          children: [
-            const _Header(),
-            const SizedBox(height: 18),
-            const EventCarousel(),
-            const SizedBox(height: 22),
-            SectionTitle(
-              title: tr(context, 'home_manna_title'),
-              action: tr(context, 'home_view_all'),
-              onAction: () => _push(const MannaScreen()),
-            ),
-            const SizedBox(height: 12),
-            const _ReadingCard(),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 42,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _tabKeys.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (_, i) {
-                  final on = i == _tab;
-                  return GestureDetector(
-                    onTap: () => setState(() => _tab = i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: on ? const Color(0xFF1E1E1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: on
-                              ? const Color(0xFF1E1E1E)
-                              : AppColors.magenta,
+        RefreshIndicator(
+          onRefresh: () => contentState.refresh(AppLocale.of(context).lang),
+          child: ListView(
+            controller: _scroll,
+            padding: EdgeInsets.only(top: top + 14, bottom: 120),
+            children: [
+              const _Header(),
+              const SizedBox(height: 18),
+              const EventCarousel(),
+              const SizedBox(height: 22),
+              SectionTitle(
+                title: tr(context, 'home_manna_title'),
+                action: tr(context, 'home_view_all'),
+                onAction: () => _push(const MannaScreen()),
+              ),
+              const SizedBox(height: 12),
+              const _ReadingCard(),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 42,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _tabKeys.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (_, i) {
+                    final on = i == _tab;
+                    return GestureDetector(
+                      onTap: () => setState(() => _tab = i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: on ? const Color(0xFF1E1E1E) : Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: on
+                                ? const Color(0xFF1E1E1E)
+                                : AppColors.magenta,
+                          ),
+                        ),
+                        child: Text(
+                          tr(context, _tabKeys[i]),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: on ? Colors.white : AppColors.ink,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        tr(context, _tabKeys[i]),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: on ? Colors.white : AppColors.ink,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.count(
-                key: ValueKey(_tab),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.4,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                children: _tiles(context),
-              ),
-            ),
-            const SizedBox(height: 22),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Text(
-                tr(context, 'pr_req_title'),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                    );
+                  },
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const _PrayerRequestCard(),
-          ],
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
+                  key: ValueKey(_tab),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.4,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  children: _tiles(context),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Text(
+                  tr(context, 'pr_req_title'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const _PrayerRequestCard(),
+            ],
+          ),
         ),
       ],
     );
@@ -271,8 +296,15 @@ class _ReadingCard extends StatelessWidget {
   const _ReadingCard();
 
   @override
-  Widget build(BuildContext context) {
-    final m = kMannas.first;
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: contentState,
+    builder: (context, _) => _card(context),
+  );
+
+  Widget _card(BuildContext context) {
+    // Today's Manna (the most recent one when there is none for today).
+    final m = contentState.mannas.firstOrNull;
+    if (m == null) return const SizedBox.shrink();
     return GestureDetector(
       onTap: () => openManna(context, m),
       child: WhiteCard(
@@ -306,11 +338,13 @@ class _ReadingCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    tr(
-                      context,
-                      'home_manna_meta',
-                      args: {'ref': m.ref, 'n': '${m.minutes}'},
-                    ),
+                    m.ref.isEmpty
+                        ? '${tr(context, 'manna_daily')} · ${m.minutes} ${tr(context, 'unit_min')}'
+                        : tr(
+                            context,
+                            'home_manna_meta',
+                            args: {'ref': m.ref, 'n': '${m.minutes}'},
+                          ),
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,
@@ -327,7 +361,13 @@ class _ReadingCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                tr(context, 'today'),
+                m.daysAgo == 0
+                    ? tr(context, 'today')
+                    : tr(
+                        context,
+                        'manna_days_ago',
+                        args: {'n': '${m.daysAgo}'},
+                      ),
                 style: const TextStyle(
                   color: AppColors.magenta,
                   fontSize: 12,

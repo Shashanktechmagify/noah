@@ -415,6 +415,13 @@ class ApiClient {
   Future<Map<String, dynamic>> pastorReply(String threadId, String text) =>
       _send('POST', '/pastor/threads/$threadId/messages', json: {'text': text});
 
+  // ── Daily content (Manna, prayers, confessions) ─────────────────────
+
+  /// `{ items: [...] }` for `manna`, `prayers` or `confessions`, newest first, in language [lang]
+  /// (the server falls back to English for days that have no entry in it).
+  Future<Map<String, dynamic>> content(String kind, int lang, {int limit = 30}) =>
+      _send('GET', '/content/$kind?lang=$lang&limit=$limit');
+
   // ── Push and notifications ───────────────────────────────────────────
 
   Future<void> registerDevice(

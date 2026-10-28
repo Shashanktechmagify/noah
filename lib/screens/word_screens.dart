@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart' show liveApi;
+import '../data/content_data.dart';
 import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
 import 'events/events_widgets.dart' show monthShort;
 import 'jodie/jodie_widgets.dart' show toast;
+import 'manna_screen.dart' show ContentEmpty;
 
 String _shortDate(BuildContext context, DateTime d) =>
     '${d.day} ${monthShort(context, d.month)}';
@@ -42,12 +45,14 @@ class _FeatureCard extends StatelessWidget {
     required this.title,
     required this.body,
     required this.ref,
+    this.prayer = '',
   });
 
   final String pill;
   final String title;
   final String body;
   final String ref;
+  final String prayer;
 
   @override
   Widget build(BuildContext context) => WhiteCard(
@@ -70,15 +75,29 @@ class _FeatureCard extends StatelessWidget {
             height: 1.45,
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          ref,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
+        if (prayer.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            prayer,
+            style: const TextStyle(
+              color: Color(0xFF55576F),
+              fontSize: 14,
+              height: 1.45,
+              fontStyle: FontStyle.italic,
+            ),
           ),
-        ),
+        ],
+        if (ref.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            ref,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ],
     ),
   );
@@ -159,91 +178,173 @@ class DailyPrayersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = kPrayers.first;
     return Scaffold(
-      body: PageScaffold(
-        title: tr(context, 'dp_title'),
-        subtitle: tr(context, 'dp_sub'),
-        leadingIcon: Icons.chevron_left,
-        onLeading: () => Navigator.of(context).pop(),
-        children: [
-          _FeatureCard(
-            pill: tr(
-              context,
-              'dp_today',
-              args: {'date': '${now.day} ${tr(context, 'mo_${now.month}')}'},
-            ),
-            title: today.title,
-            body: today.body,
-            ref: today.ref,
-          ),
-          const _SaveRow(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
-            child: Text(
-              tr(context, 'dp_earlier'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
-          ),
-          WhiteCard(
-            child: Column(
-              children: [
-                for (var i = 1; i < kPrayers.length; i++) ...[
-                  if (i > 1) const Divider(height: 1, color: AppColors.border),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.tint,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.self_improvement,
-                            color: Color(0xFF55576F),
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                kPrayers[i].title,
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${_shortDate(context, now.subtract(Duration(days: kPrayers[i].daysAgo)))} · ${kPrayers[i].ref}',
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 12.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        StatusPill(
-                          text: tr(context, 'dp_read'),
-                          background: const Color(0xFFDDF3E4),
-                          foreground: const Color(0xFF1F8A4C),
-                        ),
-                      ],
+      body: ListenableBuilder(
+        listenable: contentState,
+        builder: (context, _) {
+          final now = DateTime.now();
+          final prayers = contentState.prayers;
+          final today = prayers.isEmpty ? null : prayers.first;
+          return PageScaffold(
+            title: tr(context, 'dp_title'),
+            subtitle: tr(context, 'dp_sub'),
+            leadingIcon: Icons.chevron_left,
+            onLeading: () => Navigator.of(context).pop(),
+            children: [
+              if (today == null)
+                ContentEmpty(loading: contentState.loading)
+              else ...[
+                _FeatureCard(
+                  pill: tr(
+                    context,
+                    'dp_today',
+                    args: {
+                      'date': _dayLabel(
+                        context,
+                        now.subtract(Duration(days: today.daysAgo)),
+                      ),
+                    },
+                  ),
+                  title: today.title,
+                  body: today.body,
+                  ref: today.ref,
+                ),
+                const _SaveRow(),
+              ],
+              if (prayers.length > 1) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
+                  child: Text(
+                    tr(context, 'dp_earlier'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                ],
+                ),
+                WhiteCard(
+                  child: Column(
+                    children: [
+                      for (var i = 1; i < prayers.length; i++) ...[
+                        if (i > 1)
+                          const Divider(height: 1, color: AppColors.border),
+                        _EarlierPrayer(prayer: prayers[i], now: now),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _dayLabel(BuildContext context, DateTime d) =>
+    '${d.day} ${tr(context, 'mo_${d.month}')}';
+
+/// One earlier prayer: opens to read it in full.
+class _EarlierPrayer extends StatelessWidget {
+  const _EarlierPrayer({required this.prayer, required this.now});
+
+  final DailyPrayer prayer;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = _shortDate(
+      context,
+      now.subtract(Duration(days: prayer.daysAgo)),
+    );
+    return InkWell(
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        builder: (_) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  date,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  prayer.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  prayer.body,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
               ],
             ),
           ),
-        ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.tint,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.self_improvement,
+                color: Color(0xFF55576F),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prayer.title,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    prayer.ref.isEmpty ? date : '$date · ${prayer.ref}',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            StatusPill(
+              text: tr(context, 'dp_read'),
+              background: const Color(0xFFDDF3E4),
+              foreground: const Color(0xFF1F8A4C),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -269,10 +370,18 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
   String _theme = kConfessionThemes.first.$1;
 
   @override
-  Widget build(BuildContext context) {
-    final featured = kConfessions.first;
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: contentState,
+    builder: (context, _) => _build(context),
+  );
+
+  Widget _build(BuildContext context) {
+    final all = contentState.confessions;
+    final featured = all.isEmpty ? null : all.first;
+    // The office's confessions have no theme; only the sample content is browsed by theme.
+    final themed = !liveApi;
     // The chosen theme's confessions come first.
-    final rest = kConfessions.skip(1).toList()
+    final rest = all.skip(1).toList()
       ..sort((a, b) {
         final ai = a.theme == _theme ? 0 : 1;
         final bi = b.theme == _theme ? 0 : 1;
@@ -285,70 +394,86 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
         leadingIcon: Icons.chevron_left,
         onLeading: () => Navigator.of(context).pop(),
         children: [
-          _FeatureCard(
-            pill: tr(context, 'wf_cotd'),
-            title: featured.title,
-            body: featured.body,
-            ref: featured.ref,
-          ),
-          const _SaveRow(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
-            child: Text(
-              tr(context, 'wf_by_theme'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          if (featured == null)
+            ContentEmpty(loading: contentState.loading)
+          else ...[
+            _FeatureCard(
+              pill: tr(context, 'wf_cotd'),
+              title: featured.title,
+              body: featured.body,
+              ref: featured.ref,
+              prayer: featured.prayer,
             ),
-          ),
-          SizedBox(
-            height: 92,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: kConfessionThemes.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (_, i) {
-                final (id, key) = kConfessionThemes[i];
-                final on = id == _theme;
-                return GestureDetector(
-                  onTap: () => setState(() => _theme = id),
-                  child: SizedBox(
-                    width: 66,
-                    child: Column(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            color: on ? AppColors.magenta : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: on ? AppColors.magenta : AppColors.border,
+            const _SaveRow(),
+          ],
+          if (themed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
+              child: Text(
+                tr(context, 'wf_by_theme'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          if (themed)
+            SizedBox(
+              height: 92,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: kConfessionThemes.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (_, i) {
+                  final (id, key) = kConfessionThemes[i];
+                  final on = id == _theme;
+                  return GestureDetector(
+                    onTap: () => setState(() => _theme = id),
+                    child: SizedBox(
+                      width: 66,
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: on ? AppColors.magenta : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: on
+                                    ? AppColors.magenta
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Icon(
+                              _themeIcons[id],
+                              color: on
+                                  ? Colors.white
+                                  : const Color(0xFF555770),
                             ),
                           ),
-                          child: Icon(
-                            _themeIcons[id],
-                            color: on ? Colors.white : const Color(0xFF555770),
+                          const SizedBox(height: 6),
+                          Text(
+                            tr(context, key),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: on
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: on ? AppColors.ink : AppColors.muted,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          tr(context, key),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                            color: on ? AppColors.ink : AppColors.muted,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
           const SizedBox(height: 12),
           for (final c in rest)
             Padding(
@@ -365,14 +490,36 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      c.ref,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12.5,
+                    if (c.ref.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        c.ref,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12.5,
+                        ),
                       ),
-                    ),
+                    ],
+                    // The office's confessions are short: show the confession and its prayer in the list.
+                    if (c.body.isNotEmpty && liveApi) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        c.body,
+                        style: const TextStyle(fontSize: 14, height: 1.45),
+                      ),
+                    ],
+                    if (c.prayer.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        c.prayer,
+                        style: const TextStyle(
+                          color: Color(0xFF55576F),
+                          fontSize: 13.5,
+                          height: 1.4,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

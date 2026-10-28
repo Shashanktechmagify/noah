@@ -59,14 +59,18 @@ class Confession {
     required this.ref,
     required this.body,
     required this.theme,
+    this.prayer = '',
   });
 
   final String title;
   final String ref;
   final String body;
 
-  /// One of [kConfessionThemes].
+  /// One of [kConfessionThemes] (empty for the office's confessions: they have no theme).
   final String theme;
+
+  /// The short prayer that goes with the confession (the office's confessions have one).
+  final String prayer;
 }
 
 /// Theme id and its translation key.
