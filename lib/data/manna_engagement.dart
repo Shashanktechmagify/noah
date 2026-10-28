@@ -65,7 +65,8 @@ class MannaEngagement extends ChangeNotifier {
   Future<void> open() async {
     if (!liveApi || !api.signedIn || _opened) return;
     _opened = true;
-    _countView();
+    // The view is counted first, so the numbers read next already include it.
+    await _countView();
     await refresh();
   }
 
@@ -74,15 +75,15 @@ class MannaEngagement extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final seen = prefs.getStringList(_viewedKey) ?? <String>[];
       if (seen.contains(id)) return;
+      final d = await api.viewManna(id);
       await prefs.setStringList(_viewedKey, [
         ...seen.skip(seen.length > 400 ? 100 : 0),
         id,
       ]);
-      views += 1;
+      views = (d['views'] as num?)?.toInt() ?? views + 1;
       notifyListeners();
-      await api.viewManna(id);
     } catch (_) {
-      // A view that could not be counted is not worth a message.
+      // A view that could not be counted is tried again the next time the page is opened.
     }
   }
 
@@ -90,6 +91,10 @@ class MannaEngagement extends ChangeNotifier {
     try {
       final d = await api.mannaComments(id);
       liked = d['liked'] == true;
+      // The server's current numbers (the list this page came from may be old).
+      likes = (d['likes'] as num?)?.toInt() ?? likes;
+      views = (d['views'] as num?)?.toInt() ?? views;
+      commentCount = (d['commentCount'] as num?)?.toInt() ?? commentCount;
       comments = ((d['items'] as List?) ?? const [])
           .map(
             (e) => MannaComment.fromJson(Map<String, dynamic>.from(e as Map)),

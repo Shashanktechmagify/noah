@@ -163,7 +163,11 @@ class ContentState extends ChangeNotifier {
 
   /// Shows what was saved, then reads the day's content once (again when the app language changes).
   /// [force] (pull to refresh) reads it now.
-  Future<void> ensureFresh(AppLang lang, {bool force = false}) async {
+  Future<void> ensureFresh(
+    AppLang lang, {
+    bool force = false,
+    Duration? maxAge,
+  }) async {
     if (!liveApi || !api.signedIn) return;
     await _restore();
     final code = contentLanguage(lang);
@@ -173,7 +177,7 @@ class ContentState extends ChangeNotifier {
     if (!force &&
         _day == istDay() &&
         _language == code &&
-        age < _staleAfter.inMilliseconds)
+        age < (maxAge ?? _staleAfter).inMilliseconds)
       return;
     if (_busy) return;
     _busy = true;

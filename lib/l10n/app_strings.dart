@@ -5027,6 +5027,22 @@ const Map<String, List<String>> _strings = {
     '',
     '',
   ],
+  'manna_view_all_comments': [
+    'View all {n} comments',
+    'सभी {n} टिप्पणियाँ देखें',
+    'सर्व {n} टिप्पण्या पहा',
+    '',
+    '',
+    '',
+  ],
+  'manna_add_comment': [
+    'Add a comment…',
+    'टिप्पणी जोड़ें…',
+    'टिप्पणी जोडा…',
+    '',
+    '',
+    '',
+  ],
   'reg_compressing': [
     'Compressing video…',
     'वीडियो संपीड़ित हो रहा है…',

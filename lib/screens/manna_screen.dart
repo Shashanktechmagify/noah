@@ -25,8 +25,27 @@ void openManna(BuildContext context, Manna manna) {
 }
 
 /// "View full": the last few daily Mannas, as picture cards.
-class MannaScreen extends StatelessWidget {
+class MannaScreen extends StatefulWidget {
   const MannaScreen({super.key});
+
+  @override
+  State<MannaScreen> createState() => _MannaScreenState();
+}
+
+class _MannaScreenState extends State<MannaScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Likes, views and comments move all day: opening the list reads them again if the copy is a few minutes old.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        contentState.ensureFresh(
+          AppLocale.of(context).lang,
+          maxAge: const Duration(minutes: 5),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +217,50 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
             ),
             const SizedBox(height: 20),
           ],
-          MannaComments(manna: manna),
+          if (liveApi)
+            ListenableBuilder(
+              listenable: engagementOf(manna),
+              builder: (context, _) {
+                final n = engagementOf(manna).commentCount;
+                return GestureDetector(
+                  onTap: () => showMannaComments(context, manna),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.chat_bubble_outline,
+                          color: AppColors.magenta,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            n > 0
+                                ? tr(
+                                    context,
+                                    'manna_view_all_comments',
+                                    args: {'n': '$n'},
+                                  )
+                                : tr(context, 'manna_add_comment'),
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right, color: AppColors.muted),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),

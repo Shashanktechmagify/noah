@@ -115,7 +115,11 @@ class ApiClient {
   void Function()? onSessionLost;
 
   /// Puts back a sign-in saved on this phone (see session_restore.dart).
-  void restore({required String accessToken, required String refreshToken, required List<String> roles}) {
+  void restore({
+    required String accessToken,
+    required String refreshToken,
+    required List<String> roles,
+  }) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.roles = roles;
@@ -180,8 +184,12 @@ class ApiClient {
       );
     }
 
-    if (method != 'GET' && res.statusCode < 400 &&
-        (path.startsWith('/registration') || path.startsWith('/profile') || path.startsWith('/files') || path == '/notifications/read')) {
+    if (method != 'GET' &&
+        res.statusCode < 400 &&
+        (path.startsWith('/registration') ||
+            path.startsWith('/profile') ||
+            path.startsWith('/files') ||
+            path == '/notifications/read')) {
       sessionStore.markStale();
     }
 
@@ -235,7 +243,10 @@ class ApiClient {
       accessToken = d['accessToken'] as String?;
       refreshToken = d['refreshToken'] as String?;
       if (accessToken != null && refreshToken != null) {
-        sessionStore.saveTokens(accessToken: accessToken!, refreshToken: refreshToken!);
+        sessionStore.saveTokens(
+          accessToken: accessToken!,
+          refreshToken: refreshToken!,
+        );
       }
       return accessToken != null;
     } on ApiException {
@@ -284,7 +295,11 @@ class ApiClient {
     refreshToken = d['refreshToken'] as String?;
     roles = ((d['roles'] as List?) ?? const []).map((e) => '$e').toList();
     if (accessToken != null && refreshToken != null) {
-      sessionStore.saveTokens(accessToken: accessToken!, refreshToken: refreshToken!, roles: roles);
+      sessionStore.saveTokens(
+        accessToken: accessToken!,
+        refreshToken: refreshToken!,
+        roles: roles,
+      );
     }
     return SignedIn(
       next: '${d['next']}',
@@ -319,8 +334,10 @@ class ApiClient {
 
   /// `{ registration, profile }` in one call (sign-in needs both).
   /// Registration and profile in one call; [notifications] adds the notification list too.
-  Future<Map<String, dynamic>> bootstrap({bool notifications = false}) =>
-      _send('GET', notifications ? '/me/bootstrap?notifications=1' : '/me/bootstrap');
+  Future<Map<String, dynamic>> bootstrap({bool notifications = false}) => _send(
+    'GET',
+    notifications ? '/me/bootstrap?notifications=1' : '/me/bootstrap',
+  );
 
   Future<Map<String, dynamic>> getRegistration() =>
       _send('GET', '/registration');
@@ -419,11 +436,15 @@ class ApiClient {
 
   /// `{ items: [...] }` for `manna`, `prayers` or `confessions`, newest first, in language [lang]
   /// (the server falls back to English for days that have no entry in it).
-  Future<Map<String, dynamic>> content(String kind, int lang, {int limit = 30}) =>
-      _send('GET', '/content/$kind?lang=$lang&limit=$limit');
+  Future<Map<String, dynamic>> content(
+    String kind,
+    int lang, {
+    int limit = 30,
+  }) => _send('GET', '/content/$kind?lang=$lang&limit=$limit');
 
   /// Counts a view of a Daily Manna (the server batches the writes).
-  Future<void> viewManna(String id) => _send('POST', '/content/manna/$id/view', json: {});
+  Future<Map<String, dynamic>> viewManna(String id) =>
+      _send('POST', '/content/manna/$id/view', json: {});
 
   /// Sets whether the member likes the Manna: `{ liked, likes }`.
   Future<Map<String, dynamic>> likeManna(String id, bool liked) =>
@@ -436,8 +457,10 @@ class ApiClient {
   Future<Map<String, dynamic>> addMannaComment(String id, String text) =>
       _send('POST', '/content/manna/$id/comments', json: {'text': text});
 
-  Future<void> deleteMannaComment(String id, String commentId) =>
-      _send('DELETE', '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}');
+  Future<void> deleteMannaComment(String id, String commentId) => _send(
+    'DELETE',
+    '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}',
+  );
 
   // ── Push and notifications ───────────────────────────────────────────
 
