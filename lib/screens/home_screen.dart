@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const _tabKeys = [
     'tab_prayers',
     'tab_confessions',
@@ -39,6 +39,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     contentState.addListener(_onContent);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Coming back to the app: pick up anything the office changed meanwhile (reads only if the saved copy is old).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      contentState.ensureFresh(AppLocale.of(context).lang);
+    }
   }
 
   void _onContent() {
@@ -54,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     contentState.removeListener(_onContent);
     _scroll.dispose();
     super.dispose();

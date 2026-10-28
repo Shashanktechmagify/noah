@@ -84,6 +84,9 @@ Confession confessionFromJson(Map<String, dynamic> j) => Confession(
 class ContentState extends ChangeNotifier {
   static const _cacheKey = 'noah_content_v1';
 
+  /// The saved copy is used for this long before the app asks the server again.
+  static const _staleAfter = Duration(hours: 3);
+
   List<Map<String, dynamic>> _mannaRaw = [];
   List<Map<String, dynamic>> _prayersRaw = [];
   List<Map<String, dynamic>> _confessionsRaw = [];
@@ -91,6 +94,7 @@ class ContentState extends ChangeNotifier {
   List<DailyPrayer> _prayers = [];
   List<Confession> _confessions = [];
   String? _day; // the day the saved lists were fetched (IST)
+  int _fetchedAt = 0; // when (milliseconds since 1970)
   int? _language;
   bool _restored = false;
   bool _busy = false;
@@ -123,6 +127,7 @@ class ContentState extends ChangeNotifier {
       _prayersRaw = list('prayers');
       _confessionsRaw = list('confessions');
       _day = d['day'] as String?;
+      _fetchedAt = (d['fetchedAt'] as num?)?.toInt() ?? 0;
       _language = (d['language'] as num?)?.toInt();
       _build();
       notifyListeners();
@@ -137,7 +142,10 @@ class ContentState extends ChangeNotifier {
     if (!liveApi || !api.signedIn) return;
     await _restore();
     final code = contentLanguage(lang);
-    if (!force && _day == istDay() && _language == code) return;
+    // Read again when the day or the language changed, or the saved copy is a few hours old (so an
+    // edit the office makes during the day reaches the phone the next time the app is opened).
+    final age = DateTime.now().millisecondsSinceEpoch - _fetchedAt;
+    if (!force && _day == istDay() && _language == code && age < _staleAfter.inMilliseconds) return;
     if (_busy) return;
     _busy = true;
     loading = _manna.isEmpty && _prayers.isEmpty && _confessions.isEmpty;
@@ -156,6 +164,7 @@ class ContentState extends ChangeNotifier {
       _prayersRaw = items(results[1]);
       _confessionsRaw = items(results[2]);
       _day = istDay();
+      _fetchedAt = DateTime.now().millisecondsSinceEpoch;
       _language = code;
       _build();
       try {
@@ -163,6 +172,7 @@ class ContentState extends ChangeNotifier {
           _cacheKey,
           jsonEncode({
             'day': _day,
+            'fetchedAt': _fetchedAt,
             'language': _language,
             'manna': _mannaRaw,
             'prayers': _prayersRaw,
