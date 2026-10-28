@@ -30,6 +30,7 @@ class MannaScreen extends StatelessWidget {
       body: ListenableBuilder(
         listenable: contentState,
         builder: (context, _) => PageScaffold(
+          onRefresh: () => contentState.refresh(AppLocale.of(context).lang),
           title: tr(context, 'manna_daily'),
           subtitle: tr(context, 'manna_sub'),
           leadingIcon: Icons.arrow_back,

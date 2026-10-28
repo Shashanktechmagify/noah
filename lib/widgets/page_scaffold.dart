@@ -16,6 +16,7 @@ class PageScaffold extends StatefulWidget {
     this.bandHeight = 150,
     this.above,
     this.headerExtra,
+    this.onRefresh,
     required this.children,
   });
 
@@ -39,6 +40,9 @@ class PageScaffold extends StatefulWidget {
 
   /// Shown on the band below the header row (e.g. a progress bar or chips).
   final Widget? headerExtra;
+
+  /// Pull down to refresh (the page can then always be pulled, even when it is short).
+  final Future<void> Function()? onRefresh;
   final List<Widget> children;
 
   @override
@@ -60,32 +64,41 @@ class _PageScaffoldState extends State<PageScaffold> {
     return Stack(
       children: [
         HeaderBand(controller: _controller, height: widget.bandHeight),
-        ListView(
-          controller: _controller,
-          padding: EdgeInsets.only(top: top + 14, bottom: 120),
-          children: [
-            if (widget.above != null) ...[
-              widget.above!,
-              const SizedBox(height: 12),
+        _refreshable(
+          ListView(
+            controller: _controller,
+            physics: widget.onRefresh == null
+                ? null
+                : const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(top: top + 14, bottom: 120),
+            children: [
+              if (widget.above != null) ...[
+                widget.above!,
+                const SizedBox(height: 12),
+              ],
+              PageHeaderRow(
+                title: widget.title,
+                subtitle: widget.subtitle,
+                leadingIcon: widget.leadingIcon,
+                onLeading: widget.onLeading,
+                actions: widget.actions,
+              ),
+              if (widget.headerExtra != null) ...[
+                const SizedBox(height: 14),
+                widget.headerExtra!,
+              ],
+              const SizedBox(height: 20),
+              ...widget.children,
             ],
-            PageHeaderRow(
-              title: widget.title,
-              subtitle: widget.subtitle,
-              leadingIcon: widget.leadingIcon,
-              onLeading: widget.onLeading,
-              actions: widget.actions,
-            ),
-            if (widget.headerExtra != null) ...[
-              const SizedBox(height: 14),
-              widget.headerExtra!,
-            ],
-            const SizedBox(height: 20),
-            ...widget.children,
-          ],
+          ),
         ),
       ],
     );
   }
+
+  Widget _refreshable(Widget list) => widget.onRefresh == null
+      ? list
+      : RefreshIndicator(onRefresh: widget.onRefresh!, child: list);
 }
 
 /// Leading circle, title (+ optional subtitle) and trailing buttons.

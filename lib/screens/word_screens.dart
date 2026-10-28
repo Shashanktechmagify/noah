@@ -191,6 +191,7 @@ class DailyPrayersScreen extends StatelessWidget {
           final prayers = contentState.prayers;
           final today = prayers.isEmpty ? null : prayers.first;
           return PageScaffold(
+            onRefresh: () => contentState.refresh(AppLocale.of(context).lang),
             title: tr(context, 'dp_title'),
             subtitle: tr(context, 'dp_sub'),
             leadingIcon: Icons.chevron_left,
@@ -418,6 +419,7 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
       });
     return Scaffold(
       body: PageScaffold(
+        onRefresh: () => contentState.refresh(AppLocale.of(context).lang),
         title: tr(context, 'wf_title'),
         subtitle: tr(context, 'wf_sub'),
         leadingIcon: Icons.chevron_left,

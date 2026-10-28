@@ -42,8 +42,13 @@ int _daysAgo(String? day) {
 
 /// About 200 words a minute. The server sends the word count; otherwise it is counted here (without tags).
 int _minutes(String html, [int? wordCount]) {
-  final words = wordCount ??
-      html.replaceAll(RegExp(r'<[^>]*>'), ' ').split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+  final words =
+      wordCount ??
+      html
+          .replaceAll(RegExp(r'<[^>]*>'), ' ')
+          .split(RegExp(r'\s+'))
+          .where((w) => w.isNotEmpty)
+          .length;
   return (words / 200).ceil().clamp(1, 20);
 }
 
@@ -159,7 +164,11 @@ class ContentState extends ChangeNotifier {
     // Read again when the day or the language changed, or the saved copy is a few hours old (so an
     // edit the office makes during the day reaches the phone the next time the app is opened).
     final age = DateTime.now().millisecondsSinceEpoch - _fetchedAt;
-    if (!force && _day == istDay() && _language == code && age < _staleAfter.inMilliseconds) return;
+    if (!force &&
+        _day == istDay() &&
+        _language == code &&
+        age < _staleAfter.inMilliseconds)
+      return;
     if (_busy) return;
     _busy = true;
     loading = _manna.isEmpty && _prayers.isEmpty && _confessions.isEmpty;
@@ -177,6 +186,12 @@ class ContentState extends ChangeNotifier {
       _mannaRaw = items(results[0]);
       _prayersRaw = items(results[1]);
       _confessionsRaw = items(results[2]);
+      if (kDebugMode) {
+        debugPrint(
+          '[content] read: ${_mannaRaw.length} manna, ${_prayersRaw.length} prayers, '
+          '${_confessionsRaw.length} confessions; today: ${_mannaRaw.isEmpty ? '-' : _mannaRaw.first['title']}',
+        );
+      }
       _day = istDay();
       _fetchedAt = DateTime.now().millisecondsSinceEpoch;
       _language = code;
