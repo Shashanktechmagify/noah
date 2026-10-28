@@ -32,6 +32,7 @@ class ContentCard extends StatelessWidget {
     this.badge,
     this.icon = Icons.menu_book_outlined,
     this.onTap,
+    this.footer,
   });
 
   final String title;
@@ -47,6 +48,9 @@ class ContentCard extends StatelessWidget {
   final String? badge;
   final IconData icon;
   final VoidCallback? onTap;
+
+  /// Shown at the bottom of the card (e.g. the likes, views and comments).
+  final Widget? footer;
 
   Widget _placeholder() => Container(
     decoration: const BoxDecoration(gradient: AppColors.headerGradient),
@@ -152,6 +156,12 @@ class ContentCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                    ],
+                    if (footer != null) ...[
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 12),
+                      footer!,
                     ],
                     if (preview.isNotEmpty) ...[
                       const SizedBox(height: 8),

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_strings.dart';
 import 'api_client.dart';
 import 'manna_data.dart';
+import 'manna_engagement.dart';
 import 'word_data.dart';
 
 /// Daily Manna, prayers and confessions written in the office's admin console.
@@ -77,6 +78,10 @@ Manna mannaFromJson(Map<String, dynamic> j) {
     image: _img(j['image']),
     closingConfession: j['closingType'] == 'confession',
     writer: j['writer'] is Map ? _s((j['writer'] as Map)['name']) : '',
+    date: DateTime.tryParse(_s(j['date'])),
+    likes: (j['likes'] as num?)?.toInt() ?? 0,
+    views: (j['views'] as num?)?.toInt() ?? 0,
+    comments: (j['comments'] as num?)?.toInt() ?? 0,
   );
 }
 
@@ -128,6 +133,7 @@ class ContentState extends ChangeNotifier {
 
   void _build() {
     _manna = _mannaRaw.map(mannaFromJson).toList();
+    syncEngagement(_manna);
     _prayers = _prayersRaw.map(prayerFromJson).toList();
     _confessions = _confessionsRaw.map(confessionFromJson).toList();
   }

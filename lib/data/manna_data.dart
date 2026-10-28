@@ -13,6 +13,10 @@ class Manna {
     this.image,
     this.closingConfession = false,
     this.writer = '',
+    this.date,
+    this.likes = 0,
+    this.views = 0,
+    this.comments = 0,
   });
 
   final String id;
@@ -31,6 +35,12 @@ class Manna {
   final String? image;
   final bool closingConfession;
   final String writer;
+
+  /// Live content: the day it belongs to and how many likes, views and comments it has.
+  final DateTime? date;
+  final int likes;
+  final int views;
+  final int comments;
 }
 
 /// Newest first. The first entry is "today's Manna".

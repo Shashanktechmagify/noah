@@ -148,7 +148,11 @@ class _BlockingTaskState extends State<_BlockingTask> {
 }
 
 class _Button extends StatelessWidget {
-  const _Button({required this.label, required this.filled, required this.onTap});
+  const _Button({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
 
   final String label;
   final bool filled;

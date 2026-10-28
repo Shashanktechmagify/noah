@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/widgets/content_card.dart';
 import 'package:noah_frontend_flutter/widgets/rich_html.dart';
 import 'package:noah_frontend_flutter/data/content_data.dart';
+import 'package:noah_frontend_flutter/data/manna_engagement.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 
 void main() {
@@ -124,5 +125,33 @@ void main() {
 
   test('previews drop the formatting tags', () {
     expect(plainPreview('<p>Hello <strong>bold</strong></p><p>Second&nbsp;line &amp; more</p>'), 'Hello bold Second line & more');
+  });
+
+  test('a Manna keeps its day and its like, view and comment counts; comments know which are mine', () {
+    final m = mannaFromJson({
+      'id': '7',
+      'date': '2026-10-27',
+      'title': 'T',
+      'message': 'm',
+      'prayer': '',
+      'likes': 3,
+      'views': 120,
+      'comments': 2,
+    });
+    expect(m.date, DateTime(2026, 10, 27));
+    expect([m.likes, m.views, m.comments], [3, 120, 2]);
+    final e = engagementOf(m);
+    expect([e.likes, e.views, e.commentCount, e.liked], [3, 120, 2, false]);
+    // A newer list from the server updates the counts of a page that has not read its comments yet.
+    syncEngagement([mannaFromJson({'id': '7', 'date': '2026-10-27', 'title': 'T', 'message': 'm', 'likes': 5, 'views': 130, 'comments': 4})]);
+    expect([e.likes, e.views, e.commentCount], [5, 130, 4]);
+    final c = MannaComment.fromJson({
+      'id': '9',
+      'author': {'id': '1', 'name': 'Asha Rao'},
+      'text': 'Amen',
+      'createdAt': '2026-10-27T10:00:00.000Z',
+      'mine': true,
+    });
+    expect([c.author, c.text, c.mine], ['Asha Rao', 'Amen', true]);
   });
 }

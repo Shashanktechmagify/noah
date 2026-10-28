@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart' show liveApi;
 import '../data/content_data.dart';
 import '../data/manna_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart' show GradientButton;
 import '../widgets/content_card.dart';
+import '../widgets/engagement_bar.dart';
+import '../data/manna_engagement.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import '../widgets/rich_html.dart';
@@ -46,6 +49,7 @@ class MannaScreen extends StatelessWidget {
                 meta:
                     '${m.ref.isEmpty ? '' : '${m.ref} · '}${m.minutes} ${tr(context, 'unit_min')}',
                 badge: _whenText(context, m.daysAgo),
+                footer: liveApi ? EngagementBar(manna: m) : null,
                 onTap: () => openManna(context, m),
               ),
           ],
@@ -55,10 +59,26 @@ class MannaScreen extends StatelessWidget {
   }
 }
 
-class MannaDetailScreen extends StatelessWidget {
+class MannaDetailScreen extends StatefulWidget {
   const MannaDetailScreen({super.key, required this.manna});
 
   final Manna manna;
+
+  @override
+  State<MannaDetailScreen> createState() => _MannaDetailScreenState();
+}
+
+class _MannaDetailScreenState extends State<MannaDetailScreen> {
+  Manna get manna => widget.manna;
+
+  @override
+  void initState() {
+    super.initState();
+    // Counts a view (once per member) and reads the comments.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => engagementOf(manna).open(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +142,12 @@ class MannaDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-          if (manna.writer.isNotEmpty)
+          if (liveApi)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: EngagementBar(manna: manna),
+            ),
+          if (manna.writer.isNotEmpty && !liveApi)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Text(
@@ -173,6 +198,8 @@ class MannaDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
+          MannaComments(manna: manna),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GradientButton(

@@ -422,6 +422,23 @@ class ApiClient {
   Future<Map<String, dynamic>> content(String kind, int lang, {int limit = 30}) =>
       _send('GET', '/content/$kind?lang=$lang&limit=$limit');
 
+  /// Counts a view of a Daily Manna (the server batches the writes).
+  Future<void> viewManna(String id) => _send('POST', '/content/manna/$id/view', json: {});
+
+  /// Sets whether the member likes the Manna: `{ liked, likes }`.
+  Future<Map<String, dynamic>> likeManna(String id, bool liked) =>
+      _send('POST', '/content/manna/$id/like', json: {'liked': liked});
+
+  /// `{ liked, items: [{ id, author: {id, name}, text, createdAt, mine }] }`, newest first.
+  Future<Map<String, dynamic>> mannaComments(String id) =>
+      _send('GET', '/content/manna/$id/comments');
+
+  Future<Map<String, dynamic>> addMannaComment(String id, String text) =>
+      _send('POST', '/content/manna/$id/comments', json: {'text': text});
+
+  Future<void> deleteMannaComment(String id, String commentId) =>
+      _send('DELETE', '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}');
+
   // ── Push and notifications ───────────────────────────────────────────
 
   Future<void> registerDevice(
