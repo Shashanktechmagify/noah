@@ -7,7 +7,6 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart' show GradientButton;
 import '../widgets/page_scaffold.dart';
-import '../widgets/rich_html.dart' show EntryImage;
 
 /// Bible study: the plans to choose from.
 class BibleStudyScreen extends StatefulWidget {
@@ -432,8 +431,7 @@ class BibleStepView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[
-      // A picture the office attached to this step.
-      if (content.photo != null) Padding(padding: const EdgeInsets.only(top: 4), child: EntryImage(content.photo)),
+      // (The picture belongs to the plan's card in the list, not to the page of a step.)
       Padding(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
         child: Text(
