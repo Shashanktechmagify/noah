@@ -7,6 +7,7 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart' show GradientButton;
 import '../widgets/page_scaffold.dart';
+import '../widgets/rich_html.dart' show EntryImage;
 
 /// Bible study: the plans to choose from.
 class BibleStudyScreen extends StatefulWidget {
@@ -401,7 +402,12 @@ class _BiblePlanScreenState extends State<BiblePlanScreen> {
     final p = _c.progress!;
     if (_c.viewingStepId == null) {
       return p.completedAll
-          ? _statusCard(context, 'bible_congrats', fill: const Color(0xFFD6E9FB), ink: const Color(0xFF0B3C7D))
+          ? BibleCongratsView(
+              planName: widget.plan.name,
+              days: _c.steps.length,
+              onMore: () => Navigator.of(context).pop(),
+              onAgain: _restart,
+            )
           : _statusCard(context, 'bible_progress', fill: Colors.white, ink: const Color(0xFF4A4A57), size: 24);
     }
     if (_c.contentLoading || _c.content == null) {
@@ -426,6 +432,8 @@ class BibleStepView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[
+      // A picture the office attached to this step.
+      if (content.photo != null) Padding(padding: const EdgeInsets.only(top: 4), child: EntryImage(content.photo)),
       Padding(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
         child: Text(
@@ -681,6 +689,160 @@ class _JumpDialogState extends State<_JumpDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shown when every step of a plan is done: a trophy, the plan's name and what to do next.
+class BibleCongratsView extends StatelessWidget {
+  const BibleCongratsView({
+    required this.planName,
+    required this.days,
+    required this.onMore,
+    required this.onAgain,
+  });
+
+  final String planName;
+  final int days;
+  final VoidCallback onMore;
+  final VoidCallback onAgain;
+
+  static const _confetti = [
+    (0.08, 0.10, 10.0, Color(0xFFF5A524)),
+    (0.22, 0.04, 7.0, Color(0xFFE5334B)),
+    (0.38, 0.12, 9.0, Color(0xFF3B82F6)),
+    (0.60, 0.05, 8.0, Color(0xFF1F8A4C)),
+    (0.78, 0.13, 11.0, Color(0xFFA719C8)),
+    (0.92, 0.06, 8.0, Color(0xFFF5A524)),
+    (0.14, 0.30, 8.0, Color(0xFF3B82F6)),
+    (0.88, 0.32, 9.0, Color(0xFFE5334B)),
+    (0.05, 0.50, 7.0, Color(0xFFA719C8)),
+    (0.95, 0.52, 7.0, Color(0xFF1F8A4C)),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      children: [
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEAF3FF), Color(0xFFFFFFFF)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0xFFCFE2F7)),
+          ),
+          child: Stack(
+            children: [
+              // A few coloured dots and strips, like confetti.
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (context, box) => Stack(
+                    children: [
+                      for (final (x, y, size, color) in _confetti)
+                        Positioned(
+                          left: box.maxWidth * x,
+                          top: box.maxHeight * y,
+                          child: Transform.rotate(
+                            angle: x * 9,
+                            child: Container(
+                              width: size,
+                              height: x > 0.5 ? size : size * 0.45,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(x > 0.5 ? size : 2),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 30),
+                child: Column(
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.4, end: 1),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.elasticOut,
+                      builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+                      child: Container(
+                        width: 112,
+                        height: 112,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.headerGradient,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2A0A55).withValues(alpha: 0.28),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 60),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      tr(context, 'bible_congrats_title'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF0B3C7D), fontSize: 30, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      tr(context, 'bible_congrats_body'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF3A4A66), fontSize: 17, height: 1.4),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFCFE2F7)),
+                      ),
+                      child: Text(
+                        planName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    if (days > 0) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle, color: Color(0xFF1F8A4C), size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            tr(context, 'bible_congrats_days', args: {'n': '$days'}),
+                            style: const TextStyle(color: Color(0xFF1F8A4C), fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    GradientButton(label: tr(context, 'bible_more_plans'), onPressed: onMore),
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: onAgain,
+                      child: Text(tr(context, 'bible_read_again'), style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

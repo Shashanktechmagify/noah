@@ -204,4 +204,33 @@ void main() {
     await tester.pump();
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
+
+  testWidgets('the finished-plan page congratulates, names the plan and offers what to do next', (tester) async {
+    var more = false;
+    var again = false;
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: BibleCongratsView(planName: 'Pursuing God', days: 30, onMore: () => more = true, onAgain: () => again = true),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Congratulations!'), findsOneWidget);
+    expect(find.text('You have completed this Bible study plan.'), findsOneWidget);
+    expect(find.text('Pursuing God'), findsOneWidget);
+    expect(find.text('All 30 days finished'), findsOneWidget);
+    await tester.tap(find.text('Browse more plans'));
+    await tester.tap(find.text('Start again'));
+    expect([more, again], [true, true]);
+  });
+
+  test('a Bible step keeps its picture link, and an empty one is none', () {
+    expect(BibleStepContent.fromJson({'id': '1', 'name': 'A', 'photo': 'https://example.com/a.png'}).photo, 'https://example.com/a.png');
+    expect(BibleStepContent.fromJson({'id': '1', 'name': 'A', 'photo': ''}).photo, isNull);
+    expect(BibleStepContent.fromJson({'id': '1', 'name': 'A'}).photo, isNull);
+  });
 }

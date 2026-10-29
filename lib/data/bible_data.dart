@@ -135,12 +135,16 @@ class BibleStepContent {
     required this.passages,
     required this.quiz,
     this.youtubeId,
+    this.photo,
   });
 
   final String id;
   final String name;
   final String? description;
   final String? youtubeId;
+
+  /// A picture the office attached to the step (a link).
+  final String? photo;
   final List<BiblePassage> passages;
   final List<BibleQuestion> quiz;
 
@@ -149,6 +153,7 @@ class BibleStepContent {
     name: '${j['name'] ?? ''}',
     description: j['description'] as String?,
     youtubeId: j['youtubeId'] as String?,
+    photo: (j['photo'] as String?)?.trim().isEmpty ?? true ? null : j['photo'] as String,
     passages: ((j['passages'] as List?) ?? const [])
         .map((p) => BiblePassage.fromJson(Map<String, dynamic>.from(p as Map)))
         .toList(),
