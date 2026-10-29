@@ -8,6 +8,7 @@ import 'events/events_screen.dart';
 import 'home_screen.dart';
 import '../widgets/prayer_dialog.dart';
 import 'jodie/jodie_screen.dart';
+import 'bible_study_screen.dart';
 import 'manna_screen.dart';
 import 'menu_sheet.dart';
 import 'me_screen.dart';
@@ -185,6 +186,9 @@ class _MainShellState extends State<MainShell> {
       case 'manna':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const MannaScreen()));
+      case 'bible_study' when liveApi:
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const BibleStudyScreen()));
       case 'ebooks':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const EbooksScreen()));

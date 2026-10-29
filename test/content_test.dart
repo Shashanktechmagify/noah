@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/widgets/content_card.dart';
 import 'package:noah_frontend_flutter/widgets/rich_html.dart';
+import 'package:noah_frontend_flutter/data/bible_data.dart';
 import 'package:noah_frontend_flutter/data/content_data.dart';
+import 'package:noah_frontend_flutter/screens/bible_study_screen.dart';
 import 'package:noah_frontend_flutter/data/manna_engagement.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 
@@ -153,5 +155,53 @@ void main() {
       'mine': true,
     });
     expect([c.author, c.text, c.mine], ['Asha Rao', 'Amen', true]);
+  });
+
+  test('Bible study: a plan, a step with its verses and quiz, and the progress are read from the server', () {
+    final plan = BiblePlan.fromJson({'id': '1', 'name': 'Pursuing God', 'description': '30 days', 'photo': '', 'days': 30, 'maxStepsPerDay': true, 'type': 2, 'locked': true, 'completedSteps': 3});
+    expect([plan.days, plan.maxStepsPerDay, plan.locked, plan.started, plan.photo], [30, true, true, true, null]);
+    final progress = BibleProgress.fromJson({'completed': ['1', '2'], 'nextStepId': '3', 'completedAll': false, 'limitedToday': true});
+    expect([progress.completed.length, progress.nextStepId, progress.limitedToday], [2, '3', true]);
+    final step = BibleStepContent.fromJson({
+      'id': '9',
+      'name': 'Day one',
+      'passages': [
+        {'book': 'Leviticus', 'chapter': 1, 'verses': [{'n': 2, 'text': 'Speak unto the children of Israel'}]},
+      ],
+      'quiz': [
+        {'question': 'Who spoke?', 'options': [{'text': 'The LORD', 'correct': true}, {'text': 'Aaron', 'correct': false}]},
+      ],
+    });
+    expect([step.passages.single.verses.single.n, step.quiz.single.options.first.correct], [2, true]);
+  });
+
+  testWidgets('a Bible step shows its name, the book, the chapter heading and each verse with its number', (tester) async {
+    final content = BibleStepContent(
+      id: '9',
+      name: 'Day one',
+      description: null,
+      passages: [
+        BiblePassage(book: 'Leviticus', chapter: 1, verses: [BibleVerse(2, 'Speak unto the children of Israel'), BibleVerse(3, 'If his offering be a burnt sacrifice')]),
+      ],
+      quiz: [BibleQuestion('Who spoke?', [BibleQuizOption('The LORD', true), BibleQuizOption('Aaron', false)])],
+    );
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(home: Scaffold(body: BibleStepView(content: content, step: null, done: false))),
+      ),
+    );
+    expect(find.text('Day one'), findsOneWidget);
+    expect(find.text('Leviticus'), findsOneWidget);
+    expect(find.text('CHAPTER 1'), findsOneWidget);
+    expect(find.textContaining('Speak unto the children of Israel', findRichText: true), findsOneWidget);
+    expect(find.text('2'), findsOneWidget); // the verse number
+    // The quiz marks an answer right or wrong when it is tapped.
+    await tester.tap(find.text('Aaron'));
+    await tester.pump();
+    expect(find.byIcon(Icons.cancel), findsOneWidget);
+    await tester.tap(find.text('The LORD'));
+    await tester.pump();
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 }

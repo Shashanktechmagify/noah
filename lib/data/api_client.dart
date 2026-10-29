@@ -462,6 +462,24 @@ class ApiClient {
     '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}',
   );
 
+  // ── Bible study ────────────────────────────────────────────────────────
+
+  /// `{ items: [plan] }`: the plans that are live, with the member's progress in each.
+  Future<Map<String, dynamic>> biblePlans(int lang) => _send('GET', '/bible-study/plans?lang=$lang');
+
+  /// `{ plan, steps, progress }`.
+  Future<Map<String, dynamic>> biblePlan(String id) => _send('GET', '/bible-study/plans/$id');
+
+  /// `{ id, name, description, passages: [{ book, chapter, verses: [{ n, text }] }], quiz }`.
+  Future<Map<String, dynamic>> bibleStep(String id) => _send('GET', '/bible-study/steps/$id');
+
+  /// Marks a step as read: `{ progress }`. Fails with `come_back_tomorrow` on a one-step-a-day plan.
+  Future<Map<String, dynamic>> bibleComplete(String stepId) =>
+      _send('POST', '/bible-study/steps/$stepId/complete', json: {});
+
+  Future<Map<String, dynamic>> bibleRestart(String planId) =>
+      _send('POST', '/bible-study/plans/$planId/restart', json: {});
+
   // ── Prayer requests ───────────────────────────────────────────────────
 
   /// Sends a prayer request to the office's prayer inbox. [category] is `healing`, `family`, `guidance`,
