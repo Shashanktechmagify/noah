@@ -122,7 +122,7 @@ class _MainShellState extends State<MainShell> {
     if (target.isChat) {
       // Staff: a member wrote to them (their inbox). Otherwise (or if it is not in the inbox,
       // e.g. an admin who is messaged like a member) it is one of the member's own chats.
-      if (api.isStaff) {
+      if (inboxEnabled) {
         await pastorInbox.load();
         final thread = pastorInbox.threads
             .where((t) => t.id == target.threadId)

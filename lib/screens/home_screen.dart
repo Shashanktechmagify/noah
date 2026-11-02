@@ -626,7 +626,8 @@ class _Bell extends StatelessWidget {
   int get _count => !liveApi
       ? 0
       : notificationsState.unread +
-            (api.isStaff ? pastorInbox.totalUnread : ministry.unreadTotal);
+            (inboxEnabled ? pastorInbox.totalUnread : 0) +
+            (api.isStaff ? 0 : ministry.unreadTotal);
 
   @override
   Widget build(BuildContext context) {

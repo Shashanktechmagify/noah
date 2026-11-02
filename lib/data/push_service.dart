@@ -150,10 +150,12 @@ class PushService {
   void _refresh(Map<String, dynamic> data) {
     if ('${data['type']}'.startsWith('chat')) {
       pushTick.value++; // an open chat looks for the new message
+      // A staff account only has the inbox; anyone else has their own chats, and a cell leader an inbox too.
       if (api.isStaff) {
         pastorInbox.load();
       } else {
         ministry.refreshContacts();
+        if (ministry.hasInbox) pastorInbox.load();
       }
     } else {
       notificationsState.load();

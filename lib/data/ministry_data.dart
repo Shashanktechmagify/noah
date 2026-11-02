@@ -246,6 +246,13 @@ class MinistryState extends ChangeNotifier {
   String? _contactsToken;
   bool _started = false;
 
+  /// True when people have written to this member as their cell leader or pastor: they answer from the
+  /// inbox (the same page a pastor uses). Told by the server with the contacts.
+  bool hasInbox = false;
+
+  /// Called the first time the inbox is found, so it can start loading.
+  VoidCallback? onInboxFound;
+
   /// Loads the chats list once and keeps it fresh. Called when the Me tab is first shown.
   void ensureLoaded() {
     if (_started || !liveApi || !api.signedIn || api.isPastor) return;
@@ -316,7 +323,11 @@ class MinistryState extends ChangeNotifier {
       _livePastors
         ..clear()
         ..addAll(pastors);
+      final found = d['hasInbox'] == true;
+      final first = found && !hasInbox;
+      hasInbox = found;
       notifyListeners();
+      if (first) onInboxFound?.call();
       return signature() != before;
     } on ApiException {
       // Offline: keep what is on screen.
@@ -420,3 +431,7 @@ class MinistryState extends ChangeNotifier {
 }
 
 final ministry = MinistryState();
+
+/// Whether this person has an inbox to answer from: staff (pastor, admin) and any cell leader or pastor
+/// whom members have written to.
+bool get inboxEnabled => api.isStaff || ministry.hasInbox;

@@ -9,6 +9,8 @@ import 'push_service.dart';
 Future<void> startLiveSession() async {
   if (!liveApi) return;
   ministry.resetForLive();
+  // A cell leader's inbox starts loading once the contacts say there is one.
+  ministry.onInboxFound = pastorInbox.ensureLoaded;
   // The notification list arrives with the sign-in call (/me/bootstrap). Chats and the pastor inbox
   // load when the member first opens the Me tab (see MainShell) or the bell. Reading them at sign-in
   // costs database reads that most sessions never use.

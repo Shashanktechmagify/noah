@@ -134,16 +134,64 @@ class MeScreen extends StatelessWidget {
                     ),
                     const Divider(height: 24, color: AppColors.border),
                   ],
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _Fact(
-                      label: tr(context, 'me2_cell_leader'),
-                      value: liveApi
-                          ? (ministry.leader.available
-                                ? ministry.leader.name
-                                : '-')
-                          : '${ministry.leader.name} · ${rec.cellArea}',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _Fact(
+                          label: tr(context, 'me2_cell_leader'),
+                          value: liveApi
+                              ? (ministry.leader.available
+                                    ? ministry.leader.name
+                                    : '-')
+                              : '${ministry.leader.name} · ${rec.cellArea}',
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (liveApi && !ministry.leader.available) {
+                            ScaffoldMessenger.of(context)
+                              ..clearSnackBars()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(tr(context, 'me2_no_leader')),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            return;
+                          }
+                          openMinistryChat(context, ministry.leader);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 11,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.buttonGradient,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.chat_bubble_outline,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr(context, 'me2_chat_leader'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const Divider(height: 24, color: AppColors.border),
                   Align(
@@ -279,10 +327,10 @@ class MeScreen extends StatelessWidget {
                   ),
                   onTap: () => shell?.openMenu(),
                 ),
-                if (api.isStaff)
+                if (inboxEnabled)
                   _Row(
                     icon: Icons.inbox_outlined,
-                    title: tr(context, 'pastor_inbox'),
+                    title: tr(context, api.isStaff ? 'pastor_inbox' : 'leader_inbox'),
                     subtitle: tr(context, 'pastor_inbox_sub'),
                     pill: pastorInbox.totalUnread > 0
                         ? _Pill(

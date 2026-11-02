@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'adaptive_poll.dart';
 import 'api_client.dart';
+import 'ministry_data.dart' show inboxEnabled;
 
 /// One member's conversation in the pastor's inbox.
 class PastorThread {
@@ -69,7 +70,7 @@ class PastorInboxState extends ChangeNotifier {
 
   /// Loads the inbox once and keeps it fresh (staff only). Called when the Me tab is first shown.
   void ensureLoaded() {
-    if (_started || !liveApi || !api.signedIn || !api.isStaff) return;
+    if (_started || !liveApi || !api.signedIn || !inboxEnabled) return;
     _started = true;
     load();
     startPolling();
@@ -77,7 +78,7 @@ class PastorInboxState extends ChangeNotifier {
 
   /// Returns true when the list changed.
   Future<bool> load() async {
-    if (!liveApi || !api.signedIn || !api.isStaff) return false;
+    if (!liveApi || !api.signedIn || !inboxEnabled) return false;
     try {
       final before = '$totalUnread|${threads.map((t) => '${t.id}:${t.unread}:${t.lastMessage}').join(',')}';
       final d = await api.pastorThreads(since: _token);

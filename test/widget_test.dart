@@ -499,6 +499,13 @@ void main() {
     await settle();
     expect(find.text('2 new'), findsNothing);
 
+    // The cell leader has a chat button next to their name, like the pastor.
+    await tester.tap(find.text('Chat with leader'));
+    await settle();
+    expect(find.text('Your cell leader'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
+
     // Messages list -> cell leader chat.
     await tester.tap(find.text('Pastor, cell leader and the office'));
     await settle();

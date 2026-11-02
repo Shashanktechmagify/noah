@@ -233,6 +233,7 @@ class _LiveNotificationsState extends State<_LiveNotifications> {
       pastorInbox.load();
     } else {
       ministry.refreshContacts();
+      if (ministry.hasInbox) pastorInbox.load();
     }
   }
 
@@ -258,7 +259,7 @@ class _LiveNotificationsState extends State<_LiveNotifications> {
   /// Unread chats first (messages are not stored as notifications), then the notification list.
   List<_Entry> _entries() {
     final out = <_Entry>[];
-    if (api.isStaff) {
+    if (inboxEnabled) {
       for (final t in pastorInbox.threads.where((t) => t.unread > 0)) {
         out.add(
           _Entry(
@@ -271,7 +272,9 @@ class _LiveNotificationsState extends State<_LiveNotifications> {
           ),
         );
       }
-    } else {
+    }
+    // A staff account has only the inbox; everyone else also has their own chats.
+    if (!api.isStaff) {
       for (final c in ministry.contacts.where((c) => c.unread > 0)) {
         out.add(
           _Entry(
