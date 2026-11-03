@@ -1010,7 +1010,10 @@ void main() {
     expect(find.text('For the city'), findsWidgets);
     await tester.tap(find.text('For the sick'));
     await settle();
-    expect(find.textContaining('Healer of all'), findsWidgets); // the card's preview and the sheet
+    expect(
+      find.textContaining('Healer of all'),
+      findsWidgets,
+    ); // the card's preview and the sheet
     await tester.tapAt(const Offset(10, 10)); // closes the sheet
     await settle();
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
@@ -1030,53 +1033,131 @@ void main() {
     expect(find.text('Prayer warriors'), findsOneWidget);
   });
 
-  testWidgets('me: professional and document sections; the designation is searched in a list', (
-    tester,
-  ) async {
-    final loader = FontLoader('PlusJakartaSans')
-      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
-    await tester.runAsync(loader.load);
-    tester.view.physicalSize = const Size(390, 4200);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    profile.seedDemo();
-    profile.requests.clear();
+  testWidgets(
+    'me: professional and document sections; the designation is searched in a list',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 4200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      profile.seedDemo();
+      profile.requests.clear();
 
-    await tester.pumpWidget(
-      AppLocale(
-        controller: LocaleController(),
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const ProfileInfoScreen(),
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: const ProfileInfoScreen(),
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    Future<void> settle() => tester.pumpAndSettle();
+      );
+      await tester.pump();
+      Future<void> settle() => tester.pumpAndSettle();
 
-    expect(find.text('Professional Details'), findsOneWidget);
-    expect(find.text('Document Details'), findsOneWidget);
-    expect(find.text('Organisation Name'), findsOneWidget);
+      expect(find.text('Professional Details'), findsOneWidget);
+      expect(find.text('Document Details'), findsOneWidget);
+      expect(find.text('Organisation Name'), findsOneWidget);
 
-    await tester.tap(find.text('Designation'));
-    await settle();
-    await tester.tap(find.text('Choose'));
-    await settle();
-    // Searching narrows the long list.
-    await tester.enterText(find.byType(TextField), 'nurse');
-    await settle();
-    expect(find.text('Head Nurse'), findsOneWidget);
-    expect(find.text('Staff Nurse'), findsOneWidget);
-    expect(find.text('Director'), findsNothing);
-    await tester.tap(find.text('Staff Nurse'));
-    await settle();
-    await tester.tap(find.text('Request admin'));
-    await settle();
-    // Asked, not changed: the admin accepts first.
-    expect(profile.pendingFor('occupation')!.newValue, 'Staff Nurse');
-    expect(find.text('Requested: Staff Nurse'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 5));
-    await settle();
+      await tester.tap(find.text('Designation'));
+      await settle();
+      await tester.tap(find.text('Choose'));
+      await settle();
+      // Searching narrows the long list.
+      await tester.enterText(find.byType(TextField), 'nurse');
+      await settle();
+      expect(find.text('Head Nurse'), findsOneWidget);
+      expect(find.text('Staff Nurse'), findsOneWidget);
+      expect(find.text('Director'), findsNothing);
+      await tester.tap(find.text('Staff Nurse'));
+      await settle();
+      await tester.tap(find.text('Done'));
+      await settle();
+      await tester.tap(find.textContaining('Request admin'));
+      await settle();
+      // Asked, not changed: the admin accepts first.
+      expect(profile.pendingFor('occupation')!.newValue, 'Staff Nurse');
+      expect(find.text('Requested: Staff Nurse'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await settle();
+    },
+  );
+
+  testWidgets(
+    'me: several changes go to the admin with one button; income is a range',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 4200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      profile.seedDemo();
+      profile.requests.clear();
+      profile.drafts.clear();
+
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: const ProfileInfoScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      Future<void> settle() => tester.pumpAndSettle();
+
+      // No button until something is changed.
+      expect(find.textContaining('Request admin'), findsNothing);
+
+      await tester.tap(find.text('Annual income'));
+      await settle();
+      await tester.tap(find.text('Choose'));
+      await settle();
+      expect(find.text('Below ₹1 lakh'), findsOneWidget);
+      await tester.tap(find.text('₹5 – 10 lakh'));
+      await settle();
+      await tester.tap(find.text('Done'));
+      await settle();
+      expect(find.text('Request admin (1)'), findsOneWidget);
+      expect(
+        find.text('₹5 – 10 lakh'),
+        findsOneWidget,
+      ); // shown in the row as the draft
+      expect(profile.requests, isEmpty, reason: 'nothing is sent yet');
+
+      await tester.tap(find.text('Organisation Name'));
+      await settle();
+      await tester.enterText(find.byType(TextField), 'Karuna Hospital');
+      await tester.pump();
+      await tester.tap(find.text('Done'));
+      await settle();
+      expect(find.text('Request admin (2)'), findsOneWidget);
+
+      await tester.tap(find.text('Request admin (2)'));
+      await settle();
+      // One tap sent both; the stored income is the start of the range (the office's column is a number).
+      expect(profile.drafts, isEmpty);
+      expect(profile.pendingFor('income')!.newValue, '500000');
+      expect(profile.pendingFor('employed')!.newValue, 'Karuna Hospital');
+      expect(find.textContaining('Request admin'), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+      await settle();
+    },
+  );
+
+  testWidgets('me: a stored income shows as its range', (tester) async {
+    final field = kProfileSections
+        .expand((s) => s.fields)
+        .firstWhere((f) => f.id == 'income');
+    expect(field.optionFor('0')!.$1, '0');
+    expect(field.optionFor('450000')!.$1, '300000');
+    expect(field.optionFor('99999999')!.$1, '10000000');
+    expect(field.optionFor('lots'), isNull);
+    expect(field.optionFor(''), isNull);
   });
 
   testWidgets('me: details change only when the admin accepts a request', (
@@ -1124,7 +1205,9 @@ void main() {
     await settle();
     await tester.tap(find.text('O+'));
     await settle();
-    await tester.tap(find.text('Request admin'));
+    await tester.tap(find.text('Done'));
+    await settle();
+    await tester.tap(find.textContaining('Request admin'));
     await settle();
     // The detail itself has not changed: the admin has to accept it first.
     expect(profile.get('blood_group'), '');
@@ -1158,7 +1241,9 @@ void main() {
     await settle();
     await tester.tap(find.text('A+'));
     await settle();
-    await tester.tap(find.text('Request admin'));
+    await tester.tap(find.text('Done'));
+    await settle();
+    await tester.tap(find.textContaining('Request admin'));
     await settle();
     await tester.pump(const Duration(seconds: 5));
     await settle();
@@ -1187,7 +1272,9 @@ void main() {
     expect(find.text('Enter a valid email address'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'daniel@new.com');
     await tester.pump();
-    await tester.tap(find.text('Request admin'));
+    await tester.tap(find.text('Done'));
+    await settle();
+    await tester.tap(find.textContaining('Request admin'));
     await settle();
     expect(profile.get('email'), 'daniel.fernandes@example.com');
     expect(profile.pendingFor('email')!.newValue, 'daniel@new.com');

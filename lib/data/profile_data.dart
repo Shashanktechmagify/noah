@@ -26,6 +26,7 @@ class PfField {
     this.required = false,
     this.options,
     this.idType,
+    this.bucketed = false,
   });
 
   final String id;
@@ -42,6 +43,30 @@ class PfField {
 
   /// For [PfKind.idNumber]: which ID format to validate against.
   final String? idType;
+
+  /// For a choice of numeric ranges (annual income): each option's value is the start of its range, and a
+  /// stored number belongs to the last range that starts at or below it.
+  final bool bucketed;
+
+  /// The option a stored value stands for, or null if it matches none (a free-text value from before).
+  (String, String?)? optionFor(String stored) {
+    final options = this.options;
+    if (options == null || stored.trim().isEmpty) return null;
+    final v = stored.trim();
+    if (bucketed) {
+      final n = num.tryParse(v);
+      if (n == null) return null;
+      (String, String?)? found;
+      for (final o in options) {
+        if (n >= (num.tryParse(o.$1) ?? 0)) found = o;
+      }
+      return found;
+    }
+    for (final o in options) {
+      if (o.$1.toLowerCase() == v.toLowerCase()) return o;
+    }
+    return null;
+  }
 }
 
 class PfSection {
@@ -109,6 +134,18 @@ const _motherTongues = [
   ('English', null),
   ('Arabic', null),
   ('Other', null),
+];
+
+/// Annual income ranges. The value kept is where the range starts (the office's column is a number).
+const _incomeRanges = [
+  ('0', 'inc_0'),
+  ('100000', 'inc_1'),
+  ('300000', 'inc_2'),
+  ('500000', 'inc_3'),
+  ('1000000', 'inc_4'),
+  ('2000000', 'inc_5'),
+  ('5000000', 'inc_6'),
+  ('10000000', 'inc_7'),
 ];
 
 const _yesNoOnly = [('no', 'pf_no'), ('yes', 'pf_yes')];
@@ -278,7 +315,13 @@ const kProfileSections = [
     ),
     PfField('employed', 'pf_org_name', PfKind.text),
     PfField('education', 'pf_education', PfKind.choice, options: _educations),
-    PfField('income', 'pf_income', PfKind.text),
+    PfField(
+      'income',
+      'pf_income',
+      PfKind.choice,
+      options: _incomeRanges,
+      bucketed: true,
+    ),
   ]),
   PfSection('pf_sec_documents', [
     PfField('pan', 'reg_id_pan', PfKind.idNumber, idType: 'pan'),
@@ -377,8 +420,54 @@ class ChangeRequest {
   RequestStatus status;
 }
 
+/// What the member uploaded when they registered: their ID proof, photo and declaration video (ids of
+/// the files on the server; the pages fetch them with the member's own login).
+class UploadedDocs {
+  const UploadedDocs({
+    this.idType,
+    this.idProofId,
+    this.photoId,
+    this.videoId,
+    this.videoSeconds,
+  });
+
+  final String? idType;
+  final String? idProofId;
+  final String? photoId;
+  final String? videoId;
+  final int? videoSeconds;
+
+  bool get any => idProofId != null || photoId != null || videoId != null;
+
+  factory UploadedDocs.fromRegistration(Map<String, dynamic> m) {
+    String? idOf(Object? ref) => ref is Map ? ref['id'] as String? : null;
+    final video = (m['video'] as Map<String, dynamic>?) ?? const {};
+    final seconds = video['seconds'];
+    return UploadedDocs(
+      idType: m['idType'] as String?,
+      idProofId: idOf(m['idProof']),
+      photoId: idOf(m['photo']),
+      videoId: idOf(video['file']),
+      videoSeconds: seconds is num ? seconds.toInt() : null,
+    );
+  }
+}
+
 class ProfileState extends ChangeNotifier {
   final _values = <String, String>{};
+
+  /// The registration uploads, read from the server when My information opens (live mode only).
+  UploadedDocs? docs;
+
+  Future<void> loadDocuments() async {
+    if (!liveApi || !api.signedIn) return;
+    try {
+      docs = UploadedDocs.fromRegistration(await api.getRegistration());
+      notifyListeners();
+    } on ApiException {
+      // Offline: the section just stays as it was.
+    }
+  }
 
   /// Id of the member's photo on the server (live mode), shown on the Me page.
   String? photoId;
@@ -386,6 +475,35 @@ class ProfileState extends ChangeNotifier {
   /// Requests raised with the admin, newest first (demo store; the backend
   /// keeps these and the admin accepts or rejects them).
   final requests = <ChangeRequest>[];
+
+  /// Changes the member has entered but not sent yet: one button sends them all (see [submitDrafts]).
+  final drafts = <String, String>{};
+
+  /// Keeps [value] as the member's new value for [fieldId] until they send. The same as what is already
+  /// held (or an empty value) takes the draft back.
+  void stage(String fieldId, String value) {
+    final v = value.trim();
+    if (v.isEmpty || v == get(fieldId)) {
+      drafts.remove(fieldId);
+    } else {
+      drafts[fieldId] = v;
+    }
+    notifyListeners();
+  }
+
+  void discardDraft(String fieldId) {
+    if (drafts.remove(fieldId) != null) notifyListeners();
+  }
+
+  /// Sends every draft to the admin, each as its own request, and clears them. Returns how many.
+  int submitDrafts() {
+    final entries = drafts.entries.toList();
+    drafts.clear();
+    for (final e in entries) {
+      requestChange(e.key, e.value);
+    }
+    return entries.length;
+  }
 
   /// The open request for [fieldId], if any.
   ChangeRequest? pendingFor(String fieldId) {

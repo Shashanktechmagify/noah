@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:video_player/video_player.dart';
+
+import '../../data/api_client.dart';
 import '../../data/profile_data.dart';
 import '../../data/registration_data.dart'
     show emailError, idNumberError, phoneError, pinError;
@@ -18,8 +21,21 @@ const _amberBg = Color(0xFFFDEBD3);
 /// Me → My information: every detail the ministry holds about the member.
 /// Members cannot edit these directly. They tap a detail, enter the new value
 /// and send it to the admin; the detail changes only if the admin accepts.
-class ProfileInfoScreen extends StatelessWidget {
+class ProfileInfoScreen extends StatefulWidget {
   const ProfileInfoScreen({super.key});
+
+  @override
+  State<ProfileInfoScreen> createState() => _ProfileInfoScreenState();
+}
+
+class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Anything entered but not sent when the page was last left is dropped; the uploads come from the server.
+    profile.drafts.clear();
+    profile.loadDocuments();
+  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -28,6 +44,9 @@ class ProfileInfoScreen extends StatelessWidget {
       final missing = profile.missingRequired;
       final total = profile.totalRequired;
       return SubPage(
+        bottomBar: profile.drafts.isEmpty
+            ? null
+            : _SendBar(key: ValueKey(profile.drafts.length)),
         title: tr(context, 'pf_title'),
         subtitle: tr(
           context,
@@ -70,6 +89,11 @@ class ProfileInfoScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (section.titleKey == 'pf_sec_documents' &&
+                (profile.docs?.any ?? false)) ...[
+              const SizedBox(height: 12),
+              _DocsCard(docs: profile.docs!),
+            ],
             const SizedBox(height: 14),
           ],
           Padding(
@@ -86,6 +110,295 @@ class ProfileInfoScreen extends StatelessWidget {
         ],
       );
     },
+  );
+}
+
+/// The one button that sends every detail the member changed to the admin together.
+class _SendBar extends StatelessWidget {
+  const _SendBar({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      border: Border(top: BorderSide(color: AppColors.border)),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            tr(
+              context,
+              'pf_drafts_ready',
+              args: {'n': '${profile.drafts.length}'},
+            ),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+          ),
+          const SizedBox(height: 8),
+          GradientButton(
+            label: '${tr(context, 'pf_req_submit')} (${profile.drafts.length})',
+            onPressed: () {
+              profile.submitDrafts();
+              toast(context, tr(context, 'pf_req_sent'));
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// What the member uploaded when registering: ID proof and photo (tap to see them) and the declaration video.
+class _DocsCard extends StatelessWidget {
+  const _DocsCard({required this.docs});
+
+  final UploadedDocs docs;
+
+  Widget _row(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onView,
+  }) => InkWell(
+    onTap: onView,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          IconTile(icon: icon),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            tr(context, 'pf_doc_view'),
+            style: const TextStyle(
+              color: AppColors.magenta,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  void _open(BuildContext context, Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+
+  @override
+  Widget build(BuildContext context) {
+    final uploaded = tr(context, 'pf_doc_uploaded');
+    final seconds = docs.videoSeconds;
+    final rows = <Widget>[
+      if (docs.idProofId != null)
+        _row(
+          context,
+          icon: Icons.badge_outlined,
+          title: tr(context, 'pf_doc_idproof'),
+          subtitle: docs.idType == null
+              ? uploaded
+              : '${docs.idType!.toUpperCase()} · $uploaded',
+          onView: () => _open(
+            context,
+            _FileImagePage(
+              title: tr(context, 'pf_doc_idproof'),
+              fileId: docs.idProofId!,
+            ),
+          ),
+        ),
+      if (docs.photoId != null)
+        _row(
+          context,
+          icon: Icons.photo_outlined,
+          title: tr(context, 'pf_doc_photo'),
+          subtitle: uploaded,
+          onView: () => _open(
+            context,
+            _FileImagePage(
+              title: tr(context, 'pf_doc_photo'),
+              fileId: docs.photoId!,
+            ),
+          ),
+        ),
+      if (docs.videoId != null)
+        _row(
+          context,
+          icon: Icons.videocam_outlined,
+          title: tr(context, 'pf_doc_video'),
+          subtitle: seconds == null
+              ? uploaded
+              : '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')} · $uploaded',
+          onView: () => _open(
+            context,
+            _VideoPage(
+              title: tr(context, 'pf_doc_video'),
+              fileId: docs.videoId!,
+            ),
+          ),
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+          child: Text(
+            tr(context, 'pf_docs_title'),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
+        WhiteCard(
+          child: Column(
+            children: [
+              for (final (i, r) in rows.indexed) ...[
+                if (i > 0) const Divider(height: 1, color: AppColors.border),
+                r,
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A picture the member uploaded, full screen, fetched with their own login. A PDF cannot be drawn here.
+class _FileImagePage extends StatelessWidget {
+  const _FileImagePage({required this.title, required this.fileId});
+
+  final String title;
+  final String fileId;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: Text(title),
+    ),
+    body: Center(
+      child: InteractiveViewer(
+        child: Image.network(
+          api.fileUrl(fileId),
+          headers: api.authHeaders,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, progress) => progress == null
+              ? child
+              : const CircularProgressIndicator(color: Colors.white),
+          errorBuilder: (context, error, stack) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              tr(context, 'pf_doc_nopreview'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The declaration video the member recorded, played from the server with their own login.
+class _VideoPage extends StatefulWidget {
+  const _VideoPage({required this.title, required this.fileId});
+
+  final String title;
+  final String fileId;
+
+  @override
+  State<_VideoPage> createState() => _VideoPageState();
+}
+
+class _VideoPageState extends State<_VideoPage> {
+  late final VideoPlayerController _c;
+  bool _ready = false;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = VideoPlayerController.networkUrl(
+      Uri.parse(api.fileUrl(widget.fileId)),
+      httpHeaders: api.authHeaders,
+    );
+    _c
+        .initialize()
+        .then((_) {
+          if (mounted) {
+            setState(() => _ready = true);
+            _c.play();
+          }
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _failed = true);
+        });
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: Text(widget.title),
+    ),
+    body: Center(
+      child: _failed
+          ? Text(
+              tr(context, 'pf_doc_nopreview'),
+              style: const TextStyle(color: Colors.white70),
+            )
+          : !_ready
+          ? const CircularProgressIndicator(color: Colors.white)
+          : GestureDetector(
+              onTap: () =>
+                  setState(() => _c.value.isPlaying ? _c.pause() : _c.play()),
+              child: AspectRatio(
+                aspectRatio: _c.value.aspectRatio,
+                child: VideoPlayer(_c),
+              ),
+            ),
+    ),
   );
 }
 
@@ -139,12 +452,9 @@ String _display(BuildContext context, PfField f, String v) {
     case PfKind.date:
       return displayDate(v);
     case PfKind.choice:
-      for (final (value, key) in f.options!) {
-        if (value.toLowerCase() == v.toLowerCase()) {
-          return key == null ? value : tr(context, key);
-        }
-      }
-      return v;
+      final option = f.optionFor(v);
+      if (option == null) return v;
+      return option.$2 == null ? option.$1 : tr(context, option.$2!);
     case PfKind.number:
       return f.id == 'height'
           ? '$v ${tr(context, 'pf_cm')}'
@@ -169,7 +479,11 @@ class _FieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = _shown(context, field);
+    // A change the member has entered but not sent yet shows in place of the stored value.
+    final draft = profile.drafts[field.id];
+    final value = draft != null
+        ? _display(context, field, draft)
+        : _shown(context, field);
     final required = profile.isRequired(field);
     final empty = value.isEmpty;
     final pending = profile.pendingFor(field.id);
@@ -195,9 +509,10 @@ class _FieldRow extends StatelessWidget {
                   if (!empty)
                     Text(
                       value,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
+                        color: draft != null ? AppColors.magenta : null,
                       ),
                     )
                   else if (field.kind == PfKind.readOnly)
@@ -237,7 +552,9 @@ class _FieldRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (pending != null)
+            if (draft != null)
+              _Tag(tr(context, 'pf_edited'))
+            else if (pending != null)
               _Tag(tr(context, 'pf_pending'))
             else if (empty && required)
               _Tag(tr(context, 'pf_required'))
@@ -290,17 +607,13 @@ String? _error(PfField f, String v) {
   };
 }
 
-/// Lets the member propose a new value for [field] and send it to the admin.
-/// The detail itself does not change until the admin accepts.
-Future<void> showChangeRequest(BuildContext context, PfField field) async {
-  final sent = await showDialog<bool>(
-    context: context,
-    builder: (_) => _RequestDialog(field: field),
-  );
-  if (sent == true && context.mounted) {
-    toast(context, tr(context, 'pf_req_sent'));
-  }
-}
+/// Lets the member enter a new value for [field]. It is kept as a draft; the one button at the bottom of
+/// the page sends every draft to the admin together, and a detail changes only when the admin accepts.
+Future<void> showChangeRequest(BuildContext context, PfField field) =>
+    showDialog<bool>(
+      context: context,
+      builder: (_) => _RequestDialog(field: field),
+    );
 
 class _RequestDialog extends StatefulWidget {
   const _RequestDialog({required this.field});
@@ -312,9 +625,14 @@ class _RequestDialog extends StatefulWidget {
 }
 
 class _RequestDialogState extends State<_RequestDialog> {
-  late String _value =
-      profile.pendingFor(widget.field.id)?.newValue ??
-      profile.get(widget.field.id);
+  late String _value = _bucket(
+    profile.drafts[widget.field.id] ??
+        profile.pendingFor(widget.field.id)?.newValue ??
+        profile.get(widget.field.id),
+  );
+
+  /// A stored income is shown as the range it falls in.
+  String _bucket(String stored) => widget.field.optionFor(stored)?.$1 ?? stored;
   late final _c = TextEditingController(text: _value);
 
   PfField get f => widget.field;
@@ -425,7 +743,7 @@ class _RequestDialogState extends State<_RequestDialog> {
     final valid =
         v.trim().isNotEmpty &&
         _error(f, v) == null &&
-        v.trim() != profile.get(f.id);
+        v.trim() != _bucket(profile.get(f.id));
     return Dialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
@@ -469,6 +787,20 @@ class _RequestDialogState extends State<_RequestDialog> {
             ),
             const SizedBox(height: 8),
             _editor(context),
+            if (profile.drafts.containsKey(f.id))
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () {
+                    profile.discardDraft(f.id);
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text(
+                    tr(context, 'pf_discard'),
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
+                ),
+              ),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -485,10 +817,10 @@ class _RequestDialogState extends State<_RequestDialog> {
                 Expanded(
                   flex: 2,
                   child: GradientButton(
-                    label: tr(context, 'pf_req_submit'),
+                    label: tr(context, 'pf_done'),
                     onPressed: valid
                         ? () {
-                            profile.requestChange(f.id, v);
+                            profile.stage(f.id, v);
                             Navigator.of(context).pop(true);
                           }
                         : null,
@@ -518,7 +850,7 @@ class _OptionSheetState extends State<_OptionSheet> {
   String _query = '';
 
   bool _isSelected(String value) =>
-      value.toLowerCase() == widget.selected.toLowerCase();
+      widget.field.optionFor(widget.selected)?.$1 == value;
 
   @override
   Widget build(BuildContext context) {

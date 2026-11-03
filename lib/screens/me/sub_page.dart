@@ -10,6 +10,7 @@ class SubPage extends StatelessWidget {
     this.subtitle = '',
     this.bandHeight = 150,
     this.headerExtra,
+    this.bottomBar,
     required this.children,
   });
 
@@ -17,10 +18,14 @@ class SubPage extends StatelessWidget {
   final String subtitle;
   final double bandHeight;
   final Widget? headerExtra;
+
+  /// Stays at the bottom of the page while the content scrolls (for example a button that sends all changes).
+  final Widget? bottomBar;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    bottomNavigationBar: bottomBar,
     body: PageScaffold(
       title: title,
       subtitle: subtitle,
