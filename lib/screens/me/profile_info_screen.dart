@@ -323,6 +323,48 @@ class _RequestDialogState extends State<_RequestDialog> {
     super.dispose();
   }
 
+  Future<void> _pick(BuildContext context) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _OptionSheet(field: f, selected: _value),
+    );
+    if (picked != null) setState(() => _value = picked);
+  }
+
+  Widget _pickerField(BuildContext context) => GestureDetector(
+    onTap: () => _pick(context),
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _value.isEmpty
+                  ? tr(context, 'pf_choose')
+                  : _display(context, f, _value),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: _value.isEmpty ? FontWeight.w500 : FontWeight.w800,
+                color: _value.isEmpty ? AppColors.muted : AppColors.ink,
+              ),
+            ),
+          ),
+          const Icon(Icons.keyboard_arrow_down, color: AppColors.muted),
+        ],
+      ),
+    ),
+  );
+
   Widget _editor(BuildContext context) {
     switch (f.kind) {
       case PfKind.date:
@@ -335,6 +377,8 @@ class _RequestDialogState extends State<_RequestDialog> {
           }),
         );
       case PfKind.choice:
+        // A long list (the designations) is searched in a sheet; a short one is shown as chips.
+        if (f.options!.length > 12) return _pickerField(context);
         return Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -483,6 +527,95 @@ class _RequestDialogState extends State<_RequestDialog> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A searchable list of the options of a long choice (the designations).
+class _OptionSheet extends StatefulWidget {
+  const _OptionSheet({required this.field, required this.selected});
+
+  final PfField field;
+  final String selected;
+
+  @override
+  State<_OptionSheet> createState() => _OptionSheetState();
+}
+
+class _OptionSheetState extends State<_OptionSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final f = widget.field;
+    final q = _query.trim().toLowerCase();
+    final options = [
+      for (final (value, key) in f.options!)
+        if (q.isEmpty ||
+            (key == null ? value : tr(context, key)).toLowerCase().contains(q))
+          (value, key == null ? value : tr(context, key)),
+    ];
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.75,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+              child: Text(
+                tr(context, f.labelKey),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: tr(context, 'pf_search'),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.muted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final (value, label) in options)
+                    ListTile(
+                      title: Text(
+                        label,
+                        style: TextStyle(
+                          fontWeight: value == widget.selected
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                          color: value == widget.selected
+                              ? AppColors.magenta
+                              : AppColors.ink,
+                        ),
+                      ),
+                      trailing: value == widget.selected
+                          ? const Icon(Icons.check, color: AppColors.magenta)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(value),
+                    ),
+                ],
+              ),
             ),
           ],
         ),

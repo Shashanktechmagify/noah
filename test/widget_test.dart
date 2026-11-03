@@ -1030,6 +1030,55 @@ void main() {
     expect(find.text('Prayer warriors'), findsOneWidget);
   });
 
+  testWidgets('me: professional and document sections; the designation is searched in a list', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 4200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    profile.seedDemo();
+    profile.requests.clear();
+
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(
+          theme: buildTheme(),
+          home: const ProfileInfoScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    Future<void> settle() => tester.pumpAndSettle();
+
+    expect(find.text('Professional Details'), findsOneWidget);
+    expect(find.text('Document Details'), findsOneWidget);
+    expect(find.text('Organisation Name'), findsOneWidget);
+
+    await tester.tap(find.text('Designation'));
+    await settle();
+    await tester.tap(find.text('Choose'));
+    await settle();
+    // Searching narrows the long list.
+    await tester.enterText(find.byType(TextField), 'nurse');
+    await settle();
+    expect(find.text('Head Nurse'), findsOneWidget);
+    expect(find.text('Staff Nurse'), findsOneWidget);
+    expect(find.text('Director'), findsNothing);
+    await tester.tap(find.text('Staff Nurse'));
+    await settle();
+    await tester.tap(find.text('Request admin'));
+    await settle();
+    // Asked, not changed: the admin accepts first.
+    expect(profile.pendingFor('occupation')!.newValue, 'Staff Nurse');
+    expect(find.text('Requested: Staff Nurse'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await settle();
+  });
+
   testWidgets('me: details change only when the admin accepts a request', (
     tester,
   ) async {

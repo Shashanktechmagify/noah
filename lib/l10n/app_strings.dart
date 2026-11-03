@@ -5540,6 +5540,12 @@ const Map<String, List<String>> _strings = {
     'കത്തിടപാട് വിലാസം',
     'కరస్పాండెన్స్ చిరునామా',
   ],
+  'pf_sec_professional': ['Professional Details', 'पेशेवर विवरण', 'व्यावसायिक तपशील', '', '', ''],
+  'pf_sec_documents': ['Document Details', 'दस्तावेज़ विवरण', 'कागदपत्र तपशील', '', '', ''],
+  'pf_designation': ['Designation', 'पदनाम', 'पदनाम', '', '', ''],
+  'pf_org_name': ['Organisation Name', 'संगठन का नाम', 'संस्थेचे नाव', '', '', ''],
+  'pf_choose': ['Choose', 'चुनें', 'निवडा', '', '', ''],
+  'pf_search': ['Search', 'खोजें', 'शोधा', '', '', ''],
   'pf_sec_other': [
     'Other details',
     'अन्य विवरण',
