@@ -1119,9 +1119,11 @@ void main() {
     await settle();
     expect(find.text('Request a change'), findsOneWidget);
     expect(find.text('Current: (empty)'), findsOneWidget);
-    // Nothing chosen yet: the button is off.
+    // Nothing chosen yet: the button is off. The choice is a dropdown.
+    await tester.tap(find.text('Choose'));
+    await settle();
     await tester.tap(find.text('O+'));
-    await tester.pump();
+    await settle();
     await tester.tap(find.text('Request admin'));
     await settle();
     // The detail itself has not changed: the admin has to accept it first.
@@ -1152,8 +1154,10 @@ void main() {
     // 3. A second request is accepted: the detail is updated.
     await tester.tap(find.text('Not added yet'));
     await settle();
+    await tester.tap(find.text('Choose'));
+    await settle();
     await tester.tap(find.text('A+'));
-    await tester.pump();
+    await settle();
     await tester.tap(find.text('Request admin'));
     await settle();
     await tester.pump(const Duration(seconds: 5));

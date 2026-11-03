@@ -140,7 +140,9 @@ String _display(BuildContext context, PfField f, String v) {
       return displayDate(v);
     case PfKind.choice:
       for (final (value, key) in f.options!) {
-        if (value == v) return key == null ? value : tr(context, key);
+        if (value.toLowerCase() == v.toLowerCase()) {
+          return key == null ? value : tr(context, key);
+        }
       }
       return v;
     case PfKind.number:
@@ -377,42 +379,8 @@ class _RequestDialogState extends State<_RequestDialog> {
           }),
         );
       case PfKind.choice:
-        // A long list (the designations) is searched in a sheet; a short one is shown as chips.
-        if (f.options!.length > 12) return _pickerField(context);
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final (value, key) in f.options!)
-              GestureDetector(
-                onTap: () => setState(() => _value = value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: value == _value ? AppColors.magenta : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: value == _value
-                          ? AppColors.magenta
-                          : AppColors.border,
-                    ),
-                  ),
-                  child: Text(
-                    key == null ? value : tr(context, key),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: value == _value ? Colors.white : AppColors.ink,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
+        // Every choice is a dropdown: a sheet with the options (and a search box when the list is long).
+        return _pickerField(context);
       default:
         final error = _error(f, _value);
         return TextField(
@@ -549,9 +517,13 @@ class _OptionSheet extends StatefulWidget {
 class _OptionSheetState extends State<_OptionSheet> {
   String _query = '';
 
+  bool _isSelected(String value) =>
+      value.toLowerCase() == widget.selected.toLowerCase();
+
   @override
   Widget build(BuildContext context) {
     final f = widget.field;
+    final searchable = f.options!.length > 12;
     final q = _query.trim().toLowerCase();
     final options = [
       for (final (value, key) in f.options!)
@@ -562,7 +534,7 @@ class _OptionSheetState extends State<_OptionSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.75,
+        height: searchable ? MediaQuery.sizeOf(context).height * 0.75 : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -576,40 +548,45 @@ class _OptionSheetState extends State<_OptionSheet> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                onChanged: (v) => setState(() => _query = v),
-                decoration: InputDecoration(
-                  hintText: tr(context, 'pf_search'),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.muted),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+            if (searchable)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  onChanged: (v) => setState(() => _query = v),
+                  decoration: InputDecoration(
+                    hintText: tr(context, 'pf_search'),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.muted,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ),
-            ),
             const SizedBox(height: 6),
-            Expanded(
+            Flexible(
               child: ListView(
+                shrinkWrap: true,
                 children: [
                   for (final (value, label) in options)
                     ListTile(
                       title: Text(
                         label,
                         style: TextStyle(
-                          fontWeight: value == widget.selected
+                          fontWeight: _isSelected(value)
                               ? FontWeight.w800
                               : FontWeight.w500,
-                          color: value == widget.selected
+                          color: _isSelected(value)
                               ? AppColors.magenta
                               : AppColors.ink,
                         ),
                       ),
-                      trailing: value == widget.selected
+                      trailing: _isSelected(value)
                           ? const Icon(Icons.check, color: AppColors.magenta)
                           : null,
                       onTap: () => Navigator.of(context).pop(value),

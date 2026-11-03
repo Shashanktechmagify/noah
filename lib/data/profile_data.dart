@@ -62,11 +62,56 @@ const _bloodGroups = [
   ('O-', null),
 ];
 
-const _yesNo = [
-  ('no', 'pf_no'),
-  ('occasionally', 'pf_occasionally'),
-  ('yes', 'pf_yes'),
+/// What a member picks as their education (Professional Details).
+const _educations = [
+  ('No formal education', null),
+  ('Primary (up to 7th)', null),
+  ('10th (SSC)', null),
+  ('12th (HSC)', null),
+  ('ITI', null),
+  ('Diploma', null),
+  ('Bachelor\'s degree', null),
+  ('Master\'s degree', null),
+  ('Doctorate (PhD)', null),
+  ('MBBS / Medical', null),
+  ('Nursing', null),
+  ('Law (LLB / LLM)', null),
+  ('Chartered Accountant', null),
+  ('Company Secretary', null),
+  ('Other', null),
 ];
+
+/// The mother tongues a member picks from.
+const _motherTongues = [
+  ('Hindi', null),
+  ('Marathi', null),
+  ('Kannada', null),
+  ('Malayalam', null),
+  ('Telugu', null),
+  ('Tamil', null),
+  ('Gujarati', null),
+  ('Bengali', null),
+  ('Punjabi', null),
+  ('Urdu', null),
+  ('Odia', null),
+  ('Assamese', null),
+  ('Konkani', null),
+  ('Tulu', null),
+  ('Sindhi', null),
+  ('Nepali', null),
+  ('Kashmiri', null),
+  ('Manipuri', null),
+  ('Bodo', null),
+  ('Santali', null),
+  ('Maithili', null),
+  ('Dogri', null),
+  ('Sanskrit', null),
+  ('English', null),
+  ('Arabic', null),
+  ('Other', null),
+];
+
+const _yesNoOnly = [('no', 'pf_no'), ('yes', 'pf_yes')];
 
 /// The designations a member picks from (Professional Details). Shown as written.
 const _designations = [
@@ -225,9 +270,14 @@ const kProfileSections = [
   ]),
   PfSection('pf_sec_professional', [
     // Stored in the office's occupation and employedIn columns.
-    PfField('occupation', 'pf_designation', PfKind.choice, options: _designations),
+    PfField(
+      'occupation',
+      'pf_designation',
+      PfKind.choice,
+      options: _designations,
+    ),
     PfField('employed', 'pf_org_name', PfKind.text),
-    PfField('education', 'pf_education', PfKind.text),
+    PfField('education', 'pf_education', PfKind.choice, options: _educations),
     PfField('income', 'pf_income', PfKind.text),
   ]),
   PfSection('pf_sec_documents', [
@@ -239,7 +289,13 @@ const kProfileSections = [
     PfField('dl', 'reg_id_dl', PfKind.idNumber, idType: 'dl'),
   ]),
   PfSection('pf_sec_other', [
-    PfField('mother_tongue', 'pf_mother_tongue', PfKind.text, required: true),
+    PfField(
+      'mother_tongue',
+      'pf_mother_tongue',
+      PfKind.choice,
+      required: true,
+      options: _motherTongues,
+    ),
     PfField(
       'comm_language',
       'pf_comm_lang',
@@ -281,8 +337,8 @@ const kProfileSections = [
         ('vegan', 'pf_diet_vegan'),
       ],
     ),
-    PfField('smoking', 'pf_smoking', PfKind.choice, options: _yesNo),
-    PfField('drink', 'pf_drink', PfKind.choice, options: _yesNo),
+    PfField('smoking', 'pf_smoking', PfKind.choice, options: _yesNoOnly),
+    PfField('drink', 'pf_drink', PfKind.choice, options: _yesNoOnly),
     PfField('reference', 'reg_ref', PfKind.text),
     PfField('reference_phone', 'pf_ref_phone', PfKind.phone),
   ]),
