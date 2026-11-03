@@ -502,6 +502,40 @@ class ApiClient {
     },
   );
 
+  // ── Family ──────────────────────────────────────────────────────────
+
+  /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.
+  Future<Map<String, dynamic>> family() => _send('GET', '/family');
+
+  /// Asks the office to add someone to the family: `{ id, state: Pending, kid }`. A child under 18 needs
+  /// [dateOfBirth] (YYYY-MM-DD) and no number; a grown-up needs [mobileNumber], to link their account.
+  Future<Map<String, dynamic>> createFamilyRequest({
+    required String relation,
+    required String firstName,
+    String lastName = '',
+    String? dateOfBirth,
+    String? countryCode,
+    String? mobileNumber,
+    String? gender,
+    String? note,
+  }) => _send(
+    'POST',
+    '/family/requests',
+    json: {
+      'relation': relation,
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
+      'dateOfBirth': ?dateOfBirth,
+      'countryCode': ?countryCode,
+      'mobileNumber': ?mobileNumber,
+      'gender': ?gender,
+      'note': ?note,
+    },
+  );
+
+  Future<Map<String, dynamic>> cancelFamilyRequest(String id) =>
+      _send('DELETE', '/family/requests/$id');
+
   // ── Push and notifications ───────────────────────────────────────────
 
   Future<void> registerDevice(

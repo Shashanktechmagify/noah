@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import 'family_data.dart';
 import 'ministry_data.dart';
 import 'notifications_data.dart';
 import 'pastor_data.dart';
@@ -23,6 +24,7 @@ Future<void> endLiveSession() async {
   ministry.stopPolling();
   pastorInbox.stop();
   notificationsState.clear();
+  familyState.clear();
   await pushService.stop();
   await api.logout();
 }

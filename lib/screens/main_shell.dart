@@ -20,6 +20,8 @@ import '../data/ministry_data.dart';
 import '../data/pastor_data.dart';
 import '../data/api_client.dart';
 import '../data/open_target.dart';
+import '../data/family_data.dart';
+import 'me/family_screen.dart';
 import 'me/ministry_chat_screen.dart';
 import 'me/pastor_inbox_screen.dart';
 
@@ -146,6 +148,10 @@ class _MainShellState extends State<MainShell> {
         );
       }
     }
+    if (target.type.startsWith('family')) {
+      nav.push(MaterialPageRoute(builder: (_) => const FamilyScreen()));
+      return;
+    }
     // Anything else (registration decisions, ...) lands on the Me tab, where that lives.
   }
 
@@ -157,6 +163,7 @@ class _MainShellState extends State<MainShell> {
     if (page == 4) {
       ministry.ensureLoaded();
       pastorInbox.ensureLoaded();
+      familyState.ensureLoaded();
     }
   }
 

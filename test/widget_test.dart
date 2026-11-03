@@ -610,8 +610,20 @@ void main() {
       final last = noahgram.me.name.split(' ').last; // earlier tests may rename
       expect(find.text('$last household'), findsOneWidget);
       expect(find.text('Linked members'), findsOneWidget);
-      expect(find.text('Rebecca $last'), findsOneWidget);
-      expect(find.text('Minor'), findsNWidgets(2));
+      // Demo mode has no server: only the member themself, and the way to ask the office to add someone.
+      expect(find.text('Add +'), findsOneWidget);
+      expect(find.textContaining('No one is linked yet'), findsOneWidget);
+      await tester.tap(find.text('Add +'));
+      await settle();
+      expect(find.text('Add a family member'), findsOneWidget);
+      expect(find.text('Send request'), findsOneWidget);
+      // A grown-up needs a number; a son or daughter needs a date of birth.
+      expect(find.text('Mobile number'), findsOneWidget);
+      await tester.tap(find.text('Son'));
+      await settle();
+      expect(find.text('Date of birth'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close));
+      await settle();
       await back();
 
       // Location: change it, with a confirmation.

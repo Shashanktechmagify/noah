@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import '../data/family_data.dart';
 import '../data/live_session.dart';
 import '../data/pastor_data.dart';
 import '../data/me_data.dart';
@@ -55,6 +56,7 @@ class MeScreen extends StatelessWidget {
         meState,
         profile,
         pastorInbox,
+        familyState,
       ]),
       builder: (context, _) {
         final me = noahgram.me;
@@ -201,7 +203,9 @@ class MeScreen extends StatelessWidget {
                       value: tr(
                         context,
                         'me2_members_linked',
-                        args: {'n': '${rec.familyLinked}'},
+                        args: {
+                          'n': '${liveApi ? familyState.count : rec.familyLinked}',
+                        },
                       ),
                     ),
                   ),
@@ -276,7 +280,9 @@ class MeScreen extends StatelessWidget {
                   subtitle: tr(
                     context,
                     'me2_family_sub',
-                    args: {'n': '${rec.familyLinked}'},
+                    args: {
+                      'n': '${liveApi ? familyState.count : rec.familyLinked}',
+                    },
                   ),
                   onTap: () => _open(context, const FamilyScreen()),
                 ),

@@ -1,50 +1,131 @@
 import 'package:flutter/material.dart';
 
-import '../../data/ministry_data.dart';
+import '../../data/api_client.dart';
+import '../../data/family_data.dart';
 import '../../data/noahgram_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/family_dialog.dart';
 import '../../widgets/page_scaffold.dart';
 import '../jodie/jodie_widgets.dart' show toast;
 import '../main_shell.dart' show ShellScope;
 import 'sub_page.dart';
 
-class _Member {
-  const _Member(this.name, this.relKey, {this.since, this.guardian});
+class FamilyScreen extends StatefulWidget {
+  const FamilyScreen({super.key});
 
-  final String name;
-  final String relKey;
-  final int? since;
-  final String? guardian;
+  @override
+  State<FamilyScreen> createState() => _FamilyScreenState();
+}
 
-  bool get minor => guardian != null;
+class _FamilyScreenState extends State<FamilyScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Always look again when the page opens: the office may have decided since.
+    familyState.load();
+  }
 
-  String get initials => name
+  Future<void> _add() async {
+    final sent = await showFamilyDialog(context);
+    if (sent && mounted) toast(context, tr(context, 'fam_sent'));
+  }
+
+  Future<void> _cancel(FamilyRequest r) async {
+    try {
+      await familyState.cancel(r.id);
+      if (mounted) toast(context, tr(context, 'fam_cancelled'));
+    } on ApiException catch (e) {
+      if (mounted) toast(context, e.message);
+    }
+  }
+
+  static const _red = (Color(0xFFFBE3E6), Color(0xFFC62840));
+
+  static String _initials(String name) => name
       .split(' ')
       .where((p) => p.isNotEmpty)
       .take(2)
       .map((p) => p[0].toUpperCase())
       .join();
-}
 
-class FamilyScreen extends StatelessWidget {
-  const FamilyScreen({super.key});
+  Widget _avatar(String initials, {required bool soft}) => Container(
+    width: 46,
+    height: 46,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: soft ? const Color(0xFFF7E8F4) : const Color(0xFFA719C8),
+      borderRadius: BorderRadius.circular(15),
+    ),
+    child: Text(
+      initials,
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
+        color: soft ? const Color(0xFFB3641A) : Colors.white,
+      ),
+    ),
+  );
+
+  Widget _row({
+    required String name,
+    required String subtitle,
+    required bool soft,
+    required StatusPill pill,
+    Widget? below,
+  }) => Padding(
+    padding: const EdgeInsets.all(14),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _avatar(_initials(name), soft: soft),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            pill,
+          ],
+        ),
+        ?below,
+      ],
+    ),
+  );
+
+  StatusPill _pill(String text, (Color, Color) colors) =>
+      StatusPill(text: text, background: colors.$1, foreground: colors.$2);
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: noahgram,
+      listenable: Listenable.merge([noahgram, familyState]),
       builder: (context, _) {
         final me = noahgram.me.name;
         final last = me.split(' ').last;
-        final spouse = 'Rebecca $last';
-        final members = [
-          _Member(me, 'fm_you', since: ministry.record.memberSince),
-          _Member(spouse, 'fm_spouse', since: 2009),
-          _Member('Hannah $last', 'fm_daughter', guardian: me),
-          _Member('Ruth $last', 'fm_daughter', guardian: spouse),
-        ];
-        final rec = ministry.record;
+        final people = familyState.people;
+        final requests = familyState.requests;
         return SubPage(
           title: tr(context, 'me2_family'),
           subtitle: tr(context, 'fm_sub'),
@@ -71,8 +152,11 @@ class FamilyScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '${tr(context, 'me2_members_linked', args: {'n': '${members.length}'})}'
-                              ' · ${rec.cellArea} · ${tr(context, 'fm_cell', args: {'cell': rec.cell})}',
+                              tr(
+                                context,
+                                'fam_you_linked',
+                                args: {'n': '${people.length}'},
+                              ),
                               style: const TextStyle(
                                 color: AppColors.muted,
                                 fontSize: 12,
@@ -83,19 +167,9 @@ class FamilyScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: const LinearProgressIndicator(
-                      value: 1,
-                      minHeight: 5,
-                      backgroundColor: AppColors.tint,
-                      color: AppColors.magenta,
-                    ),
-                  ),
                   const SizedBox(height: 10),
                   Text(
-                    tr(context, 'fm_all_verified'),
+                    tr(context, 'fam_office_note'),
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12.5,
@@ -109,103 +183,97 @@ class FamilyScreen extends StatelessWidget {
             SectionTitle(
               title: tr(context, 'fm_linked'),
               action: '${tr(context, 'fm_add')} +',
-              onAction: () => toast(
-                context,
-                '${tr(context, 'fm_add')} · ${tr(context, 'coming_soon')}',
-              ),
+              onAction: _add,
             ),
             const SizedBox(height: 12),
             WhiteCard(
               child: Column(
                 children: [
-                  for (final (i, m) in members.indexed) ...[
-                    if (i > 0)
-                      const Divider(height: 1, color: AppColors.border),
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 46,
-                            height: 46,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: m.minor
-                                  ? const Color(0xFFF7E8F4)
-                                  : const Color(0xFFA719C8),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Text(
-                              m.initials,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: m.minor
-                                    ? const Color(0xFFB3641A)
-                                    : Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  m.name,
-                                  style: const TextStyle(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  m.minor
-                                      ? tr(
-                                          context,
-                                          'fm_rel_guardian',
-                                          args: {
-                                            'rel': tr(context, m.relKey),
-                                            'name': m.guardian!,
-                                          },
-                                        )
-                                      : tr(
-                                          context,
-                                          'fm_rel_since',
-                                          args: {
-                                            'rel': tr(context, m.relKey),
-                                            'y': '${m.since}',
-                                          },
-                                        ),
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 12,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          StatusPill(
-                            text: tr(
-                              context,
-                              m.minor ? 'fm_minor' : 'jd_verified',
-                            ),
-                            background: m.minor
-                                ? StatusPill.past.$1
-                                : StatusPill.booked.$1,
-                            foreground: m.minor
-                                ? StatusPill.past.$2
-                                : StatusPill.booked.$2,
-                          ),
-                        ],
-                      ),
+                  _row(
+                    name: me,
+                    subtitle: tr(context, 'fm_you'),
+                    soft: false,
+                    pill: _pill(tr(context, 'jd_verified'), StatusPill.booked),
+                  ),
+                  for (final p in people) ...[
+                    const Divider(height: 1, color: AppColors.border),
+                    _row(
+                      name: p.name,
+                      subtitle: p.isKid && p.age != null
+                          ? '${tr(context, 'rel_${p.relation}')} · '
+                                '${tr(context, 'fam_age', args: {'n': '${p.age}'})}'
+                          : tr(context, 'rel_${p.relation}'),
+                      soft: p.isKid,
+                      pill: p.isKid
+                          ? _pill(tr(context, 'fm_minor'), StatusPill.past)
+                          : _pill(tr(context, 'jd_verified'), StatusPill.booked),
                     ),
                   ],
                 ],
               ),
             ),
+            if (people.isEmpty && requests.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Text(
+                  tr(context, 'fam_empty'),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            if (requests.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              SectionTitle(title: tr(context, 'fam_requests')),
+              const SizedBox(height: 12),
+              WhiteCard(
+                child: Column(
+                  children: [
+                    for (final (i, r) in requests.indexed) ...[
+                      if (i > 0)
+                        const Divider(height: 1, color: AppColors.border),
+                      _row(
+                        name: r.name,
+                        subtitle: r.rejected && r.remark.isNotEmpty
+                            ? '${tr(context, 'rel_${r.relation}')} · ${r.remark}'
+                            : tr(context, 'rel_${r.relation}'),
+                        soft: true,
+                        pill: r.rejected
+                            ? _pill(tr(context, 'fam_rejected'), _red)
+                            : _pill(
+                                tr(
+                                  context,
+                                  r.waiting ? 'fam_waiting' : 'fam_pending',
+                                ),
+                                StatusPill.soon,
+                              ),
+                        below: r.pending
+                            ? Align(
+                                alignment: Alignment.centerRight,
+                                child: GestureDetector(
+                                  onTap: () => _cancel(r),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      tr(context, 'fam_cancel'),
+                                      style: const TextStyle(
+                                        color: AppColors.magenta,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
             SectionTitle(title: tr(context, 'fm_passes')),
             const SizedBox(height: 12),
