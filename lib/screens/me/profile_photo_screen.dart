@@ -114,16 +114,6 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> {
                       ),
                       colors: StatusPill.soon,
                     ),
-                  const SizedBox(height: 12),
-                  Text(
-                    tr(context, 'ph_rules'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                      height: 1.4,
-                    ),
-                  ),
                 ],
               ),
             ),
