@@ -650,20 +650,8 @@ void main() {
       await settle();
       await back();
 
-      // Identity & consent: agree, then record the video.
-      await tester.tap(find.text('Identity & consent'));
-      await settle();
-      expect(find.text('1 · Aadhaar'), findsOneWidget);
-      expect(meState.identityDone, 1);
-      await tester.tap(find.text('I agree and consent'));
-      await settle();
-      expect(find.text('Consent recorded'), findsOneWidget);
-      await tester.tap(find.text('Record now'));
-      await settle();
-      expect(find.text('Video submitted'), findsOneWidget);
-      expect(meState.identityDone, 3);
-      await back();
-      expect(find.text('3 of 3'), findsOneWidget);
+      // Identity & consent is not on the Me page for now.
+      expect(find.text('Identity & consent'), findsNothing);
 
       // Drive
       await tester.tap(find.text('Shared folders and study material'));

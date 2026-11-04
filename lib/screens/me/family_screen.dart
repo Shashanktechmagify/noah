@@ -73,6 +73,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
     required bool soft,
     required StatusPill pill,
     Widget? below,
+    // A long status ("Approved. Linked when they join Noah") goes under the name, where it has the room.
+    bool pillBelow = false,
   }) => Padding(
     padding: const EdgeInsets.all(14),
     child: Column(
@@ -102,11 +104,11 @@ class _FamilyScreenState extends State<FamilyScreen> {
                       height: 1.3,
                     ),
                   ),
+                  if (pillBelow) ...[const SizedBox(height: 8), pill],
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            pill,
+            if (!pillBelow) ...[const SizedBox(width: 8), pill],
           ],
         ),
         ?below,
@@ -240,6 +242,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                             ? '${tr(context, 'rel_${r.relation}')} · ${r.remark}'
                             : tr(context, 'rel_${r.relation}'),
                         soft: true,
+                        pillBelow: true,
                         pill: r.rejected
                             ? _pill(tr(context, 'fam_rejected'), _red)
                             : _pill(

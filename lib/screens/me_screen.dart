@@ -15,7 +15,6 @@ import 'login_screen.dart';
 import 'main_shell.dart' show ShellScope;
 import 'me/drive_screen.dart';
 import 'me/family_screen.dart';
-import 'me/identity_screen.dart';
 import 'me/language_screen.dart';
 import 'me/location_screen.dart';
 import 'me/messages_screen.dart';
@@ -311,25 +310,7 @@ class MeScreen extends StatelessWidget {
                       : null,
                   onTap: () => _open(context, const ProfilePhotoScreen()),
                 ),
-                _Row(
-                  icon: Icons.shield_outlined,
-                  title: tr(context, 'me2_identity'),
-                  subtitle: tr(context, 'me2_identity_sub'),
-                  pill: _Pill(
-                    tr(
-                      context,
-                      'me2_of',
-                      args: {
-                        'a': '${meState.identityDone}',
-                        'b': '${MeState.identityTotal}',
-                      },
-                    ),
-                    meState.identityDone == MeState.identityTotal
-                        ? StatusPill.booked
-                        : StatusPill.soon,
-                  ),
-                  onTap: () => _open(context, const IdentityScreen()),
-                ),
+                // "Identity & consent" is taken off the Me page for now (IdentityScreen is kept).
                 _Row(
                   icon: Icons.grid_view_rounded,
                   title: tr(context, 'me2_everything'),
