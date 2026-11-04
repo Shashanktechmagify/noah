@@ -101,6 +101,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
         return SubPage(
           title: tr(context, 'me2_family'),
           subtitle: tr(context, 'fm_sub'),
+          // A shorter purple band, so the headings sit on the white page.
+          bandHeight: 84,
           children: [
             SectionTitle(title: tr(context, 'fm_linked')),
             const SizedBox(height: 12),
