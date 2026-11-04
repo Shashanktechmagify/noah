@@ -21,6 +21,7 @@ import '../data/pastor_data.dart';
 import '../data/api_client.dart';
 import '../data/open_target.dart';
 import '../data/family_data.dart';
+import '../data/profile_data.dart';
 import 'me/family_screen.dart';
 import 'me/ministry_chat_screen.dart';
 import 'me/pastor_inbox_screen.dart';
@@ -164,6 +165,8 @@ class _MainShellState extends State<MainShell> {
       ministry.ensureLoaded();
       pastorInbox.ensureLoaded();
       familyState.ensureLoaded();
+      // A request the office decided meanwhile changes the member's details.
+      if (profile.pendingCount > 0) profile.refresh();
     }
   }
 

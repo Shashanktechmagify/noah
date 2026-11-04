@@ -27,6 +27,7 @@ import 'me/rewards_screen.dart';
 import 'me/store_screen.dart';
 import 'me/terms_screen.dart';
 import 'menu_sheet.dart' show kMenuItems;
+import 'noahgram/noahgram_widgets.dart' show Avatar;
 
 /// Nav slot of the Jodie tab (see `main_shell.dart`).
 const _jodieSlot = 4;
@@ -64,7 +65,8 @@ class MeScreen extends StatelessWidget {
         final unread = ministry.unreadTotal;
         final shell = ShellScope.maybeOf(context);
         final lang = AppLocale.of(context).lang;
-        final reviewing = meState.pendingPhoto != null;
+        // The demo photo review is only a prototype; a live member's photo is the one they registered with.
+        final reviewing = !liveApi && meState.pendingPhoto != null;
         return PageScaffold(
           title: me.name,
           subtitle: tr(
@@ -79,6 +81,11 @@ class MeScreen extends StatelessWidget {
           leadingIcon: Icons.settings_outlined,
           onLeading: () => _open(context, const LanguageScreen()),
           children: [
+            if (liveApi)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Center(child: Avatar(person: me, size: 96)),
+              ),
             // Pastor / cell leader / family
             WhiteCard(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -297,7 +304,11 @@ class MeScreen extends StatelessWidget {
                   title: tr(context, 'me2_photo'),
                   subtitle: tr(
                     context,
-                    reviewing ? 'me2_in_review' : 'ph_approved',
+                    liveApi
+                        ? 'me2_photo_live'
+                        : reviewing
+                        ? 'me2_in_review'
+                        : 'ph_approved',
                   ),
                   pill: reviewing
                       ? _Pill(tr(context, 'me2_review'), StatusPill.soon)

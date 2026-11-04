@@ -548,6 +548,17 @@ class ProfileState extends ChangeNotifier {
     }
   }
 
+  /// Live mode: reads the member's details and requests again, so what the admin approved shows up.
+  /// Anything the member has typed but not sent stays as it is.
+  Future<void> refresh() async {
+    if (!liveApi || !api.signedIn) return;
+    try {
+      loadFromServer(await api.getProfile());
+    } on ApiException {
+      // Offline: keep what is on screen.
+    }
+  }
+
   /// Replaces everything with what the server holds for the signed-in member.
   void loadFromServer(Map<String, dynamic> data) {
     _values.clear();

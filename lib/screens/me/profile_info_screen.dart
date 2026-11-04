@@ -35,6 +35,8 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     // Anything entered but not sent when the page was last left is dropped; the uploads come from the server.
     profile.drafts.clear();
     profile.loadDocuments();
+    // The office may have decided on a request since the app last asked.
+    profile.refresh();
   }
 
   @override
@@ -102,9 +104,12 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
               label: profile.pendingCount > 0
                   ? '${tr(context, 'pf_req_btn')} (${profile.pendingCount})'
                   : tr(context, 'pf_req_btn'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ChangeRequestsScreen()),
-              ),
+              onPressed: () {
+                profile.refresh();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ChangeRequestsScreen()),
+                );
+              },
             ),
           ),
         ],
@@ -933,8 +938,7 @@ class _OptionSheetState extends State<_OptionSheet> {
   }
 }
 
-/// The member's change requests and what the admin decided. The accept / reject
-/// buttons are prototype controls standing in for the admin's own screen.
+/// The member's change requests and what the admin decided (the admin decides in the admin console).
 class ChangeRequestsScreen extends StatelessWidget {
   const ChangeRequestsScreen({super.key});
 
@@ -995,71 +999,11 @@ class ChangeRequestsScreen extends StatelessWidget {
                       RequestStatus.rejected => AppColors.muted,
                     },
                   ),
-                  if (r.status == RequestStatus.pending) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      tr(context, 'pf_proto').toUpperCase(),
-                      style: TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: spacing(context, 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ProtoButton(
-                            label: tr(context, 'pf_sim_accept'),
-                            onTap: () => profile.approveRequest(r),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _ProtoButton(
-                            label: tr(context, 'pf_sim_reject'),
-                            onTap: () => profile.rejectRequest(r),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
       ],
-    ),
-  );
-}
-
-class _ProtoButton extends StatelessWidget {
-  const _ProtoButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: 44,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.magenta),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: AppColors.magenta,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
     ),
   );
 }

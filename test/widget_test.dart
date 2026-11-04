@@ -1227,7 +1227,8 @@ void main() {
     await tester.tap(find.textContaining('My requests'), warnIfMissed: false);
     await settle();
     expect(find.text('Waiting for admin'), findsOneWidget);
-    await tester.tap(find.text('Simulate: admin rejects'));
+    // The admin decides in the admin console, so the test plays that part.
+    profile.rejectRequest(profile.requests.first);
     await settle();
     expect(find.text('Rejected · detail unchanged'), findsOneWidget);
     expect(profile.get('blood_group'), '');
@@ -1255,7 +1256,7 @@ void main() {
     await settle();
     await tester.tap(find.textContaining('My requests'), warnIfMissed: false);
     await settle();
-    await tester.tap(find.text('Simulate: admin accepts'));
+    profile.approveRequest(profile.requests.first);
     await settle();
     expect(find.text('Accepted · detail updated'), findsOneWidget);
     expect(profile.get('blood_group'), 'A+');
