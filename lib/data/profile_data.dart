@@ -548,6 +548,14 @@ class ProfileState extends ChangeNotifier {
     }
   }
 
+  /// Live mode: uploads a new profile photo and asks the office to swap it in. The current photo stays
+  /// until the office approves. Throws [ApiException] when the upload or the request is refused.
+  Future<void> requestPhoto(String path, String name) async {
+    final f = await api.uploadFile('photo', path, name: name);
+    await api.requestChange('photo', f.id);
+    await refresh();
+  }
+
   /// Live mode: reads the member's details and requests again, so what the admin approved shows up.
   /// Anything the member has typed but not sent stays as it is.
   Future<void> refresh() async {

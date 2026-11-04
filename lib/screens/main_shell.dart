@@ -23,6 +23,7 @@ import '../data/open_target.dart';
 import '../data/family_data.dart';
 import '../data/profile_data.dart';
 import 'me/family_screen.dart';
+import 'me/profile_info_screen.dart';
 import 'me/ministry_chat_screen.dart';
 import 'me/pastor_inbox_screen.dart';
 
@@ -148,6 +149,11 @@ class _MainShellState extends State<MainShell> {
           MaterialPageRoute(builder: (_) => MinistryChatScreen(contact: contact)),
         );
       }
+    }
+    if (target.type.startsWith('profile_change')) {
+      profile.refresh();
+      nav.push(MaterialPageRoute(builder: (_) => const ProfileInfoScreen()));
+      return;
     }
     if (target.type.startsWith('family')) {
       nav.push(MaterialPageRoute(builder: (_) => const FamilyScreen()));

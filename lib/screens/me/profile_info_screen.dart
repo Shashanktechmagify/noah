@@ -970,21 +970,29 @@ class ChangeRequestsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // The profile photo is not a form field: the request carries the id of the new picture.
                   Text(
-                    tr(context, _field(r.fieldId).labelKey),
+                    tr(
+                      context,
+                      r.fieldId == 'photo'
+                          ? 'me2_photo'
+                          : _field(r.fieldId).labelKey,
+                    ),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${_display(context, _field(r.fieldId), r.oldValue)}  →  ${_display(context, _field(r.fieldId), r.newValue)}',
-                    style: const TextStyle(
-                      color: Color(0xFF55576F),
-                      fontSize: 13.5,
+                  if (r.fieldId != 'photo') ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${_display(context, _field(r.fieldId), r.oldValue)}  →  ${_display(context, _field(r.fieldId), r.newValue)}',
+                      style: const TextStyle(
+                        color: Color(0xFF55576F),
+                        fontSize: 13.5,
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 10),
                   StatusPill(
                     text: tr(context, 'pf_st_${r.status.name}'),
