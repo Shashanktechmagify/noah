@@ -24,9 +24,16 @@ class _FamilyScreenState extends State<FamilyScreen> {
     familyState.load();
   }
 
+  static const _titles = {'mr', 'mrs', 'ms', 'miss', 'dr', 'jr', 'master'};
+
+  // "Mr Ayushi Jain" is AJ, not MA: a title in front of the name is not an initial.
   static String _initials(String name) => name
       .split(' ')
-      .where((p) => p.isNotEmpty)
+      .where(
+        (p) =>
+            p.isNotEmpty &&
+            !_titles.contains(p.toLowerCase().replaceAll('.', '')),
+      )
       .take(2)
       .map((p) => p[0].toUpperCase())
       .join();

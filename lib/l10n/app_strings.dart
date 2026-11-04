@@ -3126,6 +3126,12 @@ const Map<String, List<String>> _strings = {
   'rel_parent': ['Parent', 'माता-पिता', 'पालक', '', '', ''],
   'rel_child': ['Child', 'बच्चा', 'मूल', '', '', ''],
   'rel_sibling': ['Sibling', 'भाई/बहन', 'भावंड', '', '', ''],
+  'rel_uncle': ['Uncle', 'अंकल', 'काका', '', '', ''],
+  'rel_aunt': ['Aunt', 'आंटी', 'काकी', '', '', ''],
+  'rel_nephew': ['Nephew', 'भतीजा', 'पुतण्या', '', '', ''],
+  'rel_niece': ['Niece', 'भतीजी', 'पुतणी', '', '', ''],
+  'rel_husband': ['Husband', 'पति', 'पती', '', '', ''],
+  'rel_wife': ['Wife', 'पत्नी', 'पत्नी', '', '', ''],
   'fam_first': ['First name', 'पहला नाम', 'पहिले नाव', '', '', ''],
   'fam_last': [
     'Last name (optional)',
