@@ -314,7 +314,8 @@ void main() {
     );
     await tester.tap(find.text('Strength for today'));
     await settle();
-    expect(find.text('Reflection'), findsOneWidget);
+    expect(find.text('Reflection'), findsNothing);
+    expect(find.textContaining('Categories'), findsOneWidget);
 
     // Prayer request from this Manna: audience is "warriors only" by default.
     final addButton = find.text('Add prayer request');

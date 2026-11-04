@@ -110,112 +110,110 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
         leadingIcon: Icons.arrow_back,
         onLeading: () => Navigator.of(context).pop(),
         children: [
-          // Verse
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: AppColors.headerGradient,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2A0A55).withValues(alpha: 0.30),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tr(context, manna.titleKey),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                // The office's Manna has the scripture inside its message; only the sample content has a separate verse.
-                if (manna.verse.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    '“${manna.verse}”',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      fontSize: 16,
-                      height: 1.45,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    manna.ref,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                    ),
-                  ),
-                ],
-              ],
+          const SizedBox(height: 4),
+          // The day, the title and who wrote it.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: MannaDateTitle(
+              manna: manna,
+              title: tr(context, manna.titleKey),
             ),
           ),
-          if (liveApi)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: EngagementBar(manna: manna),
-            ),
-          if (manna.writer.isNotEmpty && !liveApi)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Text(
-                tr(context, 'manna_writer', args: {'name': manna.writer}),
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          const SizedBox(height: 20),
-          // A picture the office attached to this Manna.
+          const SizedBox(height: 16),
+          // A picture the office attached to this Manna. Tap it to see it full screen.
           if (manna.image != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: EntryImage(manna.image),
             ),
-          SectionTitle(title: tr(context, 'manna_reflection')),
-          const SizedBox(height: 10),
-          WhiteCard(
-            padding: const EdgeInsets.all(16),
-            // Bold, italic, lists and links written in the admin console come through as formatted text.
-            child: RichHtml(
-              manna.reflection,
-              style: const TextStyle(fontSize: 14.5, height: 1.5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (manna.prayer.isNotEmpty) ...[
-            SectionTitle(
-              title: tr(
-                context,
-                manna.closingConfession ? 'manna_confession' : 'manna_prayer',
+          if (manna.ref.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${tr(context, 'manna_categories')} : ',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    TextSpan(
+                      text: manna.ref,
+                      style: const TextStyle(
+                        color: AppColors.magenta,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                style: const TextStyle(fontSize: 16),
               ),
             ),
-            const SizedBox(height: 10),
-            WhiteCard(
-              padding: const EdgeInsets.all(16),
+          if (liveApi)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: MannaStatsRow(manna: manna),
+            ),
+          const SizedBox(height: 18),
+          // The office's Manna has the scripture inside its message; only the sample content has a separate verse.
+          if (manna.verse.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Container(
+                padding: const EdgeInsets.only(left: 14),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: AppColors.magenta, width: 3),
+                  ),
+                ),
+                child: Text(
+                  '“${manna.verse}”',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ),
+          // Bold, italic, lists and links written in the admin console come through as formatted text.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: RichHtml(
+              manna.reflection,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (manna.prayer.isNotEmpty) ...[
+            const Divider(height: 1, indent: 20, endIndent: 20),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                tr(
+                  context,
+                  manna.closingConfession ? 'manna_confession' : 'manna_prayer',
+                ),
+                style: const TextStyle(
+                  color: AppColors.magenta,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: RichHtml(
                 manna.prayer,
                 style: const TextStyle(
-                  fontSize: 14.5,
+                  fontSize: 16,
                   height: 1.5,
                   fontStyle: FontStyle.italic,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
           ],
           if (liveApi)
             ListenableBuilder(

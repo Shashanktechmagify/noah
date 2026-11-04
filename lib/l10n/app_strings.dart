@@ -1742,6 +1742,14 @@ const Map<String, List<String>> _strings = {
     'വിശ്വാസത്താൽ നടക്കുക',
     'విశ్వాసంతో నడవడం',
   ],
+  'manna_categories': [
+    'Categories',
+    'श्रेणियाँ',
+    'श्रेणी',
+    'ವರ್ಗಗಳು',
+    'വിഭാഗങ്ങൾ',
+    'వర్గాలు',
+  ],
   'manna_reflection': [
     'Reflection',
     'मनन',

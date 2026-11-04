@@ -134,6 +134,128 @@ class EngagementBar extends StatelessWidget {
   }
 }
 
+/// The top of a Manna page: the day on the left ("Wed / 04 / Nov"), the title and the writer beside it.
+class MannaDateTitle extends StatelessWidget {
+  const MannaDateTitle({super.key, required this.manna, required this.title});
+
+  final Manna manna;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = _dayOf(manna);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 54,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _weekday(context, day),
+                style: const TextStyle(
+                  color: _dateRed,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                day.day.toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  color: _dateRed,
+                  fontSize: 30,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                monthShort(context, day.month),
+                style: const TextStyle(
+                  color: _dateRed,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  height: 1.2,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (manna.writer.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  manna.writer,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 14.5,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Likes and comments on the left, the views on the right. Only shown when talking to the server.
+class MannaStatsRow extends StatelessWidget {
+  const MannaStatsRow({super.key, required this.manna});
+
+  final Manna manna;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!liveApi) return const SizedBox.shrink();
+    final e = engagementOf(manna);
+    return ListenableBuilder(
+      listenable: e,
+      builder: (context, _) => Row(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: e.toggleLike,
+            child: _Stat(
+              icon: e.liked ? Icons.thumb_up : Icons.thumb_up_outlined,
+              color: _likeBlue,
+              count: e.likes,
+            ),
+          ),
+          const SizedBox(width: 18),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showMannaComments(context, manna),
+            child: _Stat(
+              icon: Icons.chat_bubble,
+              color: _commentAmber,
+              count: e.commentCount,
+            ),
+          ),
+          const Spacer(),
+          _Stat(
+            icon: Icons.visibility_outlined,
+            color: _viewPurple,
+            count: e.views,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.icon, required this.color, required this.count});
 
