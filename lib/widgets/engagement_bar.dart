@@ -155,7 +155,7 @@ class MannaDateTitle extends StatelessWidget {
               Text(
                 _weekday(context, day),
                 style: const TextStyle(
-                  color: _dateRed,
+                  color: Colors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -163,7 +163,7 @@ class MannaDateTitle extends StatelessWidget {
               Text(
                 day.day.toString().padLeft(2, '0'),
                 style: const TextStyle(
-                  color: _dateRed,
+                  color: Colors.black,
                   fontSize: 30,
                   height: 1.1,
                   fontWeight: FontWeight.w700,
@@ -172,7 +172,7 @@ class MannaDateTitle extends StatelessWidget {
               Text(
                 monthShort(context, day.month),
                 style: const TextStyle(
-                  color: _dateRed,
+                  color: Colors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),

@@ -306,7 +306,10 @@ class _PrayerDialogState extends State<_PrayerDialog> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Color(0xFFE5334B), fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFFE5334B),
+                    fontSize: 13,
+                  ),
                 ),
               ),
             GradientButton(

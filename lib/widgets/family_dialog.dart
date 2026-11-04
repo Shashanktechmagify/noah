@@ -42,7 +42,8 @@ class _FamilyDialogState extends State<_FamilyDialog> {
     if (!_isChildRelation || dob == null) return false;
     final now = DateTime.now();
     var age = now.year - dob.year;
-    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
       age -= 1;
     }
     return age < 18;
@@ -149,7 +150,11 @@ class _FamilyDialogState extends State<_FamilyDialog> {
     padding: const EdgeInsets.only(top: 6),
     child: Text(
       text,
-      style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35),
+      style: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 12,
+        height: 1.35,
+      ),
     ),
   );
 
@@ -200,7 +205,9 @@ class _FamilyDialogState extends State<_FamilyDialog> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        gradient: r == _relation ? AppColors.buttonGradient : null,
+                        gradient: r == _relation
+                            ? AppColors.buttonGradient
+                            : null,
                         color: r == _relation ? null : Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
@@ -261,7 +268,9 @@ class _FamilyDialogState extends State<_FamilyDialog> {
                               : '${dob.day.toString().padLeft(2, '0')}/${dob.month.toString().padLeft(2, '0')}/${dob.year}',
                           style: TextStyle(
                             fontSize: 15,
-                            color: dob == null ? AppColors.muted : AppColors.ink,
+                            color: dob == null
+                                ? AppColors.muted
+                                : AppColors.ink,
                           ),
                         ),
                       ),
@@ -314,7 +323,10 @@ class _FamilyDialogState extends State<_FamilyDialog> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Color(0xFFE5334B), fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFFE5334B),
+                    fontSize: 13,
+                  ),
                 ),
               ),
             GradientButton(

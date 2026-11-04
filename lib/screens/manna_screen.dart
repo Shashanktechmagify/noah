@@ -103,6 +103,8 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: PageScaffold(
+        // A shorter purple band, so the date, title and reading all sit on the white page.
+        bandHeight: 84,
         title: tr(context, 'manna_daily'),
         subtitle: manna.ref.isEmpty
             ? _whenText(context, manna.daysAgo)
@@ -267,6 +269,74 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
               onPressed: () => showPrayerDialog(context, manna: manna),
             ),
           ),
+          if (liveApi) _MostRead(current: manna),
+        ],
+      ),
+    );
+  }
+}
+
+/// The five Mannas read the most, as a bulleted list of links under the page.
+class _MostRead extends StatelessWidget {
+  const _MostRead({required this.current});
+
+  final Manna current;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = [...contentState.mannas]
+      ..sort((a, b) {
+        final byViews = b.views.compareTo(a.views);
+        return byViews != 0 ? byViews : a.daysAgo.compareTo(b.daysAgo);
+      });
+    final shown = top.where((m) => m.views > 0).take(5).toList();
+    if (shown.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr(context, 'manna_most_read'),
+            style: const TextStyle(
+              color: AppColors.magenta,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final m in shown)
+            InkWell(
+              onTap: m.id == current.id
+                  ? null
+                  : () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => MannaDetailScreen(manna: m),
+                      ),
+                    ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 7, right: 10),
+                      child: Icon(Icons.circle, size: 8),
+                    ),
+                    Expanded(
+                      child: Text(
+                        tr(context, m.titleKey),
+                        style: const TextStyle(
+                          color: AppColors.magenta,
+                          fontSize: 17,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
