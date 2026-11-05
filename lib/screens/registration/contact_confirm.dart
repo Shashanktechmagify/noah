@@ -74,6 +74,7 @@ class _CodeDialogState extends State<_CodeDialog> {
   late int _length = widget.sent?.otpLength ?? 4;
   late int _seconds = widget.sent?.resendAfter ?? 24;
   late String? _devOtp = widget.sent?.devOtp;
+  late String? _mailError = widget.sent?.devMailError;
   String? _error;
   bool _busy = false;
 
@@ -143,6 +144,7 @@ class _CodeDialogState extends State<_CodeDialog> {
         _length = sent.otpLength;
         _seconds = sent.resendAfter;
         _devOtp = sent.devOtp;
+        _mailError = sent.devMailError;
       });
       _tick();
     } on ApiException catch (e) {
@@ -235,6 +237,14 @@ class _CodeDialogState extends State<_CodeDialog> {
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
+              ),
+            ),
+          if (liveApi && _mailError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Email not sent: $_mailError',
+                style: const TextStyle(color: Colors.redAccent, fontSize: 11.5),
               ),
             ),
         ],

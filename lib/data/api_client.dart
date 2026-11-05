@@ -43,6 +43,7 @@ class OtpSent {
     required this.resendAfter,
     this.devOtp,
     this.sentTo,
+    this.devMailError,
   });
 
   final String phoneKey;
@@ -54,6 +55,9 @@ class OtpSent {
 
   /// Only present while the server runs with OTP_DEV_ECHO (testing).
   final String? devOtp;
+
+  /// Testing only: why the email could not be sent (the code is echoed instead).
+  final String? devMailError;
 }
 
 class SignedIn {
@@ -277,6 +281,7 @@ class ApiClient {
     resendAfter: (d['resendAfter'] as num?)?.toInt() ?? 24,
     devOtp: d['devOtp'] as String?,
     sentTo: d['sentTo'] as String?,
+    devMailError: d['devMailError'] as String?,
   );
 
   /// Mails a sign-in code to [email].

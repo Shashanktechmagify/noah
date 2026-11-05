@@ -21,6 +21,7 @@ class OtpScreen extends StatefulWidget {
     this.otpLength = 4,
     this.resendSeconds = 24,
     this.devOtp,
+    this.devMailError,
   });
 
   final String phone;
@@ -40,6 +41,9 @@ class OtpScreen extends StatefulWidget {
   /// The code the server echoes back while testing (OTP_DEV_ECHO).
   final String? devOtp;
 
+  /// Testing only: why the email could not be sent.
+  final String? devMailError;
+
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
@@ -53,6 +57,8 @@ class _OtpScreenState extends State<OtpScreen> {
   bool _error = false;
   bool _busy = false;
   String? _message;
+  late String? _devOtp = widget.devOtp;
+  late String? _mailError = widget.devMailError;
 
   bool get _live => widget.dial != null || widget.email != null;
 
@@ -127,11 +133,12 @@ class _OtpScreenState extends State<OtpScreen> {
           : await api.sendOtp(widget.dial!, widget.number!);
       if (!mounted) return;
       _controller.clear();
-      setState(_startTimer);
-      if (sent.devOtp != null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Test code: ${sent.devOtp}')));
-      }
+      setState(() {
+        _startTimer();
+        // The code on screen must be the newest one: Resend makes the earlier code stop working.
+        _devOtp = sent.devOtp;
+        _mailError = sent.devMailError;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _message = e.message);
@@ -243,13 +250,22 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
           const SizedBox(height: 8),
-          if (!_live || widget.devOtp != null)
+          if (!_live || _devOtp != null)
             Text(
-              _live ? 'Test code: ${widget.devOtp}' : tr(context, 'demo_code'),
+              _live ? 'Test code: $_devOtp' : tr(context, 'demo_code'),
               style: const TextStyle(
                 color: Color(0xFF555770),
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          if (_live && _mailError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Email not sent: $_mailError',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 11.5),
               ),
             ),
           const SizedBox(height: 10),

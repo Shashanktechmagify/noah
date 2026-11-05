@@ -96,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
           otpLength: sent.otpLength,
           resendSeconds: sent.resendAfter,
           devOtp: sent.devOtp,
+          devMailError: sent.devMailError,
         ),
       );
     } on ApiException catch (e) {
