@@ -99,7 +99,9 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
+    // Without `expand` the stack would shrink to the close button and the picture would be drawn inside that.
     body: Stack(
+      fit: StackFit.expand,
       children: [
         Positioned.fill(
           child: GestureDetector(
