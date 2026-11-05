@@ -151,13 +151,18 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
             ),
           ),
         ),
+        // Pinned to the top-left: an unpositioned child would be stretched over the whole screen.
         if (_chrome)
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
               ),
             ),
           ),

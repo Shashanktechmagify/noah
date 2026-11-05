@@ -45,5 +45,9 @@ void main() {
     // The picture gets the whole screen to fit in (and is centred), not just the corner under the close button.
     expect(box.size, const Size(400, 800));
     expect(box.localToGlobal(Offset.zero), Offset.zero);
+    // The close button sits in the top-left corner, not in the middle of the screen.
+    final close = tester.getCenter(find.byIcon(Icons.close));
+    expect(close.dx, lessThan(100));
+    expect(close.dy, lessThan(100));
   });
 }
