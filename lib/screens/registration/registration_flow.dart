@@ -19,6 +19,7 @@ import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../events/events_widgets.dart' show fullDate;
 import '../login_screen.dart';
 import 'registration_video.dart';
+import 'contact_confirm.dart';
 import 'uploads.dart';
 import 'registration_widgets.dart';
 
@@ -195,6 +196,12 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
   final _middle = TextEditingController(text: registration.middleName);
   final _last = TextEditingController(text: registration.lastName);
   final _email = TextEditingController(text: registration.email);
+  final _mobile = TextEditingController(text: registration.mobileNumber);
+  late DialCountry _mobileDial = DialData.countries.firstWhere(
+    (c) => c.dial == registration.mobileDial,
+    orElse: () => DialData.fallback.first,
+  );
+  bool _confirming = false;
   final _ref = TextEditingController(text: registration.reference);
   final _refPhone = TextEditingController(text: registration.referencePhone);
   late DialCountry _refDial = DialData.countries.firstWhere(
@@ -204,10 +211,79 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
 
   @override
   void dispose() {
-    for (final c in [_first, _middle, _last, _email, _ref, _refPhone]) {
+    for (final c in [
+      _first,
+      _middle,
+      _last,
+      _email,
+      _mobile,
+      _ref,
+      _refPhone,
+    ]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  /// Sends a code to the email address and, when the right code comes back, marks it confirmed.
+  Future<void> _confirmEmail() async {
+    if (_confirming) return;
+    setState(() => _confirming = true);
+    final value = registration.email.trim();
+    final ok = await confirmContact(context, email: value);
+    if (ok) registration.confirmEmail(value);
+    if (mounted) setState(() => _confirming = false);
+  }
+
+  Future<void> _confirmMobile() async {
+    if (_confirming) return;
+    setState(() => _confirming = true);
+    final number = registration.mobileNumber.trim();
+    final ok = await confirmContact(
+      context,
+      dial: _mobileDial.dial,
+      number: number,
+    );
+    if (ok) registration.confirmMobile(_mobileDial.dial, number);
+    if (mounted) setState(() => _confirming = false);
+  }
+
+  /// "Verify" while a contact is not confirmed, a green tick once it is.
+  Widget _verifyTrailing({
+    required bool confirmed,
+    required bool canVerify,
+    required VoidCallback onVerify,
+  }) {
+    if (confirmed) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 10, top: 14),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF1F8A4C), size: 18),
+            const SizedBox(width: 4),
+            Text(
+              tr(context, 'reg_verified'),
+              style: const TextStyle(
+                color: Color(0xFF1F8A4C),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(left: 6, top: 4),
+      child: TextButton(
+        onPressed: canVerify && !_confirming ? onVerify : null,
+        child: Text(
+          tr(context, 'reg_verify'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
   }
 
   @override
@@ -275,16 +351,86 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
           },
         ),
         RegLabel(tr(context, 'reg_email'), required: true),
-        RegInput(
-          controller: _email,
-          error: _err(context, r.email, emailError(r.email)),
-          hint: 'you@example.com',
-          keyboardType: TextInputType.emailAddress,
-          onChanged: (v) {
-            r.email = v;
-            r.touch();
-          },
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: RegInput(
+                controller: _email,
+                error: _err(context, r.email, emailError(r.email)),
+                hint: 'you@example.com',
+                keyboardType: TextInputType.emailAddress,
+                onChanged: (v) {
+                  r.email = v;
+                  r.touch();
+                },
+              ),
+            ),
+            _verifyTrailing(
+              confirmed: r.emailConfirmed,
+              canVerify: emailError(r.email) == null,
+              onVerify: _confirmEmail,
+            ),
+          ],
         ),
+        RegLabel(tr(context, 'reg_mobile'), required: true),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DialCodePicker(
+              value: _mobileDial,
+              fill: Colors.white,
+              height: 50,
+              onChanged: (c) {
+                setState(() => _mobileDial = c);
+                r.mobileDial = c.dial;
+                r.touch();
+              },
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: RegInput(
+                controller: _mobile,
+                error:
+                    r.mobileNumber.trim().isEmpty ||
+                        _mobileDial.validLength(
+                          r.mobileNumber.replaceAll(RegExp(r'\D'), '').length,
+                        )
+                    ? null
+                    : tr(context, 'reg_err_phone'),
+                hint: tr(context, 'reg_ref_phone_ph'),
+                keyboardType: TextInputType.phone,
+                formatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9\s-]')),
+                  LengthLimitingTextInputFormatter(_mobileDial.maxDigits + 3),
+                ],
+                onChanged: (v) {
+                  r.mobileNumber = v;
+                  r.touch();
+                },
+              ),
+            ),
+            _verifyTrailing(
+              confirmed: r.mobileConfirmed,
+              canVerify: _mobileDial.validLength(
+                r.mobileNumber.replaceAll(RegExp(r'\D'), '').length,
+              ),
+              onVerify: _confirmMobile,
+            ),
+          ],
+        ),
+        if (!r.contactsConfirmed)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              tr(context, 'cc_both'),
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ),
         RegLabel(tr(context, 'reg_nationality'), required: true),
         RegPicker(
           value: r.nationality,

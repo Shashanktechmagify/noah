@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:noah_frontend_flutter/data/events_data.dart';
 import 'package:noah_frontend_flutter/data/jodie_data.dart';
@@ -762,6 +763,7 @@ void main() {
       ..firstName = 'Shashank'
       ..lastName = 'Gupta'
       ..email = 'shashank@example.com'
+      ..confirmedEmail = 'shashank@example.com'
       ..gender = 'male'
       ..dob = DateTime(1990, 5, 4)
       ..marital = 'single'
@@ -852,6 +854,7 @@ void main() {
       ..firstName = 'Anita'
       ..lastName = 'Rao'
       ..email = 'a@b.co'
+      ..confirmedEmail = 'a@b.co'
       ..gender = 'female'
       ..dob = DateTime(1990, 1, 1)
       ..marital = 'single';
@@ -887,6 +890,7 @@ void main() {
       ..firstName = 'Ravi'
       ..lastName = 'Kumar'
       ..email = 'r@k.co'
+      ..confirmedEmail = 'r@k.co'
       ..gender = 'male'
       ..dob = DateTime(1990, 1, 1)
       ..marital = 'single';
@@ -1468,6 +1472,7 @@ void main() {
       ..firstName = 'Ravi'
       ..lastName = 'Kumar'
       ..email = 'r@k.co'
+      ..confirmedEmail = 'r@k.co'
       ..gender = 'male'
       ..dob = DateTime(1990, 1, 1)
       ..marital = 'single';
@@ -1501,5 +1506,107 @@ void main() {
     // They opened the chat: two blue ticks (and a read message was also delivered).
     expect(ChatMessage.receiptFor(mine, null, mine), Receipt.read);
     expect(ChatMessage.receiptFor(mine, mine, newer), Receipt.read);
+  });
+
+  testWidgets(
+    'sign in with an email address, then confirm the mobile number with a code',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.runAsync(World.load);
+
+      await tester.pumpWidget(const NoahApp());
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome to Noah'), findsOneWidget);
+
+      // Two choices: mobile number or email. Email asks for an address.
+      await tester.tap(find.text('Email'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText), 'not-an-address');
+      await tester.pump();
+      // Continue does nothing while it is not an address.
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome to Noah'), findsOneWidget);
+      await tester.enterText(find.byType(EditableText), 'anitha@example.com');
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter your code'), findsOneWidget);
+
+      await tester.enterText(find.byType(EditableText), '4821');
+      await tester.pump();
+      await tester.tap(find.text('Verify and continue'));
+      await tester.pumpAndSettle();
+
+      // A new member registers. The address they signed in with is confirmed, the mobile number is not yet.
+      expect(find.text('Create your account'), findsOneWidget);
+      final r = registration;
+      expect(r.email, 'anitha@example.com');
+      expect(r.emailConfirmed, isTrue);
+      expect(r.mobileConfirmed, isFalse);
+      expect(r.contactsConfirmed, isFalse);
+      expect(find.text('Verified'), findsOneWidget);
+
+      // The number is confirmed with a code sent to it (the demo code is 4821).
+      r
+        ..mobileNumber = '98765 43210'
+        ..touch();
+      await tester.pump();
+      await tester.tap(find.text('Verify'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm your mobile number'), findsOneWidget);
+      final box = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(box, '4821');
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Verify'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(r.mobileConfirmed, isTrue);
+      expect(r.contactsConfirmed, isTrue);
+      expect(find.text('Verified'), findsNWidgets(2));
+    },
+  );
+
+  test('a mobile number sign-in starts with the number confirmed and the email still to confirm', () {
+    final r = registration;
+    r.start('+91 98765 43210');
+    expect(r.mobileConfirmed, isTrue);
+    expect(r.emailConfirmed, isFalse);
+    r
+      ..salutation = 'Mr'
+      ..firstName = 'Ravi'
+      ..lastName = 'Kumar'
+      ..email = 'Ravi@Example.com'
+      ..gender = 'male'
+      ..dob = DateTime(1990, 1, 1)
+      ..marital = 'single';
+    // Typing the address is not enough: it counts once the code came back.
+    expect(r.detailsValid, isFalse);
+    r.confirmEmail('Ravi@Example.com');
+    expect(r.detailsValid, isTrue);
+    // Changing it afterwards un-confirms it again.
+    r.email = 'other@example.com';
+    expect(r.emailConfirmed, isFalse);
+    expect(r.detailsValid, isFalse);
+    // The same for the number.
+    r.email = 'ravi@example.com';
+    expect(r.detailsValid, isTrue);
+    r.mobileNumber = '98765 43211';
+    expect(r.mobileConfirmed, isFalse);
+    expect(r.detailsValid, isFalse);
   });
 }

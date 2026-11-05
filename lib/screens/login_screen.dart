@@ -2,6 +2,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
@@ -10,6 +12,7 @@ import '../data/api_client.dart';
 import '../data/dial_data.dart';
 import '../widgets/dial_code_picker.dart';
 import 'me/terms_screen.dart';
+import '../data/registration_data.dart' show emailError;
 import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,19 +25,48 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _controller = TextEditingController(text: '98765 43210');
   DialCountry _country = DialData.fallback.first;
+  final _email = TextEditingController();
 
-  bool get _valid =>
-      _country.validLength(_controller.text.replaceAll(' ', '').length);
+  /// Members sign in with a mobile number or an email address; the choice is remembered.
+  bool _byEmail = false;
+
+  bool get _valid => _byEmail
+      ? emailError(_email.text) == null
+      : _country.validLength(_controller.text.replaceAll(' ', '').length);
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(() => setState(() {}));
+    _email.addListener(() => setState(() {}));
+    _loadChoice();
+  }
+
+  Future<void> _loadChoice() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted && prefs.getString('login_channel') == 'email') {
+        setState(() => _byEmail = true);
+      }
+    } catch (_) {
+      // Nothing remembered: start with the mobile number.
+    }
+  }
+
+  Future<void> _choose(bool email) async {
+    setState(() => _byEmail = email);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('login_channel', email ? 'email' : 'mobile');
+    } catch (_) {
+      // The choice is only a convenience.
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _email.dispose();
     super.dispose();
   }
 
@@ -46,8 +78,38 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _sending = false;
 
+  Future<void> _continueByEmail() async {
+    final address = _email.text.trim();
+    if (!liveApi) {
+      _openOtp(OtpScreen(phone: address.toLowerCase()));
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final sent = await api.sendEmailOtp(address);
+      if (!mounted) return;
+      _openOtp(
+        OtpScreen(
+          phone: address.toLowerCase(),
+          email: address,
+          shownTo: sent.sentTo,
+          otpLength: sent.otpLength,
+          resendSeconds: sent.resendAfter,
+          devOtp: sent.devOtp,
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   Future<void> _continue() async {
     FocusScope.of(context).unfocus();
+    if (_byEmail) return _continueByEmail();
     final phone = '${_country.dial} ${_controller.text}';
     if (!liveApi) {
       _openOtp(OtpScreen(phone: phone));
@@ -101,52 +163,91 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tr(context, 'mobile_number'),
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: spacing(context, 0.6),
+          _ChannelToggle(byEmail: _byEmail, onChoose: _choose),
+          const SizedBox(height: 16),
+          if (_byEmail) ...[
+            Text(
+              tr(context, 'email_label'),
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: spacing(context, 0.6),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              DialCodePicker(value: _country, onChanged: _pickCountry),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.centerLeft,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [
-                      _PhoneFormatter(
-                        maxDigits: _country.maxDigits,
-                        group: _country.isIndia,
-                      ),
-                    ],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: TextField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                autofillHints: const [AutofillHints.email],
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  hintText: 'you@example.com',
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              tr(context, 'mobile_number'),
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: spacing(context, 0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                DialCodePicker(value: _country, onChanged: _pickCountry),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 52,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.centerLeft,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      hintText: _country.isIndia ? '00000 00000' : '0' * 9,
+                    child: TextField(
+                      controller: _controller,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        _PhoneFormatter(
+                          maxDigits: _country.maxDigits,
+                          group: _country.isIndia,
+                        ),
+                      ],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        hintText: _country.isIndia ? '00000 00000' : '0' * 9,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           const SizedBox(height: 18),
           GradientButton(
             label: tr(context, 'continue'),
@@ -182,6 +283,50 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+/// Two choices above the input: sign in with a mobile number or with an email address.
+class _ChannelToggle extends StatelessWidget {
+  const _ChannelToggle({required this.byEmail, required this.onChoose});
+
+  final bool byEmail;
+  final ValueChanged<bool> onChoose;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: AppColors.tint,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      children: [
+        for (final email in [false, true])
+          Expanded(
+            child: GestureDetector(
+              onTap: () => onChoose(email),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: byEmail == email ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  tr(context, email ? 'login_use_email' : 'login_use_mobile'),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: byEmail == email ? AppColors.ink : AppColors.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Badge extends StatelessWidget {

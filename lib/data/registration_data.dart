@@ -123,6 +123,14 @@ class RegistrationState extends ChangeNotifier {
   String referenceDial = '+91'; // country code of the reference number
   String referencePhone = ''; // the number without the country code
 
+  // The two contacts. Registration needs an email address and a mobile number, each confirmed with a code sent to it.
+  // The server keeps a contact only once it is confirmed, so what it sends back is what counts as confirmed.
+  String mobileDial = '+91'; // typed: country code
+  String mobileNumber = ''; // typed: the number without the country code
+  String confirmedEmail = '';
+  String confirmedDial = '';
+  String confirmedMobile = ''; // digits only
+
   // Step 2: address
   String address1 = '';
   String address2 = '';
@@ -170,10 +178,29 @@ class RegistrationState extends ChangeNotifier {
   /// Call after changing a field so listeners (the footer button) refresh.
   void touch() => notifyListeners();
 
+  static String _digitsOf(String v) => v.replaceAll(RegExp(r'\D'), '');
+
+  /// Signing in with an email address or a mobile number confirms that one; the other is confirmed in step 1.
+  void _confirmSignInContact(String identity) {
+    email = confirmedEmail = '';
+    confirmedDial = confirmedMobile = mobileNumber = '';
+    mobileDial = '+91';
+    if (identity.contains('@')) {
+      email = confirmedEmail = identity.trim().toLowerCase();
+      return;
+    }
+    final m = RegExp(r'^(\+\d{1,4})\s*(.*)$').firstMatch(identity.trim());
+    if (m == null) return;
+    mobileDial = confirmedDial = m.group(1)!;
+    mobileNumber = m.group(2)!;
+    confirmedMobile = _digitsOf(mobileNumber);
+  }
+
   void start(String phoneNumber) {
     phone = phoneNumber;
     firstName = middleName = lastName = email = gender = marital = salutation =
         '';
+    _confirmSignInContact(phoneNumber);
     nationality = 'India';
     anniversary = null;
     reference = referencePhone = address1 = address2 = city = pin = idNumber =
@@ -221,7 +248,32 @@ class RegistrationState extends ChangeNotifier {
       signature.trim().isNotEmpty &&
       signature.trim().toLowerCase() == fullName.toLowerCase();
 
+  bool get emailConfirmed =>
+      confirmedEmail.isNotEmpty && email.trim().toLowerCase() == confirmedEmail;
+  bool get mobileConfirmed =>
+      confirmedMobile.isNotEmpty &&
+      _digitsOf(mobileNumber) == confirmedMobile &&
+      mobileDial == confirmedDial;
+
+  /// Both the email address and the mobile number have been confirmed with a code.
+  bool get contactsConfirmed => emailConfirmed && mobileConfirmed;
+
+  /// A code came back right: the address (or number) is now the member's.
+  void confirmEmail(String value) {
+    email = value.trim();
+    confirmedEmail = email.toLowerCase();
+    notifyListeners();
+  }
+
+  void confirmMobile(String dial, String number) {
+    mobileDial = confirmedDial = dial;
+    mobileNumber = number;
+    confirmedMobile = _digitsOf(number);
+    notifyListeners();
+  }
+
   bool get detailsValid =>
+      contactsConfirmed &&
       nameError(firstName) == null &&
       nameError(middleName, required: false) == null &&
       nameError(lastName) == null &&
@@ -376,6 +428,13 @@ class RegistrationState extends ChangeNotifier {
     middleName = s('middleName');
     lastName = s('lastName');
     email = s('email');
+    confirmedEmail = email.toLowerCase();
+    confirmedDial = s('countryCode');
+    confirmedMobile = _digitsOf(s('mobileNumber'));
+    if (confirmedMobile.isNotEmpty) {
+      mobileDial = confirmedDial;
+      mobileNumber = s('mobileNumber');
+    }
     gender = s('gender');
     dob = d('dob');
     marital = s('marital');

@@ -16,6 +16,8 @@ class OtpScreen extends StatefulWidget {
     required this.phone,
     this.dial,
     this.number,
+    this.email,
+    this.shownTo,
     this.otpLength = 4,
     this.resendSeconds = 24,
     this.devOtp,
@@ -26,6 +28,12 @@ class OtpScreen extends StatefulWidget {
   /// Set when the code was sent by the real API (otherwise the demo code is used).
   final String? dial;
   final String? number;
+
+  /// Set when signing in with an email address instead of a mobile number ([phone] then holds the address).
+  final String? email;
+
+  /// Where the code went, as the server shows it (an email address is partly hidden).
+  final String? shownTo;
   final int otpLength;
   final int resendSeconds;
 
@@ -46,7 +54,7 @@ class _OtpScreenState extends State<OtpScreen> {
   bool _busy = false;
   String? _message;
 
-  bool get _live => widget.dial != null;
+  bool get _live => widget.dial != null || widget.email != null;
 
   @override
   void initState() {
@@ -92,11 +100,9 @@ class _OtpScreenState extends State<OtpScreen> {
     }
     setState(() => _busy = true);
     try {
-      final r = await api.verifyOtp(
-        widget.dial!,
-        widget.number!,
-        _controller.text,
-      );
+      final r = widget.email != null
+          ? await api.verifyEmailOtp(widget.email!, _controller.text)
+          : await api.verifyOtp(widget.dial!, widget.number!, _controller.text);
       if (!mounted) return;
       await routeAfterServer(context, widget.phone, r.next);
     } on ApiException catch (e) {
@@ -116,7 +122,9 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
     try {
-      final sent = await api.sendOtp(widget.dial!, widget.number!);
+      final sent = widget.email != null
+          ? await api.sendEmailOtp(widget.email!)
+          : await api.sendOtp(widget.dial!, widget.number!);
       if (!mounted) return;
       _controller.clear();
       setState(_startTimer);
@@ -138,7 +146,11 @@ class _OtpScreenState extends State<OtpScreen> {
     return AuthScaffold(
       icon: Icons.lock_outline,
       title: tr(context, 'enter_code'),
-      subtitle: tr(context, 'sent_to', args: {'phone': widget.phone}),
+      subtitle: tr(
+        context,
+        'sent_to',
+        args: {'phone': widget.shownTo ?? widget.phone},
+      ),
       headerHeight: 290,
       // Leave room for the back button on the left of the strip.
       topRight: const LanguageDropdown(),
@@ -244,7 +256,10 @@ class _OtpScreenState extends State<OtpScreen> {
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Text(
-              tr(context, 'change_number'),
+              tr(
+                context,
+                widget.email != null ? 'change_email' : 'change_number',
+              ),
               style: const TextStyle(
                 color: AppColors.magenta,
                 fontSize: 13,

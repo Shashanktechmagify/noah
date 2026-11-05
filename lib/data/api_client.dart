@@ -42,9 +42,13 @@ class OtpSent {
     required this.otpLength,
     required this.resendAfter,
     this.devOtp,
+    this.sentTo,
   });
 
   final String phoneKey;
+
+  /// Where the code went, as the server wants it shown (an email address is partly hidden: a•••@example.com).
+  final String? sentTo;
   final int otpLength;
   final int resendAfter;
 
@@ -264,13 +268,59 @@ class ApiClient {
       json: {'countryCode': countryCode, 'mobileNumber': mobileNumber},
       auth: false,
     );
-    return OtpSent(
-      phoneKey: '${d['phoneKey']}',
-      otpLength: (d['otpLength'] as num?)?.toInt() ?? 6,
-      resendAfter: (d['resendAfter'] as num?)?.toInt() ?? 24,
-      devOtp: d['devOtp'] as String?,
+    return _otpSent(d);
+  }
+
+  OtpSent _otpSent(Map<String, dynamic> d) => OtpSent(
+    phoneKey: '${d['phoneKey'] ?? ''}',
+    otpLength: (d['otpLength'] as num?)?.toInt() ?? 6,
+    resendAfter: (d['resendAfter'] as num?)?.toInt() ?? 24,
+    devOtp: d['devOtp'] as String?,
+    sentTo: d['sentTo'] as String?,
+  );
+
+  /// Mails a sign-in code to [email].
+  Future<OtpSent> sendEmailOtp(String email) async => _otpSent(
+    await _send(
+      'POST',
+      '/auth/otp/send',
+      json: {'email': email.trim().toLowerCase()},
+      auth: false,
+    ),
+  );
+
+  /// Asks for the code that confirms a contact during registration: the member's other email address or mobile
+  /// number. Give either [email] or [dial] with [number].
+  Future<OtpSent> sendContactCode({
+    String? email,
+    String? dial,
+    String? number,
+  }) async => _otpSent(
+    await _send(
+      'POST',
+      '/registration/contact/code',
+      json: _contact(email, dial, number),
+    ),
+  );
+
+  /// Checks the code; the server keeps the address or number only when it is right.
+  Future<void> verifyContact(
+    String code, {
+    String? email,
+    String? dial,
+    String? number,
+  }) async {
+    await _send(
+      'POST',
+      '/registration/contact/verify',
+      json: {..._contact(email, dial, number), 'code': code},
     );
   }
+
+  Map<String, dynamic> _contact(String? email, String? dial, String? number) =>
+      email != null
+      ? {'channel': 'email', 'email': email.trim().toLowerCase()}
+      : {'channel': 'phone', 'countryCode': dial, 'mobileNumber': number};
 
   Future<SignedIn> verifyOtp(
     String countryCode,
@@ -278,19 +328,29 @@ class ApiClient {
     String otp, {
     String? deviceId,
     String? deviceName,
-  }) async {
-    final d = await _send(
-      'POST',
-      '/auth/otp/verify',
-      json: {
-        'countryCode': countryCode,
-        'mobileNumber': mobileNumber,
-        'otp': otp,
-        'deviceId': ?deviceId,
-        'deviceName': ?deviceName,
-      },
-      auth: false,
-    );
+  }) => _verify({
+    'countryCode': countryCode,
+    'mobileNumber': mobileNumber,
+    'otp': otp,
+    'deviceId': ?deviceId,
+    'deviceName': ?deviceName,
+  });
+
+  /// Signs in with the code mailed to [email].
+  Future<SignedIn> verifyEmailOtp(
+    String email,
+    String otp, {
+    String? deviceId,
+    String? deviceName,
+  }) => _verify({
+    'email': email.trim().toLowerCase(),
+    'otp': otp,
+    'deviceId': ?deviceId,
+    'deviceName': ?deviceName,
+  });
+
+  Future<SignedIn> _verify(Map<String, dynamic> body) async {
+    final d = await _send('POST', '/auth/otp/verify', json: body, auth: false);
     accessToken = d['accessToken'] as String?;
     refreshToken = d['refreshToken'] as String?;
     roles = ((d['roles'] as List?) ?? const []).map((e) => '$e').toList();
@@ -465,13 +525,16 @@ class ApiClient {
   // ── Bible study ────────────────────────────────────────────────────────
 
   /// `{ items: [plan] }`: the plans that are live, with the member's progress in each.
-  Future<Map<String, dynamic>> biblePlans(int lang) => _send('GET', '/bible-study/plans?lang=$lang');
+  Future<Map<String, dynamic>> biblePlans(int lang) =>
+      _send('GET', '/bible-study/plans?lang=$lang');
 
   /// `{ plan, steps, progress }`.
-  Future<Map<String, dynamic>> biblePlan(String id) => _send('GET', '/bible-study/plans/$id');
+  Future<Map<String, dynamic>> biblePlan(String id) =>
+      _send('GET', '/bible-study/plans/$id');
 
   /// `{ id, name, description, passages: [{ book, chapter, verses: [{ n, text }] }], quiz }`.
-  Future<Map<String, dynamic>> bibleStep(String id) => _send('GET', '/bible-study/steps/$id');
+  Future<Map<String, dynamic>> bibleStep(String id) =>
+      _send('GET', '/bible-study/steps/$id');
 
   /// Marks a step as read: `{ progress }`. Fails with `come_back_tomorrow` on a one-step-a-day plan.
   Future<Map<String, dynamic>> bibleComplete(String stepId) =>
