@@ -42,13 +42,17 @@ class RichHtml extends StatelessWidget {
 }
 
 /// Opens a picture on its own, full screen on black: pinch or double-tap to zoom, tap to hide the buttons.
-void openImageViewer(BuildContext context, String url) {
+void openImageViewer(BuildContext context, String url) =>
+    openImageProviderViewer(context, NetworkImage(url));
+
+/// The same viewer for a picture from anywhere (for example a file on the phone).
+void openImageProviderViewer(BuildContext context, ImageProvider image) {
   Navigator.of(context).push(
     PageRouteBuilder<void>(
       opaque: false,
       barrierColor: Colors.black,
       transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (_, _, _) => _ImageViewerPage(url: url),
+      pageBuilder: (_, _, _) => _ImageViewerPage(image: image),
       transitionsBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
     ),
@@ -56,9 +60,9 @@ void openImageViewer(BuildContext context, String url) {
 }
 
 class _ImageViewerPage extends StatefulWidget {
-  const _ImageViewerPage({required this.url});
+  const _ImageViewerPage({required this.image});
 
-  final String url;
+  final ImageProvider image;
 
   @override
   State<_ImageViewerPage> createState() => _ImageViewerPageState();
@@ -110,8 +114,8 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width,
                 height: MediaQuery.sizeOf(context).height,
-                child: Image.network(
-                  widget.url,
+                child: Image(
+                  image: widget.image,
                   fit: BoxFit.contain,
                   loadingBuilder: (_, child, progress) => progress == null
                       ? child

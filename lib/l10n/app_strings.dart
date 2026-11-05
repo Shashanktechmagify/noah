@@ -4051,6 +4051,14 @@ const Map<String, List<String>> _strings = {
     'അപ്‌ലോഡ് ചെയ്തു',
     'అప్‌లోడ్ అయింది',
   ],
+  'reg_view': [
+    'View',
+    'देखें',
+    'पहा',
+    'ನೋಡಿ',
+    'കാണുക',
+    'చూడండి',
+  ],
   'reg_replace': [
     'Replace',
     'बदलें',

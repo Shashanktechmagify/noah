@@ -15,6 +15,7 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/language_dropdown.dart';
+import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../events/events_widgets.dart' show fullDate;
 import '../login_screen.dart';
 import 'registration_video.dart';
@@ -733,6 +734,21 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
     }
   }
 
+  /// Opens the uploaded ID picture full screen. A PDF cannot be drawn here.
+  void _viewId() {
+    final path = registration.idPath;
+    final isPdf = (registration.idFile ?? '').toLowerCase().endsWith('.pdf');
+    if (path == null || isPdf || !File(path).existsSync()) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text(tr(context, 'pf_doc_nopreview'))),
+        );
+      return;
+    }
+    openImageProviderViewer(context, FileImage(File(path)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = registration;
@@ -909,6 +925,20 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
                     ),
                   ),
                   GestureDetector(
+                    onTap: _viewId,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 14),
+                      child: Text(
+                        tr(context, 'reg_view'),
+                        style: const TextStyle(
+                          color: AppColors.magenta,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
                     onTap: _pickId,
                     child: Text(
                       tr(context, 'reg_replace'),
@@ -968,39 +998,50 @@ class _PhotoStepState extends State<_PhotoStep> with _Live<_PhotoStep> {
       child: Center(
         child: Column(
           children: [
-            Container(
-              width: 168,
-              height: 168,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: has ? AppColors.headerGradient : null,
-                color: has ? null : AppColors.tint,
-                border: Border.all(color: AppColors.border, width: 2),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child:
+            GestureDetector(
+              onTap:
                   has && r.photoPath != null && File(r.photoPath!).existsSync()
-                  ? Image.file(
-                      File(r.photoPath!),
-                      width: 168,
-                      height: 168,
-                      fit: BoxFit.cover,
+                  ? () => openImageProviderViewer(
+                      context,
+                      FileImage(File(r.photoPath!)),
                     )
-                  : has
-                  ? Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 56,
-                        fontWeight: FontWeight.w800,
+                  : null,
+              child: Container(
+                width: 168,
+                height: 168,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: has ? AppColors.headerGradient : null,
+                  color: has ? null : AppColors.tint,
+                  border: Border.all(color: AppColors.border, width: 2),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    has &&
+                        r.photoPath != null &&
+                        File(r.photoPath!).existsSync()
+                    ? Image.file(
+                        File(r.photoPath!),
+                        width: 168,
+                        height: 168,
+                        fit: BoxFit.cover,
+                      )
+                    : has
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 56,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_outline,
+                        size: 72,
+                        color: AppColors.muted,
                       ),
-                    )
-                  : const Icon(
-                      Icons.person_outline,
-                      size: 72,
-                      color: AppColors.muted,
-                    ),
+              ),
             ),
             const SizedBox(height: 16),
             GestureDetector(
