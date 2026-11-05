@@ -1362,11 +1362,15 @@ void main() {
     await settle();
     expect(find.text('Walking in Compassion'), findsOneWidget);
     expect(find.text('All eBooks'), findsOneWidget);
-    await tester.tap(find.text('Praises'));
+    // The last home tab is the Dream Dictionary (Praises moved to the Menu only).
+    expect(find.text('Praises'), findsNothing);
+    await tester.tap(find.text('Dream Dictionary'));
     await settle();
-    expect(find.text('Healing after eight months'), findsOneWidget);
-    expect(find.text('Anil Thomas · Pune Camp'), findsOneWidget);
-    await tester.tap(find.text('All praises'));
+    expect(find.text('Coming soon'), findsOneWidget);
+    await tester.tap(find.text('Menu'));
+    await settle();
+    expect(find.text('ROWIL Bible School'), findsOneWidget);
+    await tester.tap(find.text('Praises'));
     await settle();
     expect(find.text('Swipe to read the next testimony'), findsOneWidget);
     expect(find.text('PRAISE REPORT'), findsOneWidget);

@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     'tab_confessions',
     'tab_commentary',
     'tab_ebooks',
-    'tab_praises',
+    'mn_dream',
   ];
   int _tab = 0;
   final _scroll = ScrollController();
@@ -144,18 +144,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ];
       default:
+        // The Dream Dictionary has no content yet: the tab says so and a tap tells the member the same.
         return [
-          for (var i = 0; i < 3; i++)
-            _WordTile(
-              icon: Icons.favorite_border,
-              title: kPraises[i].title,
-              sub: '${kPraises[i].author} · ${kPraises[i].place}',
-              colors: _tileColors[i],
-              onTap: () => _push(const PraisesScreen()),
-            ),
-          _ViewAllTile(
-            label: tr(context, 'all_praises'),
-            onTap: () => _push(const PraisesScreen()),
+          _WordTile(
+            icon: Icons.nights_stay_outlined,
+            title: tr(context, 'mn_dream'),
+            sub: tr(context, 'coming_soon'),
+            colors: _tileColors[0],
+            onTap: () {
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.clearSnackBars();
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${tr(context, 'mn_dream')} · ${tr(context, 'coming_soon')}',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+                ),
+              );
+            },
           ),
         ];
     }

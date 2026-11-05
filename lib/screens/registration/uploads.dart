@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
 
@@ -45,15 +46,65 @@ Future<PickedUpload> _validate(
   return PickedUpload(name: name, path: path);
 }
 
-/// Picks an ID document (JPG, PNG or PDF, up to 5 MB). Null if cancelled.
-Future<PickedUpload?> pickDocument() async {
+/// Lets the member crop and rotate a picture before it is used (phones only; the editor is the phone's own).
+/// Returns the edited picture, or null when they backed out. The edited file is always a JPG.
+Future<({String name, String path})?> _crop(
+  BuildContext context,
+  String name,
+  String path, {
+  required String title,
+  required bool square,
+}) async {
+  if (!_hasCamera) return (name: name, path: path);
+  final out = await ImageCropper().cropImage(
+    sourcePath: path,
+    compressFormat: ImageCompressFormat.jpg,
+    compressQuality: 90,
+    uiSettings: [
+      AndroidUiSettings(
+        toolbarTitle: title,
+        toolbarColor: AppColors.magenta,
+        toolbarWidgetColor: Colors.white,
+        activeControlsWidgetColor: AppColors.magenta,
+        initAspectRatio: square
+            ? CropAspectRatioPreset.square
+            : CropAspectRatioPreset.original,
+        lockAspectRatio: false,
+      ),
+      IOSUiSettings(title: title),
+    ],
+  );
+  if (out == null) return null;
+  final dot = name.lastIndexOf('.');
+  final base = dot > 0 ? name.substring(0, dot) : name;
+  return (name: '$base.jpg', path: out.path);
+}
+
+/// Picks an ID document (JPG, PNG or PDF, up to 5 MB). A picture can be cropped and rotated first; a PDF
+/// is used as it is. Null if cancelled.
+Future<PickedUpload?> pickDocument(BuildContext context) async {
   try {
     final f = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: kDocExtensions,
     );
     if (f == null || f.path == null) return null;
-    return await _validate(f.name, f.path!, kDocExtensions);
+    var name = f.name;
+    var path = f.path!;
+    final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    if (ext != 'pdf' && context.mounted) {
+      final edited = await _crop(
+        context,
+        name,
+        path,
+        title: tr(context, 'reg_crop_title'),
+        square: false,
+      );
+      if (edited == null) return null;
+      name = edited.name;
+      path = edited.path;
+    }
+    return await _validate(name, path, kDocExtensions);
   } catch (_) {
     return const PickedUpload(errorKey: 'reg_err_file_read');
   }
@@ -99,6 +150,8 @@ Future<PickedUpload?> pickPhoto(BuildContext context) async {
     camera = choice;
   }
   try {
+    String name;
+    String path;
     if (camera) {
       final x = await ImagePicker().pickImage(
         source: ImageSource.camera,
@@ -106,14 +159,27 @@ Future<PickedUpload?> pickPhoto(BuildContext context) async {
         imageQuality: 85,
       );
       if (x == null) return null;
-      return await _validate(x.name, x.path, kPhotoExtensions);
+      name = x.name;
+      path = x.path;
+    } else {
+      final f = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: kPhotoExtensions,
+      );
+      if (f == null || f.path == null) return null;
+      name = f.name;
+      path = f.path!;
     }
-    final f = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: kPhotoExtensions,
+    if (!context.mounted) return null;
+    final edited = await _crop(
+      context,
+      name,
+      path,
+      title: tr(context, 'reg_crop_title'),
+      square: true,
     );
-    if (f == null || f.path == null) return null;
-    return await _validate(f.name, f.path!, kPhotoExtensions);
+    if (edited == null) return null;
+    return await _validate(edited.name, edited.path, kPhotoExtensions);
   } catch (_) {
     return const PickedUpload(errorKey: 'reg_err_file_read');
   }
@@ -138,7 +204,9 @@ const kSkipCompressionBytes = 80 * 1024 * 1024;
 Future<CompressedVideo> compressVideo(String path) async {
   final before = await File(path).length();
   // Recorded at a low bitrate already: re-encoding would only make the member wait.
-  if (before <= kSkipCompressionBytes) return CompressedVideo(path, before, before);
+  if (before <= kSkipCompressionBytes) {
+    return CompressedVideo(path, before, before);
+  }
   try {
     final info = await VideoCompress.compressVideo(
       path,

@@ -723,7 +723,7 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
   }
 
   Future<void> _pickId() async {
-    final picked = await pickDocument();
+    final picked = await pickDocument(context);
     if (picked == null || !mounted) return;
     setState(() => _uploadError = picked.errorKey);
     if (picked.ok) {
