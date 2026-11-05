@@ -735,7 +735,7 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
   }
 
   /// Opens the uploaded ID picture full screen. A PDF cannot be drawn here.
-  void _viewId() {
+  Future<void> _viewId() async {
     final path = registration.idPath;
     final isPdf = (registration.idFile ?? '').toLowerCase().endsWith('.pdf');
     if (path == null || isPdf || !File(path).existsSync()) {
@@ -746,7 +746,10 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
         );
       return;
     }
-    openImageProviderViewer(context, FileImage(File(path)));
+    // Read the file now, so a replaced picture never shows the old one from the image cache.
+    final bytes = await File(path).readAsBytes();
+    if (!mounted) return;
+    openImageProviderViewer(context, MemoryImage(bytes));
   }
 
   @override
@@ -1001,10 +1004,13 @@ class _PhotoStepState extends State<_PhotoStep> with _Live<_PhotoStep> {
             GestureDetector(
               onTap:
                   has && r.photoPath != null && File(r.photoPath!).existsSync()
-                  ? () => openImageProviderViewer(
-                      context,
-                      FileImage(File(r.photoPath!)),
-                    )
+                  ? () async {
+                      // Read the file now, so a replaced picture never shows the old one from the image cache.
+                      final bytes = await File(r.photoPath!).readAsBytes();
+                      if (context.mounted) {
+                        openImageProviderViewer(context, MemoryImage(bytes));
+                      }
+                    }
                   : null,
               child: Container(
                 width: 168,

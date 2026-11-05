@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 
 /// Text the office wrote in the admin console's editor: bold, italic, underline, strike-through,
@@ -122,11 +123,25 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
                       : const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         ),
-                  errorBuilder: (_, _, _) => const Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.white54,
-                      size: 48,
+                  errorBuilder: (_, _, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.white54,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            tr(context, 'pf_doc_nopreview'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

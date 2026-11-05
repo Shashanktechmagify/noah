@@ -7,6 +7,7 @@ import '../../data/profile_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../events/events_widgets.dart' show fullDate, monthShort;
 import '../jodie/jodie_widgets.dart' show toast;
 import '../noahgram/noahgram_widgets.dart' show agoText;
@@ -224,7 +225,7 @@ class _PhotoBox extends StatelessWidget {
       ),
     );
     final id = fileId;
-    return ClipRRect(
+    final box = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
         width: size,
@@ -238,6 +239,15 @@ class _PhotoBox extends StatelessWidget {
                 errorBuilder: (_, _, _) => fallback,
               ),
       ),
+    );
+    if (id == null || id.isEmpty) return box;
+    // Tap the picture to see it full screen and zoom, like a chat profile photo.
+    return GestureDetector(
+      onTap: () => openImageProviderViewer(
+        context,
+        NetworkImage(api.fileUrl(id), headers: api.authHeaders),
+      ),
+      child: box,
     );
   }
 }

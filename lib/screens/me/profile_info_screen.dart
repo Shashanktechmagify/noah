@@ -11,6 +11,7 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../jodie/jodie_widgets.dart' show toast;
 import '../registration/registration_widgets.dart' show DateInputField;
 import 'sub_page.dart';
@@ -107,7 +108,9 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
               onPressed: () {
                 profile.refresh();
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ChangeRequestsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ChangeRequestsScreen(),
+                  ),
                 );
               },
             ),
@@ -215,6 +218,13 @@ class _DocsCard extends StatelessWidget {
     ),
   );
 
+  /// A picture the member uploaded, full screen and zoomable, fetched with their own login.
+  void _viewFile(BuildContext context, String fileId) =>
+      openImageProviderViewer(
+        context,
+        NetworkImage(api.fileUrl(fileId), headers: api.authHeaders),
+      );
+
   void _open(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
@@ -231,13 +241,7 @@ class _DocsCard extends StatelessWidget {
           subtitle: docs.idType == null
               ? uploaded
               : '${docs.idType!.toUpperCase()} · $uploaded',
-          onView: () => _open(
-            context,
-            _FileImagePage(
-              title: tr(context, 'pf_doc_idproof'),
-              fileId: docs.idProofId!,
-            ),
-          ),
+          onView: () => _viewFile(context, docs.idProofId!),
         ),
       if (docs.photoId != null)
         _row(
@@ -245,13 +249,7 @@ class _DocsCard extends StatelessWidget {
           icon: Icons.photo_outlined,
           title: tr(context, 'pf_doc_photo'),
           subtitle: uploaded,
-          onView: () => _open(
-            context,
-            _FileImagePage(
-              title: tr(context, 'pf_doc_photo'),
-              fileId: docs.photoId!,
-            ),
-          ),
+          onView: () => _viewFile(context, docs.photoId!),
         ),
       if (docs.videoId != null)
         _row(
@@ -297,44 +295,6 @@ class _DocsCard extends StatelessWidget {
       ],
     );
   }
-}
-
-/// A picture the member uploaded, full screen, fetched with their own login. A PDF cannot be drawn here.
-class _FileImagePage extends StatelessWidget {
-  const _FileImagePage({required this.title, required this.fileId});
-
-  final String title;
-  final String fileId;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
-    appBar: AppBar(
-      backgroundColor: Colors.black,
-      foregroundColor: Colors.white,
-      title: Text(title),
-    ),
-    body: Center(
-      child: InteractiveViewer(
-        child: Image.network(
-          api.fileUrl(fileId),
-          headers: api.authHeaders,
-          fit: BoxFit.contain,
-          loadingBuilder: (context, child, progress) => progress == null
-              ? child
-              : const CircularProgressIndicator(color: Colors.white),
-          errorBuilder: (context, error, stack) => Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              tr(context, 'pf_doc_nopreview'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 /// The declaration video the member recorded, played from the server with their own login.
@@ -714,6 +674,11 @@ class _RequestDialogState extends State<_RequestDialog> {
             PfKind.phone => TextInputType.phone,
             PfKind.email => TextInputType.emailAddress,
             PfKind.pin || PfKind.number => TextInputType.number,
+            // Aadhaar and Emirates ID are all digits; PAN, passport, voter ID and licence mix letters and digits.
+            PfKind.idNumber
+                when f.idType == 'aadhaar' || f.idType == 'emirates' =>
+              TextInputType.number,
+            PfKind.idNumber => TextInputType.visiblePassword,
             _ => TextInputType.text,
           },
           inputFormatters: [
@@ -725,6 +690,17 @@ class _RequestDialogState extends State<_RequestDialog> {
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             if (f.kind == PfKind.phone)
               FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s-]')),
+            if (f.kind == PfKind.idNumber) ...[
+              FilteringTextInputFormatter.allow(
+                f.idType == 'aadhaar' || f.idType == 'emirates'
+                    ? RegExp(r'[0-9\s-]')
+                    : RegExp(r'[A-Za-z0-9\s-]'),
+              ),
+              LengthLimitingTextInputFormatter(24),
+              TextInputFormatter.withFunction(
+                (old, v) => v.copyWith(text: v.text.toUpperCase()),
+              ),
+            ],
           ],
           textCapitalization: f.kind == PfKind.idNumber
               ? TextCapitalization.characters
