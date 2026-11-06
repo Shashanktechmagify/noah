@@ -349,7 +349,7 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
         padding: EdgeInsets.zero,
         children: [
           Container(
-            height: 200 + top,
+            height: 226 + top,
             decoration: const BoxDecoration(gradient: AppColors.headerGradient),
             child: Stack(
               children: [
@@ -392,6 +392,20 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                               color: Colors.white70,
                               fontSize: 13,
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Whom to call about the registration.
+                        Text(
+                          tr(
+                            context,
+                            'reg_office_line',
+                            args: {'phone': kOfficePhone},
+                          ),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],

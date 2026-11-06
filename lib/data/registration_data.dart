@@ -24,6 +24,51 @@ const kIdTypes = [
   ('emirates', 'reg_id_emirates', '784-1990-1234567-1'),
 ];
 
+/// Other documents a member may add: only the file is needed (no number).
+const kOtherDocTypes = [
+  ('salary', 'doc_salary'),
+  ('qualification', 'doc_qualification'),
+  ('marriage', 'doc_marriage'),
+];
+
+/// Translation key for the name of a document type (an ID or one of the other documents).
+String docLabelKey(String type) {
+  for (final t in kIdTypes) {
+    if (t.$1 == type) return t.$2;
+  }
+  return kOtherDocTypes.firstWhere((t) => t.$1 == type).$2;
+}
+
+/// A further document of the registration: another ID with its number, or a salary slip, a qualification or
+/// a marriage certificate. The main ID proof is kept apart (idType, idNumber, idFile).
+class RegDocument {
+  RegDocument({
+    required this.type,
+    this.number = '',
+    this.fileName,
+    this.path,
+    this.fileId,
+  });
+
+  final String type;
+  String number;
+  String? fileName;
+
+  /// The file picked on this phone, and the one the server holds.
+  String? path;
+  String? fileId;
+
+  /// The path last uploaded, so a file is not sent twice.
+  String? uploadedFrom;
+
+  bool get isId => kIdTypes.any((t) => t.$1 == type);
+
+  /// A file is chosen, and an ID has a number that fits.
+  bool get valid =>
+      (path != null || fileId != null) &&
+      (!isId || idNumberError(type, number) == null);
+}
+
 /// The Emirates ID is only offered to members whose address is in the UAE.
 const kUaeCountry = 'United Arab Emirates';
 
@@ -140,6 +185,8 @@ class RegistrationState extends ChangeNotifier {
   String pin = '';
 
   // Step 3: ID proof
+  /// Further documents besides the main ID: any two, any three.
+  final List<RegDocument> documents = [];
   String? idType;
   String idNumber = '';
   String? idFile; // display name
@@ -210,6 +257,7 @@ class RegistrationState extends ChangeNotifier {
     referenceDial = '+91';
     state = '';
     idType = idFile = idPath = photoFile = photoPath = null;
+    documents.clear();
     agreed = false;
     signedOn = null;
     videoSeconds = null;
@@ -305,10 +353,13 @@ class RegistrationState extends ChangeNotifier {
       (state.isNotEmpty || (World.ready?.statesOf(country).isEmpty ?? true)) &&
       pinError(pin) == null;
 
+  bool get documentsValid => documents.every((d) => d.valid);
+
   bool get idValid =>
       idType != null &&
       idNumberError(idType, idNumber) == null &&
-      idFile != null;
+      idFile != null &&
+      documentsValid;
 
   bool get photoValid => photoFile != null;
 
@@ -394,6 +445,17 @@ class RegistrationState extends ChangeNotifier {
     if (idType != null) m['idType'] = idType;
     put('idNumber', idNumber.replaceAll(RegExp(r'[\s-]'), '').toUpperCase());
     if (idProofFileId != null) m['idProofFileId'] = idProofFileId;
+    // The whole list every time: a document that is no longer in it is removed on the server.
+    m['documents'] = [
+      for (final d in documents)
+        if (d.fileId != null)
+          {
+            'fileId': d.fileId,
+            'type': d.type,
+            if (d.isId)
+              'number': d.number.replaceAll(RegExp(r'[\s-]'), '').toUpperCase(),
+          },
+    ];
     if (photoFileId != null) m['photoFileId'] = photoFileId;
     if (agreed || signature.trim().isNotEmpty) {
       m['declaration'] = {
@@ -462,6 +524,19 @@ class RegistrationState extends ChangeNotifier {
     photoFile = photoFileId == null ? null : 'Uploaded';
     photoPath = null;
     photoUploadedFrom = null;
+
+    documents
+      ..clear()
+      ..addAll([
+        for (final d in (m['documents'] as List?) ?? const [])
+          if (d is Map)
+            RegDocument(
+              type: '${d['type']}',
+              number: '${d['number'] ?? ''}',
+              fileName: '${d['name'] ?? 'Uploaded'}',
+              fileId: '${d['id']}',
+            ),
+      ]);
 
     final decl = (m['declaration'] as Map<String, dynamic>?) ?? const {};
     agreed = decl['agreed'] == true;

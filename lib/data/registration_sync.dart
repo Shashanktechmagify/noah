@@ -14,6 +14,19 @@ Future<void> pushRegistration({
     r.idProofFileId = f.id;
     r.idUploadedFrom = r.idPath;
   }
+  for (final d in r.documents) {
+    if (d.path != null && d.path != d.uploadedFrom) {
+      onStatus?.call('reg_up_id');
+      final f = await api.uploadFile(
+        'document',
+        d.path!,
+        name: d.fileName,
+        docType: d.type,
+      );
+      d.fileId = f.id;
+      d.uploadedFrom = d.path;
+    }
+  }
   if (r.photoPath != null && r.photoPath != r.photoUploadedFrom) {
     onStatus?.call('reg_up_photo');
     final f = await api.uploadFile('photo', r.photoPath!, name: r.photoFile);
@@ -31,7 +44,9 @@ Future<void> pushRegistration({
 }
 
 /// Uploads everything, saves, and submits the registration for approval.
-Future<void> submitRegistrationToServer({void Function(String statusKey)? onStatus}) async {
+Future<void> submitRegistrationToServer({
+  void Function(String statusKey)? onStatus,
+}) async {
   await pushRegistration(withVideo: true, onStatus: onStatus);
   onStatus?.call('reg_up_submit');
   await api.submitRegistration();

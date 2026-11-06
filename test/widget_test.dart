@@ -16,6 +16,7 @@ import 'package:noah_frontend_flutter/screens/me/profile_info_screen.dart';
 import 'package:noah_frontend_flutter/data/world_data.dart';
 import 'package:noah_frontend_flutter/data/registration_data.dart';
 import 'package:noah_frontend_flutter/screens/registration/registration_flow.dart';
+import 'package:noah_frontend_flutter/screens/registration/other_documents.dart';
 import 'package:noah_frontend_flutter/data/noahgram_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/main.dart';
@@ -825,7 +826,9 @@ void main() {
     await next('Complete registration');
     expect(find.text('Successful'), findsOneWidget); // the popup
     await next('OK');
-    expect(find.text('Registration successful'), findsOneWidget);
+    expect(find.text('Registration Successful'), findsOneWidget);
+    // The office number is on the page once the registration is done.
+    expect(find.text('Office: $kOfficePhone'), findsOneWidget);
     expect(find.text('Anitha Varghese · $kOfficePhone'), findsOneWidget);
 
     // The office returns the video, then approves.
@@ -869,6 +872,46 @@ void main() {
     expect(r.displayName, 'Mrs Anita Rao');
     expect(r.age, greaterThan(30));
   });
+
+  test(
+    'further documents: any two or three, each complete, and removing one',
+    () {
+      final r = registration;
+      r.start('+91 98765 43210');
+      r
+        ..idType = 'pan'
+        ..idNumber = 'ABCDE1234F'
+        ..idFile = 'pan.jpg';
+      expect(r.idValid, isTrue); // the main ID alone is enough
+      // A second ID needs its number and a file; a salary slip needs only the file.
+      r.documents.add(RegDocument(type: 'aadhaar', number: '123'));
+      expect(r.idValid, isFalse);
+      r.documents.last
+        ..number = '2345 6789 0123'
+        ..path = '/tmp/aadhaar.jpg';
+      expect(r.idValid, isTrue);
+      r.documents.add(RegDocument(type: 'salary', path: '/tmp/slip.jpg'));
+      r.documents.add(RegDocument(type: 'marriage'));
+      expect(r.idValid, isFalse); // no file yet
+      r.documents.removeLast();
+      expect(r.idValid, isTrue);
+      expect(r.documents.map((d) => d.type), ['aadhaar', 'salary']);
+      expect(docLabelKey('qualification'), 'doc_qualification');
+      expect(docLabelKey('pan'), 'reg_id_pan');
+      // Uploaded ones are sent as a list, with the number only for an ID.
+      r.documents
+        ..first.fileId = 'f1'
+        ..last.fileId = 'f2';
+      final sent = r.toApi()['documents'] as List;
+      expect(sent, [
+        {'fileId': 'f1', 'type': 'aadhaar', 'number': '234567890123'},
+        {'fileId': 'f2', 'type': 'salary'},
+      ]);
+      // A new registration starts with none.
+      r.start('+91 98765 43211');
+      expect(r.documents, isEmpty);
+    },
+  );
 
   test('Emirates ID and reference contact', () {
     expect(idNumberError('emirates', '784-1990-1234567-1'), isNull);
@@ -1608,5 +1651,55 @@ void main() {
     r.mobileNumber = '98765 43211';
     expect(r.mobileConfirmed, isFalse);
     expect(r.detailsValid, isFalse);
+  });
+
+  testWidgets('step 3 offers other documents, but not the main ID again', (
+    tester,
+  ) async {
+    final loader = FontLoader('PlusJakartaSans')
+      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+    await tester.runAsync(loader.load);
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    registration.start('+91 98765 43210');
+    registration
+      ..idType = 'pan'
+      ..touch();
+    await tester.pumpWidget(
+      AppLocale(
+        controller: LocaleController(),
+        child: MaterialApp(
+          theme: buildTheme(),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: OtherDocuments()),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Other documents'), findsOneWidget);
+    await tester.tap(find.text('Add another document'));
+    await tester.pumpAndSettle();
+    // Every kind is offered except the main ID (PAN).
+    for (final label in [
+      'Aadhaar card',
+      'Salary slip',
+      'Qualification certificate',
+      'Marriage certificate',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('PAN card'), findsNothing);
+    // Nothing can be added until a file is chosen.
+    await tester.tap(find.text('Salary slip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose file'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Add'))
+          .onPressed,
+      isNull,
+    );
   });
 }

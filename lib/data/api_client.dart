@@ -420,12 +420,13 @@ class ApiClient {
     String purpose,
     String path, {
     String? name,
+    String? docType,
   }) async {
     final bytes = await File(path).readAsBytes();
     final fileName = name ?? path.split(RegExp(r'[\\/]')).last;
     final d = await _send(
       'POST',
-      '/files?purpose=$purpose',
+      '/files?purpose=$purpose${docType == null ? '' : '&docType=$docType'}',
       bytes: bytes,
       headers: {
         'X-File-Name': Uri.encodeComponent(fileName),

@@ -20,6 +20,7 @@ import '../events/events_widgets.dart' show fullDate;
 import '../login_screen.dart';
 import 'registration_video.dart';
 import 'contact_confirm.dart';
+import 'other_documents.dart';
 import 'uploads.dart';
 import 'registration_widgets.dart';
 
@@ -1102,6 +1103,7 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
               ),
             ),
         ],
+        const OtherDocuments(),
       ],
     );
   }
