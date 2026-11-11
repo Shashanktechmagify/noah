@@ -243,7 +243,7 @@ class _ScanningState extends State<_Scanning> {
       HapticFeedback.mediumImpact();
       setState(() => _outcome = o);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = _why(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -274,10 +274,17 @@ class _ScanningState extends State<_Scanning> {
       }
     } on ApiException catch (e) {
       // Not recorded: say so, never a success.
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = _why(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// What went wrong, with the status and code the server gave, so a problem can be told apart and reported.
+  String _why(ApiException e) {
+    final detail = '${e.details['detail'] ?? ''}'.trim();
+    final tag = [if (e.status > 0) '${e.status}', e.code].join(' ');
+    return '${e.message} [$tag${detail.isEmpty ? '' : ': $detail'}]';
   }
 
   void _onDetect(BarcodeCapture capture) {
