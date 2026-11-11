@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/api_client.dart';
 import '../../data/live_events.dart';
@@ -495,22 +496,59 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                             },
                           ),
                         ),
+                      _Fact(
+                        icon: Icons.confirmation_number_outlined,
+                        label: tr(context, 'ev_entry'),
+                        value: [
+                          tr(context, e.paid ? 'ev_paid' : 'ev_free'),
+                          if (e.passRequired) tr(context, 'ev_pass_needed'),
+                        ].join(' · '),
+                      ),
+                      if (e.organisers.isNotEmpty)
+                        _Fact(
+                          icon: Icons.person_outline,
+                          label: tr(context, 'ev_hosted_by'),
+                          value: e.organisers.join(', '),
+                        ),
                     ],
                   ),
                 ),
               ),
-              if (e.description.trim().isNotEmpty) ...[
-                const SizedBox(height: 14),
+              // The place on the map, and the online link.
+              if (mapsLink(e) != null || e.meetingLink != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: WhiteCard(
-                    padding: const EdgeInsets.all(16),
-                    child: RichHtml(
-                      e.description,
-                      style: const TextStyle(fontSize: 14.5, height: 1.5),
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      if (mapsLink(e) != null)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _open(context, mapsLink(e)!),
+                            icon: const Icon(Icons.map_outlined),
+                            label: Text(tr(context, 'ev_open_maps')),
+                          ),
+                        ),
+                      if (mapsLink(e) != null && e.meetingLink != null)
+                        const SizedBox(width: 10),
+                      if (e.meetingLink != null)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _open(context, Uri.parse(e.meetingLink!)),
+                            icon: const Icon(Icons.videocam_outlined),
+                            label: Text(tr(context, 'ev_join_online')),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+              if (e.description.trim().isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _Section(title: tr(context, 'ev_about'), html: e.description),
+              ],
+              if (e.terms.trim().isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _Section(title: tr(context, 'ev_terms'), html: e.terms),
               ],
               const SizedBox(height: 18),
               Padding(
@@ -522,6 +560,19 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
         );
       },
     );
+  }
+
+  /// Opens a link in the phone's Maps app or browser; says so if nothing can open it.
+  Future<void> _open(BuildContext context, Uri uri) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && context.mounted) {
+      toast(context, tr(context, 'ev_cannot_open'));
+    }
   }
 
   Widget _actions(BuildContext context, LiveEvent e, LivePass? pass) {
@@ -573,6 +624,33 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
       ),
     );
   }
+}
+
+/// A titled card of text written in the console.
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.html});
+
+  final String title;
+  final String html;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: WhiteCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          RichHtml(html, style: const TextStyle(fontSize: 14.5, height: 1.5)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Fact extends StatelessWidget {

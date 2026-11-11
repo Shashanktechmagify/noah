@@ -19,12 +19,21 @@ Map<String, dynamic> _event({
   'start': '2026-11-15T12:30:00.000Z',
   'end': '2026-11-15T16:30:00.000Z',
   'timezone': 'Asia/Kolkata',
-  'place': {'name': 'Main Hall', 'address': '1 Church Road'},
+  'place': {
+    'name': 'Main Hall',
+    'address': '1 Church Road',
+    'lat': '19.2183',
+    'lon': '72.9781',
+  },
   'passRequired': true,
   'bookingBlocked': null,
   'seats': {'total': 100, 'left': 40},
   'status': status,
   'mine': mine,
+  'terms': '<p>Doors close at 6</p>',
+  'organisers': ['Ps John Mathew'],
+  'meetingLink': 'https://meet.example.com/abc',
+  'paid': false,
 };
 
 Map<String, dynamic> _pass({String status = 'confirmed', String? qr}) => {
@@ -162,4 +171,94 @@ void main() {
     expect(find.text('Show QR pass'), findsOneWidget);
     expect(find.text('Cancel booking'), findsOneWidget);
   });
+
+  test('the event keeps its map position, host, terms and online link', () {
+    final e = LiveEvent.fromJson(_event());
+    expect(e.organisers, ['Ps John Mathew']);
+    expect(e.terms, '<p>Doors close at 6</p>');
+    expect(e.meetingLink, 'https://meet.example.com/abc');
+    expect(e.paid, isFalse);
+    expect(e.placeLat, '19.2183');
+    // Maps opens on the position when there is one, else on the address.
+    expect(mapsLink(e)!.queryParameters['query'], '19.2183,72.9781');
+    final noPosition = LiveEvent.fromJson({
+      ..._event(),
+      'place': {
+        'name': 'Main Hall',
+        'address': '1 Church Road',
+        'lat': null,
+        'lon': null,
+      },
+    });
+    expect(
+      mapsLink(noPosition)!.queryParameters['query'],
+      'Main Hall, 1 Church Road',
+    );
+    // Zero, zero and out-of-range positions are not real places.
+    final zero = LiveEvent.fromJson({
+      ..._event(),
+      'place': {'name': 'Main Hall', 'address': '', 'lat': '0', 'lon': '0'},
+    });
+    expect(mapsLink(zero)!.queryParameters['query'], 'Main Hall');
+    final nothing = LiveEvent.fromJson({
+      ..._event(),
+      'place': {'name': '', 'address': '', 'lat': '95', 'lon': '10'},
+    });
+    expect(mapsLink(nothing), isNull);
+    final bare = LiveEvent.fromJson({'id': '1', 'name': 'x'});
+    expect(bare.organisers, isEmpty);
+    expect(bare.meetingLink, isNull);
+  });
+
+  testWidgets(
+    'the event page shows every detail: about, host, entry, map, online link, terms',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 2200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      liveEvents
+        ..events = [LiveEvent.fromJson(_event())]
+        ..passes = []
+        ..loaded = true;
+      await tester.pumpWidget(_app(const LiveEventScreen(eventId: '70')));
+      await tester.pumpAndSettle();
+      expect(find.text('About this event'), findsOneWidget);
+      // Text written in the console is drawn as formatted text, not a plain Text.
+      expect(
+        find.textContaining('A day together', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('Hosted by'), findsOneWidget);
+      expect(find.text('Ps John Mathew'), findsOneWidget);
+      expect(find.text('Free · Pass needed'), findsOneWidget);
+      expect(find.text('Open in Maps'), findsOneWidget);
+      expect(find.text('Join online'), findsOneWidget);
+      expect(find.text('Terms'), findsOneWidget);
+      expect(
+        find.textContaining('Doors close at 6', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.textContaining('1 Church Road'), findsOneWidget);
+
+      // An event with nothing more to say shows no empty boxes.
+      liveEvents.events = [
+        LiveEvent.fromJson({
+          'id': '70',
+          'name': 'Plain',
+          'status': 'upcoming',
+          'place': {'name': '', 'address': ''},
+        }),
+      ];
+      liveEvents.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(find.text('Open in Maps'), findsNothing);
+      expect(find.text('Join online'), findsNothing);
+      expect(find.text('Terms'), findsNothing);
+      expect(find.text('About this event'), findsNothing);
+    },
+  );
 }

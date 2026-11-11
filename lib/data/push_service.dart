@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
+import 'live_events.dart';
 import 'ministry_data.dart';
 import 'notifications_data.dart';
 import 'open_target.dart';
@@ -84,9 +85,11 @@ class PushService {
     final prefs = await SharedPreferences.getInstance();
     final mine = '${registration.phone}|$token';
     final seen = (prefs.getString('noah_push_reg') ?? '').split('@');
-    final recent = seen.length == 2 &&
+    final recent =
+        seen.length == 2 &&
         seen[0] == mine &&
-        DateTime.now().millisecondsSinceEpoch - (int.tryParse(seen[1]) ?? 0) < 12 * 3600 * 1000;
+        DateTime.now().millisecondsSinceEpoch - (int.tryParse(seen[1]) ?? 0) <
+            12 * 3600 * 1000;
     if (recent) return;
     try {
       await api.registerDevice(
@@ -94,7 +97,10 @@ class PushService {
         token,
         defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
       );
-      await prefs.setString('noah_push_reg', '$mine@${DateTime.now().millisecondsSinceEpoch}');
+      await prefs.setString(
+        'noah_push_reg',
+        '$mine@${DateTime.now().millisecondsSinceEpoch}',
+      );
     } on ApiException catch (e) {
       debugPrint('Could not register this phone for push: ${e.message}');
     }
@@ -112,7 +118,9 @@ class PushService {
   /// Android shows no banner for a push that arrives while the app is open, so draw one.
   Future<void> _initBanners() async {
     await _banners.initialize(
-      settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
       // A banner drawn by the app itself was tapped.
       onDidReceiveNotificationResponse: (r) {
         final payload = r.payload;
@@ -123,7 +131,9 @@ class PushService {
       },
     );
     await _banners
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_channel);
   }
 
@@ -136,7 +146,12 @@ class PushService {
       body: n.body,
       payload: jsonEncode(m.data),
       notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(_channel.id, _channel.name, importance: Importance.high, priority: Priority.high),
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
       ),
     );
   }
@@ -159,6 +174,8 @@ class PushService {
       }
     } else {
       notificationsState.load();
+      // A new event, or being marked present: the Events tab shows it at once.
+      if ('${data['type']}'.startsWith('event')) liveEvents.load();
     }
   }
 

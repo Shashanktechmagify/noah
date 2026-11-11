@@ -4,6 +4,32 @@ import 'api_client.dart';
 
 DateTime? _time(Object? v) => v == null ? null : DateTime.tryParse('$v');
 
+String? _text(Object? v) =>
+    v == null || '$v'.trim().isEmpty ? null : '$v'.trim();
+
+/// A link that shows the event's place in the phone's Maps app: its position when the office gave one, else its
+/// address (or name). Null when there is nothing to show.
+Uri? mapsLink(LiveEvent e) {
+  final lat = double.tryParse(e.placeLat ?? '');
+  final lon = double.tryParse(e.placeLon ?? '');
+  final onMap =
+      lat != null &&
+      lon != null &&
+      lat.abs() <= 90 &&
+      lon.abs() <= 180 &&
+      !(lat == 0 && lon == 0);
+  final words = [
+    e.placeName,
+    e.placeAddress,
+  ].where((p) => p.trim().isNotEmpty).join(', ');
+  final query = onMap ? '$lat,$lon' : words;
+  if (query.isEmpty) return null;
+  return Uri.https('www.google.com', '/maps/search/', {
+    'api': '1',
+    'query': query,
+  });
+}
+
 /// An event the office published, as the server shows it to this member.
 class LiveEvent {
   LiveEvent({
@@ -22,6 +48,12 @@ class LiveEvent {
     required this.status,
     required this.passId,
     required this.passStatus,
+    this.placeLat,
+    this.placeLon,
+    this.terms = '',
+    this.organisers = const [],
+    this.meetingLink,
+    this.paid = false,
   });
 
   final String id;
@@ -36,6 +68,22 @@ class LiveEvent {
   final DateTime? end;
   final String placeName;
   final String placeAddress;
+
+  /// Where the place is on the map (decimal degrees as text), when the office gave it.
+  final String? placeLat;
+  final String? placeLon;
+
+  /// HTML: the terms of the event.
+  final String terms;
+
+  /// Who hosts or preaches.
+  final List<String> organisers;
+
+  /// A link to join online, when there is one.
+  final String? meetingLink;
+
+  /// A paid event (it can be seen, but not booked in the app yet).
+  final bool paid;
   final bool passRequired;
 
   /// `paid` or `partners_only` when the app cannot book it, else null.
@@ -68,6 +116,14 @@ class LiveEvent {
       end: _time(j['end']),
       placeName: '${place['name'] ?? ''}',
       placeAddress: '${place['address'] ?? ''}',
+      placeLat: _text(place['lat']),
+      placeLon: _text(place['lon']),
+      terms: '${j['terms'] ?? ''}',
+      organisers: [
+        for (final o in (j['organisers'] as List?) ?? const []) '$o',
+      ],
+      meetingLink: _text(j['meetingLink']),
+      paid: j['paid'] == true,
       passRequired: j['passRequired'] == true,
       bookingBlocked: j['bookingBlocked'] as String?,
       seatsTotal: (seats?['total'] as num?)?.toInt(),
