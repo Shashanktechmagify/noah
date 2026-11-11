@@ -115,6 +115,11 @@ class _MainShellState extends State<MainShell> {
     final target = openRequest.value;
     if (target == null || !mounted) return;
     openRequest.value = null;
+    // A new event: its page is the Events tab (the Me tab is only for what is about the member).
+    if (target.type.startsWith('event')) {
+      setState(() => _page = 2);
+      return;
+    }
     setState(() => _page = 4);
     _loadLazy(4);
     // The Me tab's navigator may only just have been built.
