@@ -437,6 +437,26 @@ class ApiClient {
     return UploadedFile('${d['id']}', '${d['name']}');
   }
 
+  // ── Events and entry passes ──────────────────────────────────────────
+
+  /// Events the office published for this member, each with its status, seats and this member's own booking.
+  Future<List<Map<String, dynamic>>> getEvents() async {
+    final d = await _send('GET', '/events');
+    return ((d['events'] as List?) ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  /// Books an event: one pass with a QR code (asking again returns the same pass).
+  Future<Map<String, dynamic>> bookEvent(String eventId) =>
+      _send('POST', '/events/$eventId/book', json: const {});
+
+  Future<List<Map<String, dynamic>>> getPasses() async {
+    final d = await _send('GET', '/passes');
+    return ((d['passes'] as List?) ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> cancelPass(String passId) =>
+      _send('POST', '/passes/$passId/cancel', json: const {});
+
   // ── Chat with the church ─────────────────────────────────────────────
 
   /// `{ contacts: [{kind, name, available, lastMessage, unread}], totalUnread }`.

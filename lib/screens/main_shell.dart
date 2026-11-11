@@ -5,6 +5,7 @@ import '../widgets/insta_icon.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import 'events/events_screen.dart';
+import 'events/live_events_screen.dart';
 import 'home_screen.dart';
 import '../widgets/prayer_dialog.dart';
 import 'jodie/jodie_screen.dart';
@@ -137,7 +138,9 @@ class _MainShellState extends State<MainShell> {
             .where((t) => t.id == target.threadId)
             .firstOrNull;
         if (thread != null && mounted) {
-          nav.push(MaterialPageRoute(builder: (_) => const PastorInboxScreen()));
+          nav.push(
+            MaterialPageRoute(builder: (_) => const PastorInboxScreen()),
+          );
           nav.push(
             MaterialPageRoute(builder: (_) => PastorChatScreen(thread: thread)),
           );
@@ -151,7 +154,9 @@ class _MainShellState extends State<MainShell> {
           : ministry.contacts.where((c) => c.kind == kind).firstOrNull;
       if (contact != null && mounted) {
         nav.push(
-          MaterialPageRoute(builder: (_) => MinistryChatScreen(contact: contact)),
+          MaterialPageRoute(
+            builder: (_) => MinistryChatScreen(contact: contact),
+          ),
         );
       }
     }
@@ -257,7 +262,10 @@ class _MainShellState extends State<MainShell> {
           children: [
             const HomeScreen(),
             const NoahgramScreen(),
-            const TabNavigator(root: EventsScreen()),
+            // A member signed in to the server sees the office's events and books passes; the demo keeps the sample list.
+            TabNavigator(
+              root: liveApi ? const LiveEventsScreen() : const EventsScreen(),
+            ),
             const JodieScreen(),
             TabNavigator(root: const MeScreen(), navigatorKey: _meNav),
             NoahtubeScreen(),
