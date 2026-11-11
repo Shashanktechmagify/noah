@@ -11,6 +11,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/rich_html.dart';
 import '../jodie/jodie_widgets.dart' show clock, toast;
 import 'events_widgets.dart' show monthShort;
+import 'pass_scanner_screen.dart';
 
 const _red = Color(0xFFD6334B);
 
@@ -85,6 +86,16 @@ class _LiveEventsScreenState extends State<LiveEventsScreen> {
           leadingIcon: Icons.calendar_today_outlined,
           bandHeight: 84,
           onRefresh: liveEvents.load,
+          // Door staff (the scanner role, or an office admin) can scan entry passes.
+          actions: [
+            if (api.canScan)
+              GlassCircle(
+                icon: Icons.qr_code_scanner,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PassScannerScreen()),
+                ),
+              ),
+          ],
           children: [
             _Toggle(
               passes: _passes,

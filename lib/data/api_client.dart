@@ -437,6 +437,38 @@ class ApiClient {
     return UploadedFile('${d['id']}', '${d['name']}');
   }
 
+  // ── Door staff: scanning entry passes ────────────────────────────────
+
+  /// The scanner role (or an office admin) may check and admit passes in the app.
+  bool get canScan =>
+      roles.any((r) => const {'scanner', 'admin', 'superAdmin'}.contains(r));
+
+  /// Events that can be scanned for now.
+  Future<List<Map<String, dynamic>>> getScanEvents() async {
+    final d = await _send('GET', '/staff/events');
+    return ((d['events'] as List?) ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  /// Checks a pass (a scanned [token] or a typed [reference]); with [confirm] it lets the member in.
+  Future<Map<String, dynamic>> scanPass(
+    String eventId, {
+    String? token,
+    String? reference,
+    bool confirm = false,
+  }) => _send(
+    'POST',
+    '/staff/events/$eventId/scan',
+    json: {
+      'token': ?token,
+      'reference': ?reference,
+      if (confirm) 'confirm': true,
+      'deviceRef': ?deviceId,
+    },
+  );
+
+  Future<Map<String, dynamic>> scanCounts(String eventId) =>
+      _send('GET', '/staff/events/$eventId/attendance');
+
   // ── Events and entry passes ──────────────────────────────────────────
 
   /// Events the office published for this member, each with its status, seats and this member's own booking.
