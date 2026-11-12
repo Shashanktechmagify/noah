@@ -72,5 +72,17 @@
 	<string>Used to record your voice in the video KYC.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to choose your profile photo and ID proof.</string>
+	<!-- A shared Noahgram link opens the app as noah://post/<id>. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>noah.post</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>noah</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

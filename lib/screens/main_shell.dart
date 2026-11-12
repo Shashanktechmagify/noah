@@ -13,6 +13,8 @@ import 'bible_study_screen.dart';
 import 'manna_screen.dart';
 import 'menu_sheet.dart';
 import 'me_screen.dart';
+import 'noahgram/live/live_noahgram_screen.dart';
+import 'noahgram/live/ng_pages.dart';
 import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
 import 'word_screens.dart';
@@ -96,6 +98,7 @@ class _MainShellState extends State<MainShell> {
   int _page = 0;
   bool _menuOpen = false;
   final _meNav = GlobalKey<NavigatorState>();
+  final _ngNav = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -116,6 +119,32 @@ class _MainShellState extends State<MainShell> {
     final target = openRequest.value;
     if (target == null || !mounted) return;
     openRequest.value = null;
+    // A like, a comment, a follow or a shared link: Noahgram opens on that post (or that member).
+    if (target.isNoahgram) {
+      setState(() => _page = 1);
+      await WidgetsBinding.instance.endOfFrame;
+      final nav = _ngNav.currentState;
+      if (nav == null || !mounted) return;
+      nav.popUntil((r) => r.isFirst);
+      final post = target.postId;
+      if (post != null) {
+        final talk =
+            target.type == 'noahgram_comment' ||
+            target.type == 'noahgram_reply';
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => NgPostScreen(postId: post, openComments: talk),
+          ),
+        );
+      } else if (target.memberId != null) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => NgProfileScreen(memberId: target.memberId!),
+          ),
+        );
+      }
+      return;
+    }
     // A new event: its page is the Events tab (the Me tab is only for what is about the member).
     if (target.type.startsWith('event')) {
       setState(() => _page = 2);
@@ -261,7 +290,13 @@ class _MainShellState extends State<MainShell> {
           index: _page,
           children: [
             const HomeScreen(),
-            const NoahgramScreen(),
+            // A member signed in to the server uses the live Noahgram; the demo keeps the sample one.
+            liveApi
+                ? TabNavigator(
+                    root: const LiveNoahgramScreen(),
+                    navigatorKey: _ngNav,
+                  )
+                : const NoahgramScreen(),
             // A member signed in to the server sees the office's events and books passes; the demo keeps the sample list.
             TabNavigator(
               root: liveApi ? const LiveEventsScreen() : const EventsScreen(),

@@ -28,6 +28,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- A shared Noahgram link: its web page hands over to noah://post/<id>, which opens that post. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="noah" android:host="post"/>
+            </intent-filter>
         </activity>
         <!-- The phone's crop and rotate screen (image_cropper), used for the registration photo and ID proof. -->
         <activity

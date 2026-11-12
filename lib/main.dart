@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
 import 'data/api_client.dart';
+import 'data/deep_links.dart';
+import 'data/live_noahgram.dart';
 import 'data/ministry_data.dart';
 import 'data/notifications_data.dart';
 import 'data/pastor_data.dart';
@@ -20,6 +22,7 @@ void main() {
     ministry.stopPolling();
     pastorInbox.stop();
     notificationsState.clear();
+    liveNoahgram.clear();
     appNavigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,
@@ -31,6 +34,7 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+  startDeepLinks(); // a shared Noahgram link opens the app on that post
   runApp(const NoahApp());
 }
 

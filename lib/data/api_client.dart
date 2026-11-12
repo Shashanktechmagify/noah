@@ -469,6 +469,91 @@ class ApiClient {
   Future<Map<String, dynamic>> scanCounts(String eventId) =>
       _send('GET', '/staff/events/$eventId/attendance');
 
+  // ── Noahgram ─────────────────────────────────────────────────────────
+
+  /// A post's picture or video, or a member's profile photo, as other members may see it.
+  String mediaUrl(String fileId) => '$kApiBase/noahgram/media/$fileId';
+
+  /// A page of posts or reels (`kind`: `posts`, `reels`, or `all` for one member's own page), newest first.
+  Future<Map<String, dynamic>> ngFeed({
+    String kind = 'posts',
+    String? before,
+    String? author,
+  }) => _send(
+    'GET',
+    '/noahgram/feed?kind=$kind${before == null ? '' : '&before=$before'}${author == null ? '' : '&author=$author'}',
+  );
+
+  Future<Map<String, dynamic>> ngExplore(String query) => _send(
+    'GET',
+    '/noahgram/explore${query.isEmpty ? '' : '?q=${Uri.encodeQueryComponent(query)}'}',
+  );
+
+  /// Members whose name matches [query].
+  Future<Map<String, dynamic>> ngPeople(String query) =>
+      _send('GET', '/noahgram/people?q=${Uri.encodeQueryComponent(query)}');
+
+  Future<Map<String, dynamic>> ngSaved() => _send('GET', '/noahgram/saved');
+
+  Future<Map<String, dynamic>> ngPost(String id) =>
+      _send('GET', '/noahgram/posts/$id');
+
+  /// Makes a post from files already uploaded with purpose `post` (a picture) or `reel` (a video).
+  Future<Map<String, dynamic>> ngCreate({
+    String caption = '',
+    String? photoFileId,
+    String? videoFileId,
+    String? thumbnailFileId,
+  }) => _send(
+    'POST',
+    '/noahgram/posts',
+    json: {
+      'caption': caption,
+      'photoFileId': ?photoFileId,
+      'videoFileId': ?videoFileId,
+      'thumbnailFileId': ?thumbnailFileId,
+    },
+    timeout: const Duration(seconds: 40),
+  );
+
+  Future<Map<String, dynamic>> ngRemove(String id) =>
+      _send('DELETE', '/noahgram/posts/$id');
+
+  Future<Map<String, dynamic>> ngLike(String id, bool liked) =>
+      _send('POST', '/noahgram/posts/$id/like', json: {'liked': liked});
+
+  Future<Map<String, dynamic>> ngView(String id) =>
+      _send('POST', '/noahgram/posts/$id/view', json: {});
+
+  Future<Map<String, dynamic>> ngSave(String id, bool saved) =>
+      _send('POST', '/noahgram/posts/$id/save', json: {'saved': saved});
+
+  Future<Map<String, dynamic>> ngComments(String id) =>
+      _send('GET', '/noahgram/posts/$id/comments');
+
+  Future<Map<String, dynamic>> ngAddComment(
+    String id,
+    String text, {
+    String? parentId,
+  }) => _send(
+    'POST',
+    '/noahgram/posts/$id/comments',
+    json: {'text': text, 'parentId': ?parentId},
+  );
+
+  Future<Map<String, dynamic>> ngRemoveComment(String id, String commentId) =>
+      _send('DELETE', '/noahgram/posts/$id/comments/$commentId');
+
+  /// A member's Noahgram page; `me` is the signed-in member.
+  Future<Map<String, dynamic>> ngProfile(String id) =>
+      _send('GET', '/noahgram/members/$id');
+
+  Future<Map<String, dynamic>> ngFollow(String id, bool following) => _send(
+    'POST',
+    '/noahgram/members/$id/follow',
+    json: {'following': following},
+  );
+
   // ── Events and entry passes ──────────────────────────────────────────
 
   /// Events the office published for this member, each with its status, seats and this member's own booking.
