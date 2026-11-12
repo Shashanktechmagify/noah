@@ -17,15 +17,16 @@ Future<bool> confirmContact(
   String? email,
   String? dial,
   String? number,
+
+  /// The number is the WhatsApp number of My information (not a registration contact).
+  bool whatsapp = false,
 }) async {
   OtpSent? sent;
   if (liveApi) {
     try {
-      sent = await api.sendContactCode(
-        email: email,
-        dial: dial,
-        number: number,
-      );
+      sent = whatsapp
+          ? await api.sendWhatsappCode(dial!, number!)
+          : await api.sendContactCode(email: email, dial: dial, number: number);
     } on ApiException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
@@ -42,6 +43,7 @@ Future<bool> confirmContact(
       email: email,
       dial: dial,
       number: number,
+      whatsapp: whatsapp,
       sent: sent,
       shownTo: sent?.sentTo ?? email ?? '$dial $number',
     ),
@@ -54,6 +56,7 @@ class _CodeDialog extends StatefulWidget {
     required this.email,
     required this.dial,
     required this.number,
+    required this.whatsapp,
     required this.sent,
     required this.shownTo,
   });
@@ -61,6 +64,7 @@ class _CodeDialog extends StatefulWidget {
   final String? email;
   final String? dial;
   final String? number;
+  final bool whatsapp;
   final OtpSent? sent;
   final String shownTo;
 
@@ -112,12 +116,16 @@ class _CodeDialogState extends State<_CodeDialog> {
     }
     setState(() => _busy = true);
     try {
-      await api.verifyContact(
-        _code.text,
-        email: widget.email,
-        dial: widget.dial,
-        number: widget.number,
-      );
+      if (widget.whatsapp) {
+        await api.verifyWhatsapp(widget.dial!, widget.number!, _code.text);
+      } else {
+        await api.verifyContact(
+          _code.text,
+          email: widget.email,
+          dial: widget.dial,
+          number: widget.number,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -133,11 +141,13 @@ class _CodeDialogState extends State<_CodeDialog> {
       return;
     }
     try {
-      final sent = await api.sendContactCode(
-        email: widget.email,
-        dial: widget.dial,
-        number: widget.number,
-      );
+      final sent = widget.whatsapp
+          ? await api.sendWhatsappCode(widget.dial!, widget.number!)
+          : await api.sendContactCode(
+              email: widget.email,
+              dial: widget.dial,
+              number: widget.number,
+            );
       if (!mounted) return;
       _code.clear();
       setState(() {

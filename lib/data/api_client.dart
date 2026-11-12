@@ -322,6 +322,24 @@ class ApiClient {
     );
   }
 
+  /// Sends the code that confirms the WhatsApp number a member wants to put in My information.
+  Future<OtpSent> sendWhatsappCode(String dial, String number) async => _otpSent(
+    await _send(
+      'POST',
+      '/profile/whatsapp/code',
+      json: {'countryCode': dial, 'mobileNumber': number},
+    ),
+  );
+
+  /// Checks that code; only then does the server take a request to change the WhatsApp number.
+  Future<void> verifyWhatsapp(String dial, String number, String code) async {
+    await _send(
+      'POST',
+      '/profile/whatsapp/verify',
+      json: {'countryCode': dial, 'mobileNumber': number, 'code': code},
+    );
+  }
+
   Map<String, dynamic> _contact(String? email, String? dial, String? number) =>
       email != null
       ? {'channel': 'email', 'email': email.trim().toLowerCase()}

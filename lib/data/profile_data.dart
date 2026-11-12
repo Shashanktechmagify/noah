@@ -10,6 +10,9 @@ enum PfKind {
   text,
   date,
   choice,
+
+  /// Several of the options may be picked; kept as one text, separated by commas.
+  multi,
   phone,
   email,
   pin,
@@ -289,9 +292,8 @@ const kProfileSections = [
   PfSection('pf_sec_contact', [
     PfField('phone1', 'pf_phone1', PfKind.phone, required: true),
     PfField('email', 'reg_email', PfKind.email, required: true),
-    PfField('email2', 'pf_email2', PfKind.email),
+    // The second phone is the member's WhatsApp number: a change is confirmed with a code sent to it.
     PfField('phone2', 'pf_phone2', PfKind.phone),
-    PfField('landline', 'pf_landline', PfKind.phone),
     // Set automatically from the registration date; members cannot change it.
     PfField('joined', 'pf_joined', PfKind.readOnly),
   ]),
@@ -314,7 +316,7 @@ const kProfileSections = [
       options: _designations,
     ),
     PfField('employed', 'pf_org_name', PfKind.text),
-    PfField('education', 'pf_education', PfKind.choice, options: _educations),
+    PfField('education', 'pf_education', PfKind.multi, options: _educations),
     PfField(
       'income',
       'pf_income',
@@ -338,20 +340,6 @@ const kProfileSections = [
       PfKind.choice,
       required: true,
       options: _motherTongues,
-    ),
-    PfField(
-      'comm_language',
-      'pf_comm_lang',
-      PfKind.choice,
-      required: true,
-      options: [
-        ('English', null),
-        ('Hindi', null),
-        ('Marathi', null),
-        ('Kannada', null),
-        ('Malayalam', null),
-        ('Telugu', null),
-      ],
     ),
     PfField('groups', 'pf_groups', PfKind.text),
     PfField('religion', 'pf_religion', PfKind.text),
@@ -627,6 +615,17 @@ class ProfileState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Years and whole months since the date of birth (24 years 2 months), or null.
+  ({int years, int months})? get ageParts {
+    final d = DateTime.tryParse(get('dob'));
+    if (d == null) return null;
+    final now = DateTime.now();
+    var months = (now.year - d.year) * 12 + now.month - d.month;
+    if (now.day < d.day) months--;
+    if (months < 0) return null;
+    return (years: months ~/ 12, months: months % 12);
+  }
+
   /// Whole years since the date of birth, or null.
   int? get age {
     final d = DateTime.tryParse(get('dob'));
@@ -698,7 +697,6 @@ class ProfileState extends ChangeNotifier {
       ..['location'] = 'Thane, Maharashtra, India'
       ..['pin'] = '400601'
       ..['mother_tongue'] = 'Konkani'
-      ..['comm_language'] = 'English'
       ..['religion'] = 'Christian'
       ..['joined'] = '2019-06-02';
   }

@@ -13,6 +13,7 @@ import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../jodie/jodie_widgets.dart' show toast;
+import '../registration/contact_confirm.dart' show confirmContact;
 import '../registration/registration_widgets.dart' show DateInputField;
 import 'sub_page.dart';
 
@@ -431,7 +432,14 @@ String _display(BuildContext context, PfField f, String v) {
 
 /// The value shown in a row: age is worked out, everything else is stored.
 String _shown(BuildContext context, PfField f) {
-  if (f.id == 'age') return profile.age?.toString() ?? '';
+  if (f.id == 'age') {
+    final a = profile.ageParts;
+    if (a == null) return '';
+    final years = tr(context, a.years == 1 ? 'pf_year' : 'pf_years', args: {'n': '${a.years}'});
+    if (a.months == 0) return years;
+    final months = tr(context, a.months == 1 ? 'pf_month' : 'pf_months', args: {'n': '${a.months}'});
+    return '$years $months';
+  }
   final v = profile.get(f.id);
   return v.isEmpty ? '' : _display(context, f, v);
 }
@@ -602,6 +610,37 @@ class _RequestDialogState extends State<_RequestDialog> {
 
   PfField get f => widget.field;
 
+  bool _confirming = false;
+
+  /// Keeps the new value as a draft. A WhatsApp number is kept only after the code sent to it was entered.
+  Future<void> _done(BuildContext context, String v) async {
+    if (f.id == 'phone2' && liveApi) {
+      final m = RegExp(r'^(\+\d{1,4})\s*(\d[\d\s-]*)$').firstMatch(v.trim());
+      // A number typed without a country code is taken as an Indian one.
+      final digits = v.replaceAll(RegExp(r'\D'), '');
+      final dial = m?.group(1) ?? '+91';
+      final number = m != null
+          ? m.group(2)!.replaceAll(RegExp(r'\D'), '')
+          : digits.length > 10
+          ? digits.substring(digits.length - 10)
+          : digits;
+      setState(() => _confirming = true);
+      final ok = await confirmContact(
+        context,
+        dial: dial,
+        number: number,
+        whatsapp: true,
+      );
+      if (!mounted) return;
+      setState(() => _confirming = false);
+      if (!ok) return;
+      profile.stage(f.id, '$dial $number');
+    } else {
+      profile.stage(f.id, v);
+    }
+    if (context.mounted) Navigator.of(context).pop(true);
+  }
+
   @override
   void dispose() {
     _c.dispose();
@@ -616,7 +655,9 @@ class _RequestDialogState extends State<_RequestDialog> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => _OptionSheet(field: f, selected: _value),
+      builder: (_) => f.kind == PfKind.multi
+          ? _MultiSheet(field: f, selected: _value)
+          : _OptionSheet(field: f, selected: _value),
     );
     if (picked != null) setState(() => _value = picked);
   }
@@ -661,8 +702,9 @@ class _RequestDialogState extends State<_RequestDialog> {
                 : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
           }),
         );
-      case PfKind.choice:
-        // Every choice is a dropdown: a sheet with the options (and a search box when the list is long).
+      case PfKind.choice || PfKind.multi:
+        // A choice is a dropdown: a sheet with the options (and a search box when the list is long).
+        // A list (education) lets several be ticked.
         return _pickerField(context);
       default:
         final error = _error(f, _value);
@@ -799,15 +841,87 @@ class _RequestDialogState extends State<_RequestDialog> {
                   flex: 2,
                   child: GradientButton(
                     label: tr(context, 'pf_done'),
-                    onPressed: valid
-                        ? () {
-                            profile.stage(f.id, v);
-                            Navigator.of(context).pop(true);
-                          }
+                    onPressed: valid && !_confirming
+                        ? () => _done(context, v)
                         : null,
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A list with tick boxes, for a detail that can hold several choices (education). Returns them joined by commas.
+class _MultiSheet extends StatefulWidget {
+  const _MultiSheet({required this.field, required this.selected});
+
+  final PfField field;
+  final String selected;
+
+  @override
+  State<_MultiSheet> createState() => _MultiSheetState();
+}
+
+class _MultiSheetState extends State<_MultiSheet> {
+  late final Set<String> _picked = {
+    for (final part in widget.selected.split(','))
+      if (part.trim().isNotEmpty)
+        widget.field.optionFor(part.trim())?.$1 ?? part.trim(),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final f = widget.field;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.75,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(
+                tr(context, f.labelKey),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final (value, key) in f.options!)
+                    CheckboxListTile(
+                      value: _picked.contains(value),
+                      activeColor: AppColors.magenta,
+                      title: Text(key == null ? value : tr(context, key)),
+                      onChanged: (on) => setState(() {
+                        if (on == true) {
+                          _picked.add(value);
+                        } else {
+                          _picked.remove(value);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: GradientButton(
+                label: tr(context, 'pf_done'),
+                onPressed: () {
+                  // In the order of the list, not the order they were ticked.
+                  final ordered = [
+                    for (final (value, _) in f.options!)
+                      if (_picked.contains(value)) value,
+                    ..._picked.where((p) => f.optionFor(p) == null),
+                  ];
+                  Navigator.of(context).pop(ordered.join(', '));
+                },
+              ),
             ),
           ],
         ),
