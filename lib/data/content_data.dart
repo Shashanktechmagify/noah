@@ -83,6 +83,11 @@ Manna mannaFromJson(Map<String, dynamic> j) {
     likes: (j['likes'] as num?)?.toInt() ?? 0,
     views: (j['views'] as num?)?.toInt() ?? 0,
     comments: (j['comments'] as num?)?.toInt() ?? 0,
+    media: [
+      for (final m in (j['media'] as List?) ?? const [])
+        if (m is Map && '${m['url'] ?? ''}'.startsWith('http'))
+          EmbedMedia.fromJson(Map<String, dynamic>.from(m)),
+    ],
   );
 }
 

@@ -1,5 +1,34 @@
 /// Daily Manna readings. Demo content: the server will supply these later,
 /// already translated (scripture comes from a licensed Bible per language).
+/// A video or link the office attached to an entry (an "embed" in the console). The server has already turned embed
+/// code into an address; the app never runs embed code.
+class EmbedMedia {
+  const EmbedMedia({
+    required this.kind,
+    required this.url,
+    this.host = '',
+    this.title,
+    this.thumbnail,
+  });
+
+  /// `youtube`, `vimeo` or `link`.
+  final String kind;
+  final String url;
+  final String host;
+  final String? title;
+
+  /// A picture for a video (YouTube has one).
+  final String? thumbnail;
+
+  factory EmbedMedia.fromJson(Map<String, dynamic> j) => EmbedMedia(
+    kind: '${j['kind'] ?? 'link'}',
+    url: '${j['url'] ?? ''}',
+    host: '${j['host'] ?? ''}',
+    title: j['title'] == null ? null : '${j['title']}',
+    thumbnail: j['thumbnail'] == null ? null : '${j['thumbnail']}',
+  );
+}
+
 class Manna {
   const Manna({
     required this.id,
@@ -17,6 +46,7 @@ class Manna {
     this.likes = 0,
     this.views = 0,
     this.comments = 0,
+    this.media = const [],
   });
 
   final String id;
@@ -41,6 +71,9 @@ class Manna {
   final int likes;
   final int views;
   final int comments;
+
+  /// Videos and links the office attached (shown under the message).
+  final List<EmbedMedia> media;
 }
 
 /// Newest first. The first entry is "today's Manna".

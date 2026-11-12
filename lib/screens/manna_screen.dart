@@ -6,6 +6,7 @@ import '../data/manna_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/content_card.dart';
+import '../widgets/embed_cards.dart';
 import '../widgets/engagement_bar.dart';
 import '../data/manna_engagement.dart';
 import '../widgets/page_scaffold.dart';
@@ -183,6 +184,11 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
               style: const TextStyle(fontSize: 16, height: 1.5),
             ),
           ),
+          // Videos and links the office attached (the console's Embed fields), under the message.
+          if (manna.media.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            EmbedCards(items: manna.media),
+          ],
           const SizedBox(height: 18),
           if (manna.prayer.isNotEmpty) ...[
             const Divider(height: 1, indent: 20, endIndent: 20),

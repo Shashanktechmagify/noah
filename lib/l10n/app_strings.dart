@@ -8059,6 +8059,15 @@ const Map<String, List<String>> _strings = {
     '',
     'ஞாயி',
   ],
+'embed_open': [
+    'Tap to open',
+    'खोलने के लिए छुएँ',
+    'उघडण्यासाठी स्पर्श करा',
+    '',
+    '',
+    '',
+    'திறக்கத் தட்டவும்',
+  ],
 'manna_reply': [
     'Reply',
     'जवाब दें',
