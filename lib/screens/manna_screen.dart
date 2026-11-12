@@ -5,12 +5,10 @@ import '../data/content_data.dart';
 import '../data/manna_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
-import '../widgets/auth_scaffold.dart' show GradientButton;
 import '../widgets/content_card.dart';
 import '../widgets/engagement_bar.dart';
 import '../data/manna_engagement.dart';
 import '../widgets/page_scaffold.dart';
-import '../widgets/prayer_dialog.dart';
 import '../widgets/rich_html.dart';
 
 String _whenText(BuildContext context, int daysAgo) => switch (daysAgo) {
@@ -261,14 +259,6 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
                 );
               },
             ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GradientButton(
-              label: tr(context, 'pr_add'),
-              onPressed: () => showPrayerDialog(context, manna: manna),
-            ),
-          ),
           if (liveApi) _MostRead(current: manna),
         ],
       ),

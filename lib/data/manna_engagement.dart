@@ -12,6 +12,9 @@ class MannaComment {
     required this.text,
     required this.at,
     required this.mine,
+    this.parentId,
+    this.likes = 0,
+    this.likedByMe = false,
   });
 
   final String id;
@@ -22,12 +25,20 @@ class MannaComment {
   /// True for the signed-in member's own comment (they can take it back).
   final bool mine;
 
+  /// The first-level comment this one answers (null for a first-level comment).
+  final String? parentId;
+  int likes;
+  bool likedByMe;
+
   factory MannaComment.fromJson(Map<String, dynamic> j) => MannaComment(
     id: '${j['id']}',
     author: '${(j['author'] as Map?)?['name'] ?? ''}',
     text: '${j['text'] ?? ''}',
     at: DateTime.tryParse('${j['createdAt']}')?.toLocal() ?? DateTime.now(),
     mine: j['mine'] == true,
+    parentId: j['parentId'] == null ? null : '${j['parentId']}',
+    likes: (j['likes'] as num?)?.toInt() ?? 0,
+    likedByMe: j['likedByMe'] == true,
   );
 }
 
@@ -127,14 +138,16 @@ class MannaEngagement extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns true when the comment was posted.
-  Future<bool> post(String text) async {
+  /// Returns true when the comment was posted. With [parentId] it is a reply to that comment.
+  Future<bool> post(String text, {String? parentId}) async {
     if (!liveApi || !api.signedIn || posting) return false;
     posting = true;
     error = null;
     notifyListeners();
     try {
-      final c = MannaComment.fromJson(await api.addMannaComment(id, text));
+      final c = MannaComment.fromJson(
+        await api.addMannaComment(id, text, parentId: parentId),
+      );
       comments = [c, ...comments];
       commentCount += 1;
       posting = false;
@@ -143,6 +156,42 @@ class MannaEngagement extends ChangeNotifier {
     } on ApiException catch (e) {
       error = e.message;
       posting = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Likes or unlikes a comment: shown at once, put back if the server says no.
+  Future<void> toggleCommentLike(MannaComment c) async {
+    if (!liveApi || !api.signedIn) return;
+    final want = !c.likedByMe;
+    c
+      ..likedByMe = want
+      ..likes = (c.likes + (want ? 1 : -1)).clamp(0, 1 << 30);
+    notifyListeners();
+    try {
+      final d = await api.likeMannaComment(id, c.id, want);
+      c
+        ..likedByMe = d['liked'] == true
+        ..likes = (d['likes'] as num?)?.toInt() ?? c.likes;
+    } on ApiException catch (e) {
+      c
+        ..likedByMe = !want
+        ..likes = (c.likes + (want ? -1 : 1)).clamp(0, 1 << 30);
+      error = e.message;
+    }
+    notifyListeners();
+  }
+
+  /// Reports a comment to the office. It goes from this member's list at once. Returns true when it was sent.
+  Future<bool> report(MannaComment c) async {
+    try {
+      await api.reportMannaComment(id, c.id);
+      comments = comments.where((x) => x.id != c.id).toList();
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      error = e.message;
       notifyListeners();
       return false;
     }

@@ -5386,6 +5386,12 @@ const Map<String, List<String>> _strings = {
   'wdshort_5': ['Fri', 'शुक्र', 'शुक्र', '', '', ''],
   'wdshort_6': ['Sat', 'शनि', 'शनि', '', '', ''],
   'wdshort_7': ['Sun', 'रवि', 'रवि', '', '', ''],
+  'manna_reply': ['Reply', 'जवाब दें', 'उत्तर द्या', '', '', ''],
+  'manna_replying_to': ['Replying to {name}', '{name} को जवाब', '{name} यांना उत्तर', '', '', ''],
+  'manna_report': ['Report', 'रिपोर्ट करें', 'तक्रार करा', '', '', ''],
+  'manna_report_ask': ['Report this comment to the church office?', 'इस टिप्पणी की शिकायत चर्च कार्यालय से करें?', 'ही टिप्पणी चर्च कार्यालयाकडे कळवायची?', '', '', ''],
+  'manna_reported': ['Thank you. The office will look at it.', 'धन्यवाद। कार्यालय इसे देखेगा।', 'धन्यवाद. कार्यालय हे पाहील.', '', '', ''],
+  'manna_cancel': ['Cancel', 'रद्द करें', 'रद्द करा', '', '', ''],
   'manna_comments': ['Comments', 'टिप्पणियाँ', 'टिप्पण्या', '', '', ''],
   'manna_comment_hint': [
     'Write a comment…',

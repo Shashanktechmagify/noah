@@ -319,27 +319,8 @@ void main() {
     expect(find.text('Reflection'), findsNothing);
     expect(find.textContaining('Categories'), findsOneWidget);
 
-    // Prayer request from this Manna: audience is "warriors only" by default.
-    final addButton = find.text('Add prayer request');
-    await tester.scrollUntilVisible(
-      addButton,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(addButton);
-    await settle();
-    expect(find.text('New prayer request'), findsOneWidget);
-    expect(find.text('About this Manna: Strength for today'), findsOneWidget);
-    expect(
-      find.text('Default. Our prayer warriors will pray for you.'),
-      findsOneWidget,
-    );
-    await tester.enterText(find.byType(TextField).last, 'Strength for my week');
-    await tester.pump();
-    await tester.tap(find.text('Submit'));
-    await settle();
-    expect(prayer.requests.first.everyone, isFalse);
-    expect(prayer.requests.first.mannaTitleKey, 'manna_3');
+    // A Daily Manna has no "Add prayer request" button any more.
+    expect(find.text('Add prayer request'), findsNothing);
     await tester.tap(find.byIcon(Icons.arrow_back));
     await settle();
     // The list was scrolled to reach the card: back to its top to reach the arrow.
@@ -376,7 +357,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Submit'));
     await settle();
-    expect(prayer.requests.length, 2);
+    expect(prayer.requests.length, 1);
     expect(prayer.requests.first.everyone, isTrue);
 
     // Menu items without a screen yet say so.

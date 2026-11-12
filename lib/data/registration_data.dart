@@ -80,7 +80,7 @@ List<(String, String, String)> idTypesFor(String country) => [
 /// Allowed length (min, max seconds) of the video, which is the member reading
 /// the whole declaration aloud: 1 to 2 minutes in every language.
 (int, int) videoLimits(AppLang lang) => (60, 120);
-const kOfficePhone = '+91 98200 00000';
+const kOfficePhone = '+91 82915 65758';
 
 /// Salutations offered in step 1.
 const kSalutations = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Rev', 'Ps'];

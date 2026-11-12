@@ -312,6 +312,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   final _text = TextEditingController();
   final _focus = FocusNode();
 
+  /// The comment the member is answering, if any.
+  MannaComment? _replyTo;
+
   @override
   void initState() {
     super.initState();
@@ -337,7 +340,51 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Future<void> _post() async {
     final value = _text.text.trim();
     if (value.isEmpty || widget.engagement.posting) return;
-    if (await widget.engagement.post(value)) _text.clear();
+    if (await widget.engagement.post(value, parentId: _replyTo?.id)) {
+      _text.clear();
+      if (mounted) setState(() => _replyTo = null);
+    }
+  }
+
+  Future<void> _report(MannaComment c) async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        content: Text(tr(d, 'manna_report_ask')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(false),
+            child: Text(tr(d, 'manna_cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(true),
+            child: Text(
+              tr(d, 'manna_report'),
+              style: const TextStyle(color: Color(0xFFE5334B)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    final ok = await widget.engagement.report(c);
+    if (mounted && ok) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr(context, 'manna_reported'))));
+    }
+  }
+
+  /// First-level comments (newest first), each followed by its replies (oldest first).
+  List<MannaComment> _ordered(List<MannaComment> all) {
+    final ids = all.map((c) => c.id).toSet();
+    final top = all.where((c) => c.parentId == null || !ids.contains(c.parentId));
+    return [
+      for (final c in top) ...[
+        c,
+        ...all.where((r) => r.parentId == c.id).toList().reversed,
+      ],
+    ];
   }
 
   @override
@@ -391,14 +438,25 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                        itemCount: e.comments.length,
-                        itemBuilder: (_, i) => _CommentRow(
-                          comment: e.comments[i],
-                          when: _when(context, e.comments[i].at),
-                          onRemove: () => e.remove(e.comments[i]),
-                        ),
+                    : Builder(
+                        builder: (context) {
+                          final shown = _ordered(e.comments);
+                          return ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                            itemCount: shown.length,
+                            itemBuilder: (_, i) => _CommentRow(
+                              comment: shown[i],
+                              when: _when(context, shown[i].at),
+                              onRemove: () => e.remove(shown[i]),
+                              onLike: () => e.toggleCommentLike(shown[i]),
+                              onReply: () {
+                                setState(() => _replyTo = shown[i]);
+                                _focus.requestFocus();
+                              },
+                              onReport: () => _report(shown[i]),
+                            ),
+                          );
+                        },
                       ),
               ),
               if (e.error != null && e.comments.isNotEmpty)
@@ -413,6 +471,32 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                   ),
                 ),
               const Divider(height: 1, color: AppColors.border),
+              if (_replyTo != null)
+                Container(
+                  color: AppColors.tint,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tr(
+                            context,
+                            'manna_replying_to',
+                            args: {'name': _replyTo!.author},
+                          ),
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => _replyTo = null),
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+                    ],
+                  ),
+                ),
               SafeArea(
                 top: false,
                 child: Padding(
@@ -484,15 +568,26 @@ class _CommentRow extends StatelessWidget {
     required this.comment,
     required this.when,
     required this.onRemove,
+    required this.onLike,
+    required this.onReply,
+    required this.onReport,
   });
 
   final MannaComment comment;
   final String when;
   final VoidCallback onRemove;
+  final VoidCallback onLike;
+  final VoidCallback onReply;
+  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
+    // A reply is shown a step in from the comment it answers.
+    padding: EdgeInsets.only(
+      top: 8,
+      bottom: 8,
+      left: comment.parentId == null ? 0 : 40,
+    ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -535,7 +630,53 @@ class _CommentRow extends StatelessWidget {
                 comment.text,
                 style: const TextStyle(fontSize: 14.5, height: 1.4),
               ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: onReply,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        tr(context, 'manna_reply'),
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
+          ),
+        ),
+        // Like (with its count) on the right, as on Instagram.
+        GestureDetector(
+          onTap: onLike,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 6, 4, 6),
+            child: Column(
+              children: [
+                Icon(
+                  comment.likedByMe ? Icons.favorite : Icons.favorite_border,
+                  size: 19,
+                  color: comment.likedByMe
+                      ? const Color(0xFFE5334B)
+                      : AppColors.muted,
+                ),
+                if (comment.likes > 0)
+                  Text(
+                    '${comment.likes}',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11.5,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
         if (comment.mine)
@@ -545,6 +686,17 @@ class _CommentRow extends StatelessWidget {
             onPressed: onRemove,
             icon: const Icon(
               Icons.delete_outline,
+              size: 20,
+              color: AppColors.muted,
+            ),
+          )
+        else
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: tr(context, 'manna_report'),
+            onPressed: onReport,
+            icon: const Icon(
+              Icons.flag_outlined,
               size: 20,
               color: AppColors.muted,
             ),

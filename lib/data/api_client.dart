@@ -679,8 +679,32 @@ class ApiClient {
   Future<Map<String, dynamic>> mannaComments(String id) =>
       _send('GET', '/content/manna/$id/comments');
 
-  Future<Map<String, dynamic>> addMannaComment(String id, String text) =>
-      _send('POST', '/content/manna/$id/comments', json: {'text': text});
+  Future<Map<String, dynamic>> addMannaComment(
+    String id,
+    String text, {
+    String? parentId,
+  }) => _send(
+    'POST',
+    '/content/manna/$id/comments',
+    json: {'text': text, 'parentId': ?parentId},
+  );
+
+  Future<Map<String, dynamic>> likeMannaComment(
+    String id,
+    String commentId,
+    bool liked,
+  ) => _send(
+    'POST',
+    '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}/like',
+    json: {'liked': liked},
+  );
+
+  Future<Map<String, dynamic>> reportMannaComment(String id, String commentId) =>
+      _send(
+        'POST',
+        '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}/report',
+        json: {},
+      );
 
   Future<void> deleteMannaComment(String id, String commentId) => _send(
     'DELETE',
