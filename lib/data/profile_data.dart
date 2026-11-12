@@ -685,10 +685,12 @@ class ProfileState extends ChangeNotifier {
   }
 
   /// Years and whole months since the date of birth (24 years 2 months), or null.
-  ({int years, int months})? get ageParts {
+  ({int years, int months})? get ageParts => ageOn(DateTime.now());
+
+  /// The age on the day [now].
+  ({int years, int months})? ageOn(DateTime now) {
     final d = DateTime.tryParse(get('dob'));
     if (d == null) return null;
-    final now = DateTime.now();
     var months = (now.year - d.year) * 12 + now.month - d.month;
     if (now.day < d.day) months--;
     if (months < 0) return null;

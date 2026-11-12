@@ -49,6 +49,20 @@ void main() {
     expect(old.map((e) => e.label), ['Diploma', "Bachelor's degree"]);
   });
 
+  test('born 27 September 2005 is 21 years 1 month on 12 November 2026', () {
+    final p = ProfileState()..seedDemo();
+    // As when the server sends the member's profile.
+    p.loadFromServer({
+      'fields': {'dob': '2005-09-27'},
+    });
+    final on = p.ageOn(DateTime(2026, 11, 12))!;
+    expect((on.years, on.months), (21, 1));
+    expect(p.ageOn(DateTime(2026, 11, 27))!.months, 2, reason: 'the day the month is complete');
+    expect(p.ageOn(DateTime(2026, 9, 26))!.years, 20);
+    expect(p.ageOn(DateTime(2026, 9, 27))!.years, 21);
+    expect(p.ageOn(DateTime(2026, 10, 12)), (years: 21, months: 0));
+  });
+
   test('age is worked out in years and whole months', () {
     final p = ProfileState()..seedDemo(); // born 14 March 1992
     final a = p.ageParts!;
