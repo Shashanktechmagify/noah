@@ -1,6 +1,7 @@
 import '../../data/api_client.dart';
 import '../../data/registration_sync.dart';
 
+import 'dart:async';
 import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
@@ -210,8 +211,59 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
     orElse: () => DialData.fallback.first,
   );
 
+  // The reference person is looked up while the new member types: a name shows matching members to pick from,
+  // and a whole number fills in the name.
+  Timer? _refTimer;
+  List<Map<String, dynamic>> _refHits = const [];
+
+  void _askForReference({String? name, String? number}) {
+    _refTimer?.cancel();
+    if (!liveApi) return;
+    _refTimer = Timer(const Duration(milliseconds: 450), () async {
+      try {
+        final hits = await api.findReference(
+          name: name,
+          dial: number == null ? null : _refDial.dial,
+          number: number,
+        );
+        if (!mounted) return;
+        if (number != null) {
+          // A whole number names one member: put the name in (only over an empty or earlier-filled name).
+          if (hits.length == 1 && _ref.text.trim().isEmpty) {
+            _ref.text = '${hits.first['name']}';
+            registration.reference = _ref.text;
+            registration.touch();
+          }
+          setState(() => _refHits = const []);
+        } else if (name != null && name.trim() == _ref.text.trim()) {
+          setState(() => _refHits = hits);
+        }
+      } catch (_) {
+        if (mounted) setState(() => _refHits = const []);
+      }
+    });
+  }
+
+  /// The member picked from the suggestions: name and number are both filled in.
+  void _pickReference(Map<String, dynamic> hit) {
+    final dial = '${hit['dial'] ?? ''}';
+    final country = DialData.countries.where((c) => c.dial == dial).firstOrNull;
+    setState(() {
+      _ref.text = '${hit['name']}';
+      _refPhone.text = '${hit['number'] ?? ''}';
+      if (country != null) _refDial = country;
+      _refHits = const [];
+    });
+    registration
+      ..reference = _ref.text
+      ..referencePhone = _refPhone.text
+      ..referenceDial = _refDial.dial
+      ..touch();
+  }
+
   @override
   void dispose() {
+    _refTimer?.cancel();
     for (final c in [
       _first,
       _middle,
@@ -513,8 +565,52 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
           onChanged: (v) {
             r.reference = v;
             r.touch();
+            if (v.trim().length >= 3) {
+              _askForReference(name: v);
+            } else if (_refHits.isNotEmpty) {
+              setState(() => _refHits = const []);
+            }
           },
         ),
+        // Members whose name starts like what was typed: tap one to fill in the name and the number.
+        if (_refHits.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                for (final (i, hit) in _refHits.indexed) ...[
+                  if (i > 0) const Divider(height: 1, color: AppColors.border),
+                  InkWell(
+                    onTap: () => _pickReference(hit),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_outline, size: 20, color: AppColors.muted),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '${hit['name']}',
+                              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Text(
+                            '${hit['dial'] ?? ''} ${hit['number'] ?? ''}'.trim(),
+                            style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         RegLabel(tr(context, 'reg_ref_phone')),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,6 +647,9 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
                 onChanged: (v) {
                   r.referencePhone = v;
                   r.touch();
+                  // A whole number names the member who has it.
+                  final digits = v.replaceAll(RegExp(r'\D'), '');
+                  if (digits.length >= 7) _askForReference(number: digits);
                 },
               ),
             ),

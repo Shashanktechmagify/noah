@@ -61,6 +61,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   String? _sendError;
+  String? _notice;
   List<NgComment>? _items;
   String? _error;
   NgComment? _replyTo;
@@ -70,11 +71,18 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   void initState() {
     super.initState();
     _controller.addListener(() => setState(() {}));
+    liveNoahgram.addListener(_changed);
     _load();
+  }
+
+  /// A like on a comment changes its count on this sheet.
+  void _changed() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    liveNoahgram.removeListener(_changed);
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
@@ -127,6 +135,44 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       }
     }
     if (mounted) setState(() => _sending = false);
+  }
+
+  Future<void> _report(NgComment c) async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        content: Text(tr(d, 'manna_report_ask')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(false),
+            child: Text(tr(d, 'ng_cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(true),
+            child: Text(
+              tr(d, 'manna_report'),
+              style: const TextStyle(color: Color(0xFFE5334B)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    try {
+      await liveNoahgram.reportComment(widget.post, c);
+      // Said inside the sheet: a message under it would be hidden behind it.
+      if (mounted) {
+        setState(() {
+          _items = _items?.where((x) => x.id != c.id).toList();
+          _sendError = null;
+          _notice = tr(context, 'manna_reported');
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sendError = _why(context, e, 'ng_comment_failed'));
+      }
+    }
   }
 
   Future<void> _remove(NgComment c) async {
@@ -222,6 +268,17 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     ),
             ),
             const Divider(height: 1, color: AppColors.border),
+            if (_notice != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _notice!,
+                    style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+                  ),
+                ),
+              ),
             if (_sendError != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -371,6 +428,20 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                             ),
                           ),
                         ),
+                        if (!comment.mine) ...[
+                          const SizedBox(width: 14),
+                          GestureDetector(
+                            onTap: () => _report(comment),
+                            child: Text(
+                              tr(context, 'manna_report'),
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                         if (comment.canRemove) ...[
                           const SizedBox(width: 14),
                           GestureDetector(
@@ -391,6 +462,31 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               ],
             ),
           ),
+          // Like (with its count) on the right, as on Instagram.
+          if (comment != null)
+            GestureDetector(
+              onTap: () => liveNoahgram.toggleCommentLike(widget.post, comment),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 0, 4),
+                child: Column(
+                  children: [
+                    Icon(
+                      comment.likedByMe ? Icons.favorite : Icons.favorite_border,
+                      size: 18,
+                      color: comment.likedByMe
+                          ? const Color(0xFFE5334B)
+                          : AppColors.muted,
+                    ),
+                    if (comment.likes > 0)
+                      Text(
+                        '${comment.likes}',
+                        style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+                      ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

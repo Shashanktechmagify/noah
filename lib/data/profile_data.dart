@@ -13,6 +13,9 @@ enum PfKind {
 
   /// Several of the options may be picked; kept as one text, separated by commas.
   multi,
+
+  /// Education: qualifications to tick; 10th (SSC) and 12th (HSC) also ask for the school, marks and academic year.
+  education,
   phone,
   email,
   pin,
@@ -316,7 +319,6 @@ const kProfileSections = [
       options: _designations,
     ),
     PfField('employed', 'pf_org_name', PfKind.text),
-    PfField('education', 'pf_education', PfKind.multi, options: _educations),
     PfField(
       'income',
       'pf_income',
@@ -324,6 +326,10 @@ const kProfileSections = [
       options: _incomeRanges,
       bucketed: true,
     ),
+  ]),
+  PfSection('pf_sec_education', [
+    // Kept in the office's educationDetail column, one line for each qualification.
+    PfField('education', 'pf_qualification', PfKind.education, options: _educations),
   ]),
   PfSection('pf_sec_documents', [
     PfField('pan', 'reg_id_pan', PfKind.idNumber, idType: 'pan'),
@@ -374,6 +380,69 @@ const kProfileSections = [
     PfField('reference_phone', 'pf_ref_phone', PfKind.phone),
   ]),
 ];
+
+/// The qualifications that ask for more: the school, the marks and the academic year.
+const kEduSsc = '10th (SSC)';
+const kEduHsc = '12th (HSC)';
+bool eduNeedsDetails(String label) => label == kEduSsc || label == kEduHsc;
+
+/// One qualification of a member, with what is asked for 10th and 12th.
+class EduEntry {
+  EduEntry(this.label, {this.school = '', this.marks = '', this.year = ''});
+
+  final String label;
+  String school;
+  String marks;
+  String year;
+
+  /// The details of 10th and 12th are all needed.
+  bool get complete =>
+      !eduNeedsDetails(label) ||
+      (school.trim().isNotEmpty && marks.trim().isNotEmpty && year.trim().isNotEmpty);
+}
+
+String _eduClean(String v) => v.replaceAll(RegExp(r'[\n;]+'), ',').trim();
+
+/// The qualifications as one text, a line each: `10th (SSC) — School: X; Marks: 85%; Academic year: 2008-09`.
+String composeEducation(List<EduEntry> entries) => [
+  for (final e in entries)
+    eduNeedsDetails(e.label)
+        ? '${e.label} — School: ${_eduClean(e.school)}; Marks: ${_eduClean(e.marks)}; Academic year: ${_eduClean(e.year)}'
+        : e.label,
+].join('\n');
+
+/// Reads what [composeEducation] wrote. An older value, qualifications separated by commas, is read as well.
+List<EduEntry> parseEducation(String text, [Iterable<String> known = const []]) {
+  final out = <EduEntry>[];
+  for (final line in text.split('\n')) {
+    final l = line.trim();
+    if (l.isEmpty) continue;
+    final at = l.indexOf(' — ');
+    if (at < 0) {
+      final parts = l.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+      if (parts.length > 1 && parts.every(known.contains)) {
+        out.addAll(parts.map(EduEntry.new));
+      } else {
+        out.add(EduEntry(l));
+      }
+      continue;
+    }
+    String pick(String name) {
+      final m = RegExp('$name: ([^;]*)').firstMatch(l.substring(at + 3));
+      return m?.group(1)?.trim() ?? '';
+    }
+
+    out.add(
+      EduEntry(
+        l.substring(0, at),
+        school: pick('School'),
+        marks: pick('Marks'),
+        year: pick('Academic year'),
+      ),
+    );
+  }
+  return out;
+}
 
 /// dd/mm/yyyy from an ISO date string.
 String displayDate(String iso) {

@@ -322,6 +322,22 @@ class ApiClient {
     );
   }
 
+  /// Members who match what the new member typed as their reference: by [name] (first letters) or by a whole
+  /// [dial] + [number]. Each hit is `{name, dial, number}`.
+  Future<List<Map<String, dynamic>>> findReference({
+    String? name,
+    String? dial,
+    String? number,
+  }) async {
+    final q = <String, String>{
+      'name': ?name,
+      'dial': ?dial,
+      'number': ?number,
+    };
+    final d = await _send('GET', '/registration/reference?${Uri(queryParameters: q).query}');
+    return ((d['items'] as List?) ?? const []).cast<Map<String, dynamic>>();
+  }
+
   /// Sends the code that confirms the WhatsApp number a member wants to put in My information.
   Future<OtpSent> sendWhatsappCode(String dial, String number) async => _otpSent(
     await _send(
@@ -562,6 +578,12 @@ class ApiClient {
     '/noahgram/posts/$id/comments',
     json: {'text': text, 'parentId': ?parentId},
   );
+
+  Future<Map<String, dynamic>> ngLikeComment(String id, String commentId, bool liked) =>
+      _send('POST', '/noahgram/posts/$id/comments/$commentId/like', json: {'liked': liked});
+
+  Future<Map<String, dynamic>> ngReportComment(String id, String commentId) =>
+      _send('POST', '/noahgram/posts/$id/comments/$commentId/report', json: {});
 
   Future<Map<String, dynamic>> ngRemoveComment(String id, String commentId) =>
       _send('DELETE', '/noahgram/posts/$id/comments/$commentId');

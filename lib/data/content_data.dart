@@ -16,8 +16,8 @@ import 'word_data.dart';
 /// the sample content in `manna_data.dart` / `word_data.dart`.
 
 /// The server's language number for each app language (English 1, Hindi 2, Marathi 3, Telugu 4,
-/// Malayalam 5, Tamil 6, Kannada 7). The app has no Tamil; an app language the office has no content
-/// for falls back to English on the server.
+/// Malayalam 5, Tamil 6, Kannada 7). An app language the office has no content for falls back to English
+/// on the server.
 int contentLanguage(AppLang lang) => switch (lang) {
   AppLang.en => 1,
   AppLang.hi => 2,
@@ -25,6 +25,7 @@ int contentLanguage(AppLang lang) => switch (lang) {
   AppLang.te => 4,
   AppLang.ml => 5,
   AppLang.kn => 7,
+  AppLang.ta => 6,
 };
 
 /// Today's date in India (the server decides what is live by this date).

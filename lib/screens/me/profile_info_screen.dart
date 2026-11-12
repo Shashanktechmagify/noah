@@ -421,6 +421,14 @@ String _display(BuildContext context, PfField f, String v) {
       final option = f.optionFor(v);
       if (option == null) return v;
       return option.$2 == null ? option.$1 : tr(context, option.$2!);
+    case PfKind.education:
+      // One line for each qualification; 10th and 12th show their school, marks and year.
+      return [
+        for (final e in parseEducation(v, f.options!.map((o) => o.$1)))
+          eduNeedsDetails(e.label)
+              ? '${e.label}: ${e.school}, ${e.marks}, ${e.year}'
+              : e.label,
+      ].join('\n');
     case PfKind.number:
       return f.id == 'height'
           ? '$v ${tr(context, 'pf_cm')}'
@@ -611,6 +619,7 @@ class _RequestDialogState extends State<_RequestDialog> {
   PfField get f => widget.field;
 
   bool _confirming = false;
+  bool _eduComplete = true;
 
   /// Keeps the new value as a draft. A WhatsApp number is kept only after the code sent to it was entered.
   Future<void> _done(BuildContext context, String v) async {
@@ -702,6 +711,15 @@ class _RequestDialogState extends State<_RequestDialog> {
                 : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
           }),
         );
+      case PfKind.education:
+        return _EducationEditor(
+          field: f,
+          initial: _value,
+          onChanged: (value, complete) => setState(() {
+            _value = value;
+            _eduComplete = complete;
+          }),
+        );
       case PfKind.choice || PfKind.multi:
         // A choice is a dropdown: a sheet with the options (and a search box when the list is long).
         // A list (education) lets several be ticked.
@@ -766,6 +784,7 @@ class _RequestDialogState extends State<_RequestDialog> {
     final valid =
         v.trim().isNotEmpty &&
         _error(f, v) == null &&
+        (f.kind != PfKind.education || _eduComplete) &&
         v.trim() != _bucket(profile.get(f.id));
     return Dialog(
       backgroundColor: Colors.white,
@@ -851,6 +870,154 @@ class _RequestDialogState extends State<_RequestDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The qualifications to tick, and, for each of 10th (SSC) and 12th (HSC) that is ticked, the school name, the marks
+/// and the academic year. Reports the text to keep and whether every detail that is asked for is filled in.
+class _EducationEditor extends StatefulWidget {
+  const _EducationEditor({
+    required this.field,
+    required this.initial,
+    required this.onChanged,
+  });
+
+  final PfField field;
+  final String initial;
+  final void Function(String value, bool complete) onChanged;
+
+  @override
+  State<_EducationEditor> createState() => _EducationEditorState();
+}
+
+class _EducationEditorState extends State<_EducationEditor> {
+  late final List<EduEntry> _entries = parseEducation(
+    widget.initial,
+    widget.field.options!.map((o) => o.$1),
+  );
+  final _controllers = <String, TextEditingController>{};
+
+  TextEditingController _c(EduEntry e, String part, String initial) =>
+      _controllers.putIfAbsent('${e.label}|$part', () => TextEditingController(text: initial));
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _report() => widget.onChanged(
+    composeEducation(_entries),
+    _entries.isNotEmpty && _entries.every((e) => e.complete),
+  );
+
+  Future<void> _pick() async {
+    final labels = _entries.map((e) => e.label).join(',');
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _MultiSheet(field: widget.field, selected: labels),
+    );
+    if (picked == null) return;
+    final chosen = picked.split(', ').where((p) => p.isNotEmpty).toList();
+    setState(() {
+      // What was already typed for a qualification that stays is kept.
+      final old = {for (final e in _entries) e.label: e};
+      _entries
+        ..clear()
+        ..addAll([for (final l in chosen) old[l] ?? EduEntry(l)]);
+    });
+    _report();
+  }
+
+  Widget _input(EduEntry e, String part, String hintKey, String value, void Function(String) set) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: TextField(
+      controller: _c(e, part, value),
+      onChanged: (v) {
+        set(v);
+        setState(() {});
+        _report();
+      },
+      textCapitalization: TextCapitalization.words,
+      keyboardType: part == 'school' ? TextInputType.text : TextInputType.visiblePassword,
+      decoration: InputDecoration(
+        hintText: tr(context, hintKey),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: _pick,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _entries.isEmpty
+                        ? tr(context, 'pf_choose')
+                        : _entries.map((e) => e.label).join(', '),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: _entries.isEmpty ? FontWeight.w500 : FontWeight.w800,
+                      color: _entries.isEmpty ? AppColors.muted : AppColors.ink,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down, color: AppColors.muted),
+              ],
+            ),
+          ),
+        ),
+        // 10th and 12th ask for their own details.
+        for (final e in _entries.where((e) => eduNeedsDetails(e.label))) ...[
+          const SizedBox(height: 14),
+          Text(
+            e.label,
+            style: const TextStyle(
+              color: AppColors.magenta,
+              fontWeight: FontWeight.w800,
+              fontSize: 13.5,
+            ),
+          ),
+          _input(e, 'school', 'pf_edu_school', e.school, (v) => e.school = v),
+          _input(e, 'marks', 'pf_edu_marks', e.marks, (v) => e.marks = v),
+          _input(e, 'year', 'pf_edu_year', e.year, (v) => e.year = v),
+          if (!e.complete)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                tr(context, 'pf_edu_need'),
+                style: const TextStyle(color: _amber, fontSize: 12),
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

@@ -126,6 +126,8 @@ class NgComment {
     this.createdAt,
     this.mine = false,
     this.canRemove = false,
+    this.likes = 0,
+    this.likedByMe = false,
   });
 
   final String id;
@@ -135,6 +137,8 @@ class NgComment {
   final DateTime? createdAt;
   final bool mine;
   final bool canRemove;
+  int likes;
+  bool likedByMe;
 
   factory NgComment.fromJson(Map<String, dynamic> j) => NgComment(
     id: '${j['id']}',
@@ -144,6 +148,8 @@ class NgComment {
     createdAt: DateTime.tryParse('${j['createdAt'] ?? ''}'),
     mine: j['mine'] == true,
     canRemove: j['canRemove'] == true,
+    likes: (j['likes'] as num?)?.toInt() ?? 0,
+    likedByMe: j['likedByMe'] == true,
   );
 }
 
@@ -466,6 +472,31 @@ class LiveNoahgram extends ChangeNotifier {
     notifyListeners();
     return NgComment.fromJson(d);
   }
+
+  /// Likes or unlikes a comment: shown at once, put back if the server says no.
+  Future<void> toggleCommentLike(NgPost post, NgComment c) async {
+    final want = !c.likedByMe;
+    c
+      ..likedByMe = want
+      ..likes = (c.likes + (want ? 1 : -1)).clamp(0, 1 << 30);
+    notifyListeners();
+    try {
+      final d = await api.ngLikeComment(post.id, c.id, want);
+      c
+        ..likedByMe = d['liked'] == true
+        ..likes = (d['likes'] as num?)?.toInt() ?? c.likes;
+    } catch (e) {
+      c
+        ..likedByMe = !want
+        ..likes = (c.likes + (want ? -1 : 1)).clamp(0, 1 << 30);
+      lastError = _say(e);
+    }
+    notifyListeners();
+  }
+
+  /// Reports a comment to the office. Throws when it could not be sent.
+  Future<void> reportComment(NgPost post, NgComment c) =>
+      api.ngReportComment(post.id, c.id);
 
   Future<void> removeComment(NgPost post, NgComment comment) async {
     await api.ngRemoveComment(post.id, comment.id);
