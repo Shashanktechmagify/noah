@@ -19,6 +19,7 @@ class LiveNoahgramScreen extends StatefulWidget {
 
 class _LiveNoahgramScreenState extends State<LiveNoahgramScreen> {
   int _tab = 0;
+  int _profileTick = 0;
   // Tabs open the first time they are shown, so a member who only reads the feed does not load the rest.
   final _opened = <int>{0};
 
@@ -98,23 +99,38 @@ class _LiveNoahgramScreenState extends State<LiveNoahgramScreen> {
               onSelect: (i) => setState(() {
                 _tab = i;
                 _opened.add(i);
+                if (i == 3) _profileTick++; // read your own counts again
               }),
               icons: _icons,
             ),
             Expanded(
               child: IndexedStack(
                 index: _tab,
+                // A tab that is not showing must be quiet: its videos stop (TickerMode) and play again on return.
                 children: [
-                  const NgFeedView(),
-                  _opened.contains(1)
-                      ? const NgExploreView()
-                      : const SizedBox.shrink(),
-                  _opened.contains(2)
-                      ? NgReelsView(visible: _tab == 2)
-                      : const SizedBox.shrink(),
-                  _opened.contains(3)
-                      ? const NgProfileView(memberId: 'me', bottomPadding: 110)
-                      : const SizedBox.shrink(),
+                  TickerMode(enabled: _tab == 0, child: const NgFeedView()),
+                  TickerMode(
+                    enabled: _tab == 1,
+                    child: _opened.contains(1)
+                        ? const NgExploreView()
+                        : const SizedBox.shrink(),
+                  ),
+                  TickerMode(
+                    enabled: _tab == 2,
+                    child: _opened.contains(2)
+                        ? NgReelsView(visible: _tab == 2)
+                        : const SizedBox.shrink(),
+                  ),
+                  TickerMode(
+                    enabled: _tab == 3,
+                    child: _opened.contains(3)
+                        ? NgProfileView(
+                            memberId: 'me',
+                            bottomPadding: 110,
+                            refreshTick: _profileTick,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ],
               ),
             ),

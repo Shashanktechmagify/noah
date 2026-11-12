@@ -28,7 +28,7 @@ class NgVideo extends StatefulWidget {
   State<NgVideo> createState() => _NgVideoState();
 }
 
-class _NgVideoState extends State<NgVideo> {
+class _NgVideoState extends State<NgVideo> with WidgetsBindingObserver {
   VideoPlayerController? _c;
   bool _failed = false;
   bool _loading = false;
@@ -37,10 +37,25 @@ class _NgVideoState extends State<NgVideo> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.active) _start();
   }
 
   bool _covered = false;
+  bool _appAway = false;
+
+  /// The phone went to the home screen or another app: no sound from here.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appAway = state != AppLifecycleState.resumed;
+    final c = _c;
+    if (c == null || !c.value.isInitialized) return;
+    if (_appAway) {
+      c.pause();
+    } else if (!_paused && !_covered && widget.active) {
+      c.play();
+    }
+  }
 
   /// A page opened on top of this one (a profile, a post) turns this page's tickers off: stop the sound then,
   /// and carry on when the member comes back.
@@ -71,6 +86,7 @@ class _NgVideoState extends State<NgVideo> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _c?.dispose();
     super.dispose();
   }
@@ -98,7 +114,7 @@ class _NgVideoState extends State<NgVideo> {
         return;
       }
       await controller.setLooping(true);
-      if (!_covered) await controller.play();
+      if (!_covered && !_appAway) await controller.play();
       liveNoahgram.markViewed(widget.post);
       setState(() => _loading = false);
     } catch (_) {

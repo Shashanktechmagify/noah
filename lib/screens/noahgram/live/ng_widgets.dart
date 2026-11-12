@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/api_client.dart';
 import '../../../data/live_noahgram.dart';
@@ -49,7 +50,9 @@ class NgAvatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: url == null
+        child: author.isChurch
+            ? Image.asset('assets/images/noah.png', fit: BoxFit.cover)
+            : url == null
             ? initials()
             : Image.network(
                 url,
@@ -94,6 +97,8 @@ class NgPicture extends StatelessWidget {
 }
 
 void openNgProfile(BuildContext context, String memberId) {
+  // The church (an office post) has no Noahgram page.
+  if (memberId == '0') return;
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => NgProfileScreen(memberId: memberId)),
   );
@@ -296,6 +301,12 @@ class _NgPostCardState extends State<NgPostCard>
                       ),
                     ),
                   ),
+                  if (post.pinned)
+                    const Icon(
+                      Icons.push_pin,
+                      size: 16,
+                      color: AppColors.muted,
+                    ),
                   IconButton(
                     onPressed: () => showNgPostMenu(context, post),
                     icon: const Icon(Icons.more_horiz, color: AppColors.ink),
@@ -405,6 +416,25 @@ class _NgPostCardState extends State<NgPostCard>
                         ],
                       ),
                       style: const TextStyle(fontSize: 13.5, height: 1.35),
+                    ),
+                  ],
+                  if (post.link != null) ...[
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: () => launchUrl(
+                        Uri.parse(post.link!),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Text(
+                        post.link!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF2E6FD8),
+                          fontSize: 13,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
                   ],
                   if (post.comments > 0) ...[

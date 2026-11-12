@@ -493,6 +493,10 @@ class ApiClient {
   Future<Map<String, dynamic>> ngPeople(String query) =>
       _send('GET', '/noahgram/people?q=${Uri.encodeQueryComponent(query)}');
 
+  /// The members who follow [id] (`kind` = followers) or whom [id] follows (`kind` = following).
+  Future<Map<String, dynamic>> ngConnections(String id, String kind) =>
+      _send('GET', '/noahgram/members/$id/$kind');
+
   Future<Map<String, dynamic>> ngSaved() => _send('GET', '/noahgram/saved');
 
   Future<Map<String, dynamic>> ngPost(String id) =>

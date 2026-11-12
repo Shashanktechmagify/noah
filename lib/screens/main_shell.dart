@@ -291,10 +291,14 @@ class _MainShellState extends State<MainShell> {
           children: [
             const HomeScreen(),
             // A member signed in to the server uses the live Noahgram; the demo keeps the sample one.
+            // Its videos stop while another tab is showing.
             liveApi
-                ? TabNavigator(
-                    root: const LiveNoahgramScreen(),
-                    navigatorKey: _ngNav,
+                ? TickerMode(
+                    enabled: _page == 1,
+                    child: TabNavigator(
+                      root: const LiveNoahgramScreen(),
+                      navigatorKey: _ngNav,
+                    ),
                   )
                 : const NoahgramScreen(),
             // A member signed in to the server sees the office's events and books passes; the demo keeps the sample list.

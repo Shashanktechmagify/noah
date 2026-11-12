@@ -1049,6 +1049,8 @@ const Map<String, List<String>> _strings = {
   'ng_no_internet': ['Could not load. Check your internet.', 'लोड नहीं हो सका। इंटरनेट जाँचें।', 'लोड करता आले नाही. इंटरनेट तपासा.', '', '', ''],
   'ng_name_note': ['Your name and photo here are the ones in your Noah profile.', 'यहाँ आपका नाम और फोटो आपकी Noah प्रोफ़ाइल वाले ही हैं।', 'येथील तुमचे नाव आणि फोटो तुमच्या Noah प्रोफाइलमधीलच आहेत.', '', '', ''],
   'ng_caption_optional': ['Write a caption…', 'कैप्शन लिखें…', 'कॅप्शन लिहा…', '', '', ''],
+  'ng_no_followers': ['No followers yet.', 'अभी कोई फ़ॉलोअर नहीं।', 'अजून फॉलोअर्स नाहीत.', '', '', ''],
+  'ng_no_following': ['Not following anyone yet.', 'अभी किसी को फ़ॉलो नहीं किया।', 'अजून कोणालाही फॉलो केले नाही.', '', '', ''],
   'ng_people': ['People', 'लोग', 'लोक', '', '', ''],
   'ng_search_hint': ['Search people and posts', 'लोग और पोस्ट खोजें', 'लोक आणि पोस्ट शोधा', '', '', ''],
   'ng_remove_comment': ['Delete comment', 'टिप्पणी हटाएँ', 'टिप्पणी हटवा', '', '', ''],

@@ -8,11 +8,25 @@ import 'api_client.dart';
 
 /// Whoever wrote a post or comment.
 class NgAuthor {
-  const NgAuthor({required this.id, required this.name, this.photoFileId});
+  const NgAuthor({
+    required this.id,
+    required this.name,
+    this.photoFileId,
+    this.isChurch = false,
+    this.followedByMe = false,
+    this.isMe = false,
+  });
 
   final String id;
   final String name;
   final String? photoFileId;
+
+  /// A post the office wrote has no member: the church is its author (no page to open).
+  final bool isChurch;
+
+  /// In a followers or following list: whether the signed-in member follows this person, and whether it is them.
+  final bool followedByMe;
+  final bool isMe;
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
@@ -26,6 +40,9 @@ class NgAuthor {
     id: '${j['id']}',
     name: '${j['name'] ?? 'Member'}',
     photoFileId: j['photoFileId'] == null ? null : '${j['photoFileId']}',
+    isChurch: j['isChurch'] == true,
+    followedByMe: j['followedByMe'] == true,
+    isMe: j['isMe'] == true,
   );
 }
 
@@ -48,6 +65,10 @@ class NgPost {
   bool saved = false;
   bool mine = false;
   String shareUrl = '';
+
+  /// A web address the office added to its post, and whether the office pinned it to the top.
+  String? link;
+  bool pinned = false;
 
   /// Where the picture or the video is.
   String? get mediaSrc =>
@@ -78,6 +99,8 @@ class NgPost {
     saved = j['savedByMe'] == true;
     mine = j['mine'] == true;
     shareUrl = '${j['shareUrl'] ?? ''}';
+    link = j['link'] == null ? null : '${j['link']}';
+    pinned = j['pinned'] == true;
   }
 
   /// Whole hours since it was posted.
@@ -297,6 +320,14 @@ class LiveNoahgram extends ChangeNotifier {
         .toList();
   }
 
+  /// Who follows [memberId] (`followers`) or whom they follow (`following`).
+  Future<List<NgAuthor>> connections(String memberId, String kind) async {
+    final d = await api.ngConnections(memberId, kind);
+    return ((d['items'] as List?) ?? const [])
+        .map((e) => NgAuthor.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
   Future<List<NgPost>> saved() async => _page(await api.ngSaved()).items;
 
   /// What matches the words (or the latest posts when [query] is empty).
@@ -457,6 +488,20 @@ class LiveNoahgram extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
       // The tabs still work without it.
+    }
+  }
+
+  /// Follows or unfollows [memberId] from a list of people. Returns whether it went through.
+  Future<bool> setFollow(String memberId, bool wanted) async {
+    try {
+      await api.ngFollow(memberId, wanted);
+      if (me != null) me!.following += wanted ? 1 : -1;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastError = _say(e);
+      notifyListeners();
+      return false;
     }
   }
 

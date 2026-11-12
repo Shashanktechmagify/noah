@@ -602,16 +602,26 @@ class NgProfileView extends StatefulWidget {
     super.key,
     required this.memberId,
     this.bottomPadding = 24,
+    this.refreshTick = 0,
   });
 
   final String memberId;
   final double bottomPadding;
+
+  /// Changes each time the page is opened again, so its counts are read afresh (somebody may have followed you).
+  final int refreshTick;
 
   @override
   State<NgProfileView> createState() => _NgProfileViewState();
 }
 
 class _NgProfileViewState extends State<NgProfileView> {
+  @override
+  void didUpdateWidget(NgProfileView old) {
+    super.didUpdateWidget(old);
+    if (widget.refreshTick != old.refreshTick) _load();
+  }
+
   NgProfile? _profile;
   List<NgPost> _posts = const [];
   List<NgPost>? _saved;
@@ -673,6 +683,16 @@ class _NgProfileViewState extends State<NgProfileView> {
     if (mounted) setState(() => _loading = false);
   }
 
+  void _openPeople(String kind) {
+    final p = _profile;
+    if (p == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NgPeopleScreen(memberId: p.author.id, kind: kind),
+      ),
+    );
+  }
+
   Future<void> _showSaved() async {
     setState(() => _tab = 2);
     if (_saved != null) return;
@@ -699,6 +719,8 @@ class _NgProfileViewState extends State<NgProfileView> {
       listenable: liveNoahgram,
       builder: (context, _) {
         final isMe = profile.isMe;
+        // Your own counts are the ones kept up to date when you follow someone.
+        final counts = isMe ? (liveNoahgram.me ?? profile) : profile;
         final shown = switch (_tab) {
           0 => _posts.where((p) => !p.isReel).toList(),
           1 => _posts.where((p) => p.isReel).toList(),
@@ -720,16 +742,18 @@ class _NgProfileViewState extends State<NgProfileView> {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _Stat(
-                            value: compact(profile.posts),
+                            value: compact(counts.posts),
                             label: tr(context, 'ng_posts'),
                           ),
                           _Stat(
-                            value: compact(profile.followers),
+                            value: compact(counts.followers),
                             label: tr(context, 'ng_followers'),
+                            onTap: () => _openPeople('followers'),
                           ),
                           _Stat(
-                            value: compact(profile.following),
+                            value: compact(counts.following),
                             label: tr(context, 'ng_following'),
+                            onTap: () => _openPeople('following'),
                           ),
                         ],
                       ),
@@ -838,22 +862,137 @@ class _NgProfileViewState extends State<NgProfileView> {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
+  const _Stat({required this.value, required this.label, this.onTap});
 
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Text(
-        value,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-      ),
-      const SizedBox(height: 2),
-      Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink)),
-    ],
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink)),
+      ],
+    ),
   );
+}
+
+/// The members who follow someone (`followers`) or whom they follow (`following`), each with a Follow button.
+class NgPeopleScreen extends StatefulWidget {
+  const NgPeopleScreen({super.key, required this.memberId, required this.kind});
+
+  final String memberId;
+  final String kind;
+
+  @override
+  State<NgPeopleScreen> createState() => _NgPeopleScreenState();
+}
+
+class _NgPeopleScreenState extends State<NgPeopleScreen> {
+  List<NgAuthor>? _people;
+  String? _error;
+  // What the member changed on this page, over what the server said when it was opened.
+  final _followed = <String, bool>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _error = null);
+    try {
+      final list = await liveNoahgram.connections(widget.memberId, widget.kind);
+      if (mounted) setState(() => _people = list);
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _error = e is ApiException && e.code != 'network'
+              ? e.message
+              : tr(context, 'ng_no_internet'),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggle(NgAuthor who) async {
+    final wanted = !(_followed[who.id] ?? who.followedByMe);
+    setState(() => _followed[who.id] = wanted);
+    final ok = await liveNoahgram.setFollow(who.id, wanted);
+    if (!ok && mounted) setState(() => _followed[who.id] = !wanted);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final people = _people;
+    final followers = widget.kind == 'followers';
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.ink,
+        title: Text(
+          tr(context, followers ? 'ng_followers' : 'ng_following'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: _error != null
+          ? _Note(text: _error!, onRetry: _load)
+          : people == null
+          ? const Center(child: CircularProgressIndicator())
+          : people.isEmpty
+          ? _Note(
+              text: tr(
+                context,
+                followers ? 'ng_no_followers' : 'ng_no_following',
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                itemCount: people.length,
+                itemBuilder: (_, i) {
+                  final who = people[i];
+                  final following = _followed[who.id] ?? who.followedByMe;
+                  return ListTile(
+                    leading: NgAvatar(author: who, size: 46),
+                    title: Text(
+                      who.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap: () => openNgProfile(context, who.id),
+                    trailing: who.isMe
+                        ? null
+                        : SizedBox(
+                            width: 110,
+                            child: _OutlineButton(
+                              label: tr(
+                                context,
+                                following ? 'ng_following' : 'ng_follow',
+                              ),
+                              filled: !following,
+                              onTap: () => _toggle(who),
+                            ),
+                          ),
+                  );
+                },
+              ),
+            ),
+    );
+  }
 }
 
 class _OutlineButton extends StatelessWidget {
