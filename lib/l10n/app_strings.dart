@@ -4186,7 +4186,7 @@ const Map<String, List<String>> _strings = {
   'ev_qr_cancelled': ['This booking was cancelled. The pass is no longer valid.', 'यह बुकिंग रद्द हो गई है। पास अब मान्य नहीं है।', 'हे बुकिंग रद्द झाले आहे. पास आता वैध नाही.', '', '', ''],
   'ev_blocked_paid': ['Paid events cannot be booked in the app yet.', 'सशुल्क कार्यक्रम अभी ऐप में बुक नहीं हो सकते।', 'सशुल्क कार्यक्रम अजून अॅपमध्ये बुक करता येत नाहीत.', '', '', ''],
   'ev_blocked_partners': ['This event is for partners only.', 'यह कार्यक्रम केवल पार्टनर के लिए है।', 'हा कार्यक्रम फक्त भागीदारांसाठी आहे.', '', '', ''],
-  'ev_closed_note': ['Booking is not open for this event.', 'इस कार्यक्रम की बुकिंग खुली नहीं है।', 'या कार्यक्रमाचे बुकिंग सुरू नाही.', '', '', ''],
+  'ev_closed_note': ['Booking is closed for this event. It closes 24 hours before the event starts.', 'इस कार्यक्रम की बुकिंग बंद है। बुकिंग कार्यक्रम शुरू होने से 24 घंटे पहले बंद हो जाती है।', 'या कार्यक्रमाचे बुकिंग बंद आहे. बुकिंग कार्यक्रम सुरू होण्याच्या 24 तास आधी बंद होते.', '', '', ''],
   'ev_full_note': ['This event is fully booked.', 'यह कार्यक्रम पूरी तरह बुक है।', 'हा कार्यक्रम पूर्ण बुक आहे.', '', '', ''],
   'ev_copied': ['Reference copied', 'संदर्भ कॉपी किया गया', 'संदर्भ कॉपी केला', '', '', ''],
   'ev_pass_title': ['Entry pass', 'प्रवेश पास', 'प्रवेश पास', '', '', ''],
