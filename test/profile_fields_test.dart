@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/profile_data.dart';
+import 'package:noah_frontend_flutter/data/registration_data.dart' show kSalutations;
 
 void main() {
   final ids = [
@@ -12,6 +13,14 @@ void main() {
     expect(names, isNot(contains('email2')));
     expect(names, isNot(contains('landline')));
     expect(names, isNot(contains('comm_language')));
+  });
+
+  test('the salutations are the office list, in registration and in My information', () {
+    expect(kSalutations.first, 'Mr.');
+    expect(kSalutations, containsAll(['Pastor', 'Bishop', 'Apostle', 'Dr. (Mrs.)', 'LT.-Col.', 'Maj.-Gen.']));
+    expect(kSalutations.toSet().length, kSalutations.length);
+    final field = ids.firstWhere((f) => f.id == 'salutation');
+    expect(field.options!.map((o) => o.$1).toList(), kSalutations);
   });
 
   test('the second phone is the WhatsApp number, and education is a list of choices', () {

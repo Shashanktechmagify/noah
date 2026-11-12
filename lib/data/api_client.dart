@@ -322,22 +322,6 @@ class ApiClient {
     );
   }
 
-  /// Members who match what the new member typed as their reference: by [name] (first letters) or by a whole
-  /// [dial] + [number]. Each hit is `{name, dial, number}`.
-  Future<List<Map<String, dynamic>>> findReference({
-    String? name,
-    String? dial,
-    String? number,
-  }) async {
-    final q = <String, String>{
-      'name': ?name,
-      'dial': ?dial,
-      'number': ?number,
-    };
-    final d = await _send('GET', '/registration/reference?${Uri(queryParameters: q).query}');
-    return ((d['items'] as List?) ?? const []).cast<Map<String, dynamic>>();
-  }
-
   /// Sends the code that confirms the WhatsApp number a member wants to put in My information.
   Future<OtpSent> sendWhatsappCode(String dial, String number) async => _otpSent(
     await _send(

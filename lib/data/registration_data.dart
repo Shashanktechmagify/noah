@@ -83,7 +83,38 @@ List<(String, String, String)> idTypesFor(String country) => [
 const kOfficePhone = '+91 82915 65758';
 
 /// Salutations offered in step 1.
-const kSalutations = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Rev', 'Ps'];
+const kSalutations = [
+  'Mr.',
+  'Mrs.',
+  'Miss',
+  'Ms',
+  'Master',
+  'Pastor',
+  'Evg.',
+  'Rev.',
+  'Fr.',
+  'Sr.',
+  'Bro.',
+  'Sis.',
+  'Adv.',
+  'Dr.',
+  'Bishop',
+  'Apostle',
+  'Prop.',
+  'Baby',
+  'Late.',
+  'Dr. (Mr.)',
+  'Dr. (Mrs.)',
+  'Dr. (Miss)',
+  'Prof.',
+  'Capt.',
+  'Major',
+  'LT.-Col.',
+  'Brgdr.',
+  'Cmdr.',
+  'Judge',
+  'Maj.-Gen.',
+];
 
 /// Largest document or photo accepted, in bytes.
 const kMaxUploadBytes = 5 * 1024 * 1024;

@@ -243,13 +243,36 @@ const kProfileSections = [
       PfKind.choice,
       required: true,
       options: [
-        ('Mr', null),
-        ('Mrs', null),
-        ('Ms', null),
+        ('Mr.', null),
+        ('Mrs.', null),
         ('Miss', null),
-        ('Dr', null),
-        ('Rev', null),
-        ('Ps', null),
+        ('Ms', null),
+        ('Master', null),
+        ('Pastor', null),
+        ('Evg.', null),
+        ('Rev.', null),
+        ('Fr.', null),
+        ('Sr.', null),
+        ('Bro.', null),
+        ('Sis.', null),
+        ('Adv.', null),
+        ('Dr.', null),
+        ('Bishop', null),
+        ('Apostle', null),
+        ('Prop.', null),
+        ('Baby', null),
+        ('Late.', null),
+        ('Dr. (Mr.)', null),
+        ('Dr. (Mrs.)', null),
+        ('Dr. (Miss)', null),
+        ('Prof.', null),
+        ('Capt.', null),
+        ('Major', null),
+        ('LT.-Col.', null),
+        ('Brgdr.', null),
+        ('Cmdr.', null),
+        ('Judge', null),
+        ('Maj.-Gen.', null),
       ],
     ),
     PfField('first_name', 'reg_first', PfKind.text, required: true),
@@ -756,7 +779,7 @@ class ProfileState extends ChangeNotifier {
   /// Demo member (Daniel): most details present, blood group missing.
   void seedDemo() {
     _values
-      ..['salutation'] = 'Mr'
+      ..['salutation'] = 'Mr.'
       ..['first_name'] = 'Daniel'
       ..['last_name'] = 'Fernandes'
       ..['gender'] = 'male'
