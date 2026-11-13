@@ -8,9 +8,12 @@ import '../theme/app_theme.dart';
 /// The videos and links the office attached to an entry. A YouTube video shows its picture with a play button; any
 /// other link is a card with its address. A tap opens it in the YouTube app or the browser (nothing runs inside the app).
 class EmbedCards extends StatelessWidget {
-  const EmbedCards({super.key, required this.items});
+  const EmbedCards({super.key, required this.items, this.padded = true});
 
   final List<EmbedMedia> items;
+
+  /// Side margins (the Manna page); a sheet that has its own margins turns them off.
+  final bool padded;
 
   Future<void> _open(BuildContext context, EmbedMedia m) async {
     var ok = false;
@@ -32,7 +35,7 @@ class EmbedCards extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: padded ? 20 : 0),
       child: Column(
         children: [
           for (final m in items)

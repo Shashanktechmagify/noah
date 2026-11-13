@@ -487,6 +487,44 @@ class ApiClient {
   Future<Map<String, dynamic>> scanCounts(String eventId) =>
       _send('GET', '/staff/events/$eventId/attendance');
 
+  // ── Banners, announcements, dream dictionary, Bible commentary ───────
+
+  /// `{ items: [{id, caption, landscapeImage, portraitImage, url, order}] }`: the carousel on the home screen.
+  Future<Map<String, dynamic>> libBanners(int lang) =>
+      _send('GET', '/home/banners?lang=$lang');
+
+  Future<Map<String, dynamic>> libAnnouncements() =>
+      _send('GET', '/home/announcements');
+
+  /// Dream dictionary entries (featured first, then A to Z), narrowed by a search word and a category.
+  Future<Map<String, dynamic>> libDictionary(
+    int lang, {
+    String q = '',
+    String? category,
+    int limit = 50,
+  }) => _send(
+    'GET',
+    '/content/dictionary?lang=$lang&limit=$limit'
+    '${q.isEmpty ? '' : '&q=${Uri.encodeQueryComponent(q)}'}'
+    '${category == null ? '' : '&category=${Uri.encodeQueryComponent(category)}'}',
+  );
+
+  Future<Map<String, dynamic>> libDictionaryCategories(int lang) =>
+      _send('GET', '/content/dictionary/categories?lang=$lang');
+
+  /// Bible commentary: one chapter ([book] 1 to 66 and [chapter]), a whole book, or the newest entries.
+  Future<Map<String, dynamic>> libCommentary(
+    int lang, {
+    int? book,
+    int? chapter,
+    int limit = 30,
+  }) => _send(
+    'GET',
+    '/content/commentary?lang=$lang&limit=$limit'
+    '${book == null ? '' : '&book=$book'}'
+    '${chapter == null ? '' : '&chapter=$chapter'}',
+  );
+
   // ── Noahgram ─────────────────────────────────────────────────────────
 
   /// A post's picture or video, or a member's profile photo, as other members may see it.

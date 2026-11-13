@@ -1,5 +1,6 @@
 import 'api_client.dart';
 import 'family_data.dart';
+import 'library_data.dart';
 import 'live_noahgram.dart';
 import 'ministry_data.dart';
 import 'notifications_data.dart';
@@ -27,6 +28,7 @@ Future<void> endLiveSession() async {
   notificationsState.clear();
   familyState.clear();
   liveNoahgram.clear();
+  library.clear();
   await pushService.stop();
   await api.logout();
 }

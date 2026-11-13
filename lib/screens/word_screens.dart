@@ -12,6 +12,7 @@ import '../widgets/rich_html.dart';
 import 'events/events_widgets.dart' show monthShort;
 import 'jodie/jodie_widgets.dart' show toast;
 import 'manna_screen.dart' show ContentEmpty, openManna;
+import 'library_screens.dart';
 
 String _shortDate(BuildContext context, DateTime d) =>
     '${d.day} ${monthShort(context, d.month)}';
@@ -439,6 +440,8 @@ class CommentaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A member signed in to the server reads what the office wrote; the demo keeps the sample list.
+    if (liveApi) return const LiveCommentaryScreen();
     return Scaffold(
       body: PageScaffold(
         title: tr(context, 'cm_title'),

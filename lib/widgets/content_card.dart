@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/manna_data.dart' show EmbedMedia;
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
+import 'embed_cards.dart';
 import 'rich_html.dart';
 
 /// Plain text of an entry for a short preview in a list: tags removed, spaces collapsed.
@@ -195,6 +197,7 @@ void showContentSheet(
   String date = '',
   String prayer = '',
   String? image,
+  List<EmbedMedia> media = const [],
   VoidCallback? onOpenManna,
 }) {
   showModalBottomSheet<void>(
@@ -224,6 +227,11 @@ void showContentSheet(
             ),
             const SizedBox(height: 12),
             RichHtml(body, style: const TextStyle(fontSize: 15, height: 1.5)),
+            // Videos and links the office attached.
+            if (media.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              EmbedCards(items: media, padded: false),
+            ],
             if (prayer.isNotEmpty) ...[
               const SizedBox(height: 14),
               RichHtml(

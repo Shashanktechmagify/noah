@@ -13,6 +13,7 @@ import 'bible_study_screen.dart';
 import 'manna_screen.dart';
 import 'menu_sheet.dart';
 import 'me_screen.dart';
+import 'library_screens.dart';
 import 'noahgram/live/live_noahgram_screen.dart';
 import 'noahgram/live/ng_pages.dart';
 import 'noahgram/noahgram_screen.dart';
@@ -258,6 +259,10 @@ class _MainShellState extends State<MainShell> {
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const WordsOfFaithScreen()));
+      case 'dream' when liveApi:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const DreamDictionaryScreen()));
       case 'commentary':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const CommentaryScreen()));

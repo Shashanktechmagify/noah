@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import '../widgets/content_card.dart';
+import '../data/bible_books.dart';
 import '../data/content_data.dart';
+import '../data/library_data.dart';
 import '../data/ministry_data.dart';
 import '../data/notifications_data.dart';
 import '../data/pastor_data.dart';
 import '../data/word_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
+import '../widgets/banner_carousel.dart';
 import '../widgets/event_carousel.dart';
 import '../widgets/header_band.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import 'events/events_widgets.dart' show monthShort;
+import 'library_screens.dart';
 import 'manna_screen.dart';
 import 'me/notifications_screen.dart';
 import 'word_screens.dart';
@@ -39,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     contentState.addListener(_onContent);
+    library.addListener(_onContent);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -47,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       contentState.ensureFresh(AppLocale.of(context).lang);
+      library.refreshHome(AppLocale.of(context).lang);
     }
   }
 
@@ -59,11 +66,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didChangeDependencies();
     // Shows the saved Manna, prayers and confessions at once and reads the day's content once a day.
     contentState.ensureFresh(AppLocale.of(context).lang);
+    // The banners, announcements, dream dictionary and commentary the office wrote.
+    library.ensureHome(AppLocale.of(context).lang);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    library.removeListener(_onContent);
     contentState.removeListener(_onContent);
     _scroll.dispose();
     super.dispose();
@@ -114,6 +124,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ];
       case 2:
+        if (liveApi) {
+          final latest = library.latestCommentary;
+          return [
+            for (var i = 0; i < latest.length && i < 3; i++)
+              _WordTile(
+                icon: Icons.insert_drive_file_outlined,
+                title: latest[i].title,
+                sub: bibleRef(latest[i].book, latest[i].chapter),
+                colors: _tileColors[i],
+                onTap: () => openCommentary(context, latest[i]),
+              ),
+            _ViewAllTile(
+              label: tr(context, 'all_commentary'),
+              onTap: () => _push(const CommentaryScreen()),
+            ),
+          ];
+        }
         return [
           for (var i = 0; i < 3; i++)
             _WordTile(
@@ -144,7 +171,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ];
       default:
-        // The Dream Dictionary has no content yet: the tab says so and a tap tells the member the same.
+        if (liveApi) {
+          final latest = library.latestDictionary;
+          return [
+            for (var i = 0; i < latest.length && i < 3; i++)
+              _WordTile(
+                icon: Icons.nights_stay_outlined,
+                title: latest[i].title,
+                sub: plainPreview(latest[i].meaning),
+                colors: _tileColors[i],
+                onTap: () => showContentSheet(
+                  context,
+                  title: latest[i].title,
+                  body: latest[i].meaning,
+                  image: latest[i].image,
+                  media: latest[i].media,
+                ),
+              ),
+            _ViewAllTile(
+              label: tr(context, 'dict_view_all'),
+              onTap: () => _push(const DreamDictionaryScreen()),
+            ),
+          ];
+        }
+        // The demo has no Dream Dictionary: the tab says so and a tap tells the member the same.
         return [
           _WordTile(
             icon: Icons.nights_stay_outlined,
@@ -177,14 +227,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Purple header band sits behind the top of the carousel.
         HeaderBand(controller: _scroll),
         RefreshIndicator(
-          onRefresh: () => contentState.refresh(AppLocale.of(context).lang),
+          onRefresh: () async {
+            final lang = AppLocale.of(context).lang;
+            await Future.wait([contentState.refresh(lang), library.refreshHome(lang)]);
+          },
           child: ListView(
             controller: _scroll,
             padding: EdgeInsets.only(top: top + 14, bottom: 120),
             children: [
               const _Header(),
               const SizedBox(height: 18),
-              const EventCarousel(),
+              // The office's banners; the sample cards only in the demo.
+              liveApi ? const BannerCarousel() : const EventCarousel(),
+              if (liveApi) const AnnouncementsSection(),
               const SizedBox(height: 22),
               SectionTitle(
                 title: tr(context, 'home_manna_title'),
