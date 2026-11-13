@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_strings.dart';
 import '../screens/main_shell.dart' show ShellScope;
@@ -13,6 +14,32 @@ class _Slide {
   final String id;
   final IconData icon;
   final List<Color> colors;
+}
+
+/// One card of the home carousel made from what the office wrote in the console: a banner (a picture and a caption) or
+/// an announcement (a title, a message and a link). A card with a [url] has a button that opens it.
+class HomeSlide {
+  const HomeSlide({
+    this.label = '',
+    required this.title,
+    this.body = '',
+    this.cta = '',
+    this.image,
+    this.url,
+    this.icon = Icons.campaign_outlined,
+  });
+
+  final String label;
+  final String title;
+  final String body;
+
+  /// The words on the button (shown only with a [url]).
+  final String cta;
+
+  /// A picture that fills the card (a banner).
+  final String? image;
+  final String? url;
+  final IconData icon;
 }
 
 /// Every announcement card uses the same colours.
@@ -33,9 +60,16 @@ bool enableCardIdleSway = true;
 
 /// Banner cards that scroll horizontally on their own, looping forever.
 class EventCarousel extends StatefulWidget {
-  const EventCarousel({super.key, this.interval = const Duration(seconds: 4)});
+  const EventCarousel({
+    super.key,
+    this.interval = const Duration(seconds: 4),
+    this.slides,
+  });
 
   final Duration interval;
+
+  /// The office's banners and announcements. Without them the sample cards are shown.
+  final List<HomeSlide>? slides;
 
   @override
   State<EventCarousel> createState() => _EventCarouselState();
@@ -44,8 +78,9 @@ class EventCarousel extends StatefulWidget {
 class _EventCarouselState extends State<EventCarousel> {
   // Start deep into an unbounded list so the user can swipe either way.
   static const _start = 5000;
+  int get _count => widget.slides?.length ?? _slides.length;
   late final PageController _controller = PageController(
-    initialPage: _start - _start % _slides.length,
+    initialPage: _start - _start % _count.clamp(1, 1 << 20),
   );
   Timer? _timer;
   int _index = 0;
@@ -78,6 +113,8 @@ class _EventCarouselState extends State<EventCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final live = widget.slides;
+    if (_count == 0) return const SizedBox.shrink();
     return Column(
       children: [
         SizedBox(
@@ -95,16 +132,25 @@ class _EventCarouselState extends State<EventCarousel> {
             child: PageView.builder(
               controller: _controller,
               clipBehavior: Clip.none,
-              onPageChanged: (i) => setState(() => _index = i % _slides.length),
+              onPageChanged: (i) => setState(() => _index = i % _count),
               itemBuilder: (_, i) => Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
                 ),
                 child: _Hover(
-                  onTap: () => ShellScope.maybeOf(context)?.selectSlot(3),
+                  // A card from the office opens its link; a sample card opens the Events tab.
+                  onTap: () {
+                    if (live == null) {
+                      ShellScope.maybeOf(context)?.selectSlot(3);
+                    } else {
+                      final url = live[i % live.length].url;
+                      if (url != null) openHomeLink(context, url);
+                    }
+                  },
                   builder: (lifted, tilt) => _SlideCard(
-                    slide: _slides[i % _slides.length],
+                    slide: live == null ? _slides[i % _slides.length] : null,
+                    office: live == null ? null : live[i % live.length],
                     lifted: lifted,
                     tilt: tilt,
                   ),
@@ -116,7 +162,7 @@ class _EventCarouselState extends State<EventCarousel> {
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_slides.length, (i) {
+          children: List.generate(_count, (i) {
             final active = i == _index;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 250),
@@ -260,14 +306,28 @@ class _HoverState extends State<_Hover> with SingleTickerProviderStateMixin {
 
 class _SlideCard extends StatelessWidget {
   const _SlideCard({
-    required this.slide,
+    this.slide,
+    this.office,
     this.lifted = false,
     this.tilt = Offset.zero,
   });
 
-  final _Slide slide;
+  /// A sample card (its words are translation keys), or a card from the office.
+  final _Slide? slide;
+  final HomeSlide? office;
   final bool lifted;
   final Offset tilt;
+
+  List<Color> get _colors => slide?.colors ?? _cardColors;
+  IconData get _icon => slide?.icon ?? office!.icon;
+  String _label(BuildContext c) => slide != null ? tr(c, '${slide!.id}_label') : office!.label;
+  String _title(BuildContext c) => slide != null ? tr(c, '${slide!.id}_title') : office!.title;
+  String _body(BuildContext c) => slide != null ? tr(c, '${slide!.id}_body') : office!.body;
+
+  /// The words on the button; a card from the office has one only when it has a link.
+  String _cta(BuildContext c) => slide != null
+      ? tr(c, '${slide!.id}_cta')
+      : (office!.url == null ? '' : office!.cta);
 
   @override
   Widget build(BuildContext context) {
@@ -298,11 +358,32 @@ class _SlideCard extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: slide.colors,
+              colors: _colors,
             ),
           ),
           child: Stack(
             children: [
+              // A banner's picture fills the card, under a shade so the words can be read.
+              if (office?.image != null) ...[
+                Positioned.fill(
+                  child: Image.network(
+                    office!.image!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.center,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x00000000), Color(0xCC000000)],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               Positioned(
                 right: -40,
                 top: -50,
@@ -313,15 +394,16 @@ class _SlideCard extends StatelessWidget {
                 bottom: -60,
                 child: _Blob(size: 120, alpha: 0.08),
               ),
-              Positioned(
-                right: 22 - tilt.dx * 16,
-                top: 40 + tilt.dy * 10,
-                child: Icon(
-                  slide.icon,
-                  size: 52,
-                  color: Colors.white.withValues(alpha: 0.35),
+              if (office?.image == null)
+                Positioned(
+                  right: 22 - tilt.dx * 16,
+                  top: 40 + tilt.dy * 10,
+                  child: Icon(
+                    _icon,
+                    size: 52,
+                    color: Colors.white.withValues(alpha: 0.35),
+                  ),
                 ),
-              ),
               // Light sheen that slides across the card as it tilts.
               Positioned.fill(
                 child: IgnorePointer(
@@ -344,8 +426,9 @@ class _SlideCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_label(context).isNotEmpty)
                     Text(
-                      tr(context, '${slide.id}_label'),
+                      _label(context),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 11,
@@ -355,8 +438,8 @@ class _SlideCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      tr(context, '${slide.id}_title'),
-                      maxLines: 1,
+                      _title(context),
+                      maxLines: office?.image != null ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
@@ -365,8 +448,9 @@ class _SlideCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
+                    if (_body(context).isNotEmpty)
                     Text(
-                      tr(context, '${slide.id}_body'),
+                      _body(context),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -376,6 +460,7 @@ class _SlideCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    if (_cta(context).isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
@@ -389,7 +474,7 @@ class _SlideCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            tr(context, '${slide.id}_cta'),
+                            _cta(context),
                             style: const TextStyle(
                               color: Color(0xFF8E1FB0),
                               fontSize: 13,
@@ -431,4 +516,17 @@ class _Blob extends StatelessWidget {
       color: Colors.white.withValues(alpha: alpha),
     ),
   );
+}
+
+/// Opens a card's link in the browser (or the app it belongs to); the address itself is shown if the phone cannot.
+Future<void> openHomeLink(BuildContext context, String url) async {
+  var ok = false;
+  try {
+    ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    ok = false;
+  }
+  if (!ok && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(url)));
+  }
 }

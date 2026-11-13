@@ -238,8 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const _Header(),
               const SizedBox(height: 18),
               // The office's banners; the sample cards only in the demo.
-              liveApi ? const BannerCarousel() : const EventCarousel(),
-              if (liveApi) const AnnouncementsSection(),
+              liveApi ? const HomeCarousel() : const EventCarousel(),
               const SizedBox(height: 22),
               SectionTitle(
                 title: tr(context, 'home_manna_title'),
