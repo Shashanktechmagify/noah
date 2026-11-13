@@ -41,6 +41,30 @@ void main() {
     },
   );
 
+  test('a rejected registration opens the form at the first step, not the status page', () {
+    final r = RegistrationState();
+    r.loadFromServer({
+      'status': 'rejected',
+      'reviewNote': 'x',
+      'firstName': 'Ravi',
+      'submittedAt': '2026-11-10T10:00:00.000Z',
+    }, '+91 9000000001');
+    expect(
+      r.firstStepToShow(),
+      0,
+      reason: 'everything can be checked and corrected',
+    );
+    r.loadFromServer({
+      'status': 'draft',
+      'firstName': 'Ravi',
+    }, '+91 9000000001');
+    expect(
+      r.firstStepToShow(),
+      r.firstIncompleteStep,
+      reason: 'a draft resumes where it stopped',
+    );
+  });
+
   testWidgets('the status page says what to correct and offers to correct it', (
     tester,
   ) async {

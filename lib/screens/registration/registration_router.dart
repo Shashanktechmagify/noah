@@ -47,7 +47,7 @@ Future<void> routeAfterServer(
     case 'registrationStatus':
       screen = const RegistrationStatusScreen();
     default:
-      screen = RegistrationFlow(initialStep: registration.firstIncompleteStep);
+      screen = RegistrationFlow(initialStep: registration.firstStepToShow());
   }
   Navigator.of(
     context,

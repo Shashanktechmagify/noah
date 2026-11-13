@@ -52,6 +52,10 @@ Future<Widget?> restoreSavedSession() async {
     registration.approve();
     return const MainShell();
   }
+  // The office asked for corrections: the form opens again, with the office's note at the top.
+  if (registration.status == RegStatus.rejected) {
+    return const RegistrationFlow(initialStep: 0);
+  }
   if (registration.completed) return const RegistrationStatusScreen();
   return RegistrationFlow(initialStep: registration.firstIncompleteStep);
 }

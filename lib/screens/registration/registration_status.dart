@@ -68,6 +68,9 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
       if (!mounted) return;
       if (me['next'] == 'home') {
         await _approve();
+      } else if (registration.status == RegStatus.rejected) {
+        // Rejected meanwhile: the form opens, with the office's note at the top.
+        _correct();
       } else {
         setState(() {});
       }
@@ -292,9 +295,12 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
         case 'home':
           await _approve();
         case 'registration':
+          // A returned video goes to the video step; a rejected registration to the first step.
           await Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => const RegistrationFlow(initialStep: 5),
+              builder: (_) => RegistrationFlow(
+                initialStep: registration.status == RegStatus.rejected ? 0 : 5,
+              ),
             ),
           );
         default:

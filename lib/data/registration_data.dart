@@ -604,6 +604,10 @@ class RegistrationState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Where the form opens for a returning member: at the start when the office rejected the registration (everything
+  /// can be checked and corrected), else at the first step that still needs work.
+  int firstStepToShow() => status == RegStatus.rejected ? 0 : firstIncompleteStep;
+
   /// The first step that still needs work (where a returning member resumes).
   int get firstIncompleteStep {
     for (var i = 0; i < 6; i++) {
