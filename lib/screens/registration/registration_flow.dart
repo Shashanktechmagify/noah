@@ -302,6 +302,27 @@ class _DetailsStepState extends State<_DetailsStep> with _Live<_DetailsStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // The office asked for corrections: its words stay in view while the details are changed.
+        if (r.status == RegStatus.rejected)
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDEBD3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              r.reviewNote.isEmpty
+                  ? tr(context, 'reg_rej_banner')
+                  : '${tr(context, 'reg_rej_banner')}\n\n${r.reviewNote}',
+              style: const TextStyle(
+                color: Color(0xFFC2620A),
+                fontSize: 13,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         RegLabel(tr(context, 'reg_sal'), required: true),
         RegPicker(
           value: r.salutation,

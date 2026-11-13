@@ -7,7 +7,8 @@ import 'world_data.dart';
 /// Demo state for the new-member registration. Replace the actions with API
 /// calls; the server must store the declaration, ID proof, photo and video.
 
-enum RegStatus { pending, approved, videoReturned }
+/// `rejected`: the office asked for corrections; the member changes the details and submits again.
+enum RegStatus { pending, approved, videoReturned, rejected }
 
 /// Numbers that are already members (they skip registration).
 const kDemoMembers = {'+91 98765 43210'};
@@ -253,6 +254,9 @@ class RegistrationState extends ChangeNotifier {
   DateTime? registeredOn; // when the registration was submitted
   RegStatus status = RegStatus.pending;
 
+  /// What the office wrote when it rejected the registration or returned the video (shown to the member).
+  String reviewNote = '';
+
   /// Call after changing a field so listeners (the footer button) refresh.
   void touch() => notifyListeners();
 
@@ -421,6 +425,7 @@ class RegistrationState extends ChangeNotifier {
     completed = true;
     registeredOn = DateTime.now();
     status = RegStatus.pending;
+    reviewNote = '';
     notifyListeners();
   }
 
@@ -592,8 +597,10 @@ class RegistrationState extends ChangeNotifier {
     status = switch ('${m['status']}') {
       'approved' => RegStatus.approved,
       'videoReturned' => RegStatus.videoReturned,
+      'rejected' => RegStatus.rejected,
       _ => RegStatus.pending,
     };
+    reviewNote = '${m['reviewNote'] ?? ''}'.trim();
     notifyListeners();
   }
 

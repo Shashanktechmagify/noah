@@ -7,6 +7,7 @@ import '../../data/registration_data.dart';
 import '../../data/server_sync.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/hex_pattern.dart';
 import '../events/events_widgets.dart' show fullDate;
 import '../login_screen.dart';
@@ -36,6 +37,8 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
     // The "Application Approved!" push was tapped (or launched the app): look at the status at once.
     openRequest.addListener(_onApprovalPush);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onApprovalPush());
+    // The office may have decided since the last look (a push was tapped, or the app was opened later).
+    if (liveApi && api.signedIn) WidgetsBinding.instance.addPostFrameCallback((_) => _refreshQuietly());
     if (widget.showSuccess) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showSuccess();
@@ -45,9 +48,39 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   void _onApprovalPush() {
     final t = openRequest.value;
-    if (t == null || t.type != 'registration_approved' || !mounted) return;
-    openRequest.value = null;
-    if (liveApi && !_checking) _checkStatus();
+    if (t == null || !mounted) return;
+    if (t.type == 'registration_approved') {
+      openRequest.value = null;
+      if (liveApi && !_checking) _checkStatus();
+    } else if (t.type == 'registration_rejected' || t.type == 'registration_video_returned') {
+      // "Please correct your registration": show what to correct.
+      openRequest.value = null;
+      if (liveApi) _refreshQuietly();
+    }
+  }
+
+  /// Reads the member's registration again and shows it, without a message. Approved goes to Home.
+  Future<void> _refreshQuietly() async {
+    if (_checking) return;
+    try {
+      final me = await api.me();
+      await loadMemberFromServer(registration.phone);
+      if (!mounted) return;
+      if (me['next'] == 'home') {
+        await _approve();
+      } else {
+        setState(() {});
+      }
+    } catch (_) {
+      // Offline: what is shown stays.
+    }
+  }
+
+  /// The member opens the form again to correct what the office asked for. The details are all there already.
+  void _correct() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const RegistrationFlow(initialStep: 0)),
+    );
   }
 
   @override
@@ -277,6 +310,14 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
     }
   }
 
+  void _reject() {
+    registration
+      ..status = RegStatus.rejected
+      ..reviewNote = 'The ID proof is not readable. Please upload it again.'
+      ..touch();
+    setState(() {});
+  }
+
   void _returnVideo() {
     registration.returnVideo();
     Navigator.of(context).pushReplacement(
@@ -367,15 +408,17 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Icon(
-                            Icons.shield_outlined,
+                          child: Icon(
+                            r.status == RegStatus.rejected
+                                ? Icons.edit_note
+                                : Icons.shield_outlined,
                             color: Colors.white,
                             size: 30,
                           ),
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          tr(context, 'reg_done_title'),
+                          tr(context, r.status == RegStatus.rejected ? 'reg_rej_title' : 'reg_done_title'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -386,7 +429,7 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 30),
                           child: Text(
-                            tr(context, 'reg_done_sub'),
+                            tr(context, r.status == RegStatus.rejected ? 'reg_rej_sub' : 'reg_done_sub'),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white70,
@@ -420,6 +463,48 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // The office asked for corrections: what it wrote, and the way to correct and send again.
+                if (r.status == RegStatus.rejected) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDEBD3),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tr(context, 'reg_rej_note_title').toUpperCase(),
+                          style: TextStyle(
+                            color: const Color(0xFFC2620A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: spacing(context, 0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          r.reviewNote.isEmpty
+                              ? tr(context, 'reg_rej_no_note')
+                              : r.reviewNote,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  GradientButton(
+                    label: tr(context, 'reg_rej_edit'),
+                    onPressed: _correct,
+                  ),
+                  const SizedBox(height: 18),
+                ],
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
@@ -546,6 +631,11 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                   _ProtoButton(
                     label: tr(context, 'reg_sim_return'),
                     onTap: _returnVideo,
+                  ),
+                  const SizedBox(height: 8),
+                  _ProtoButton(
+                    label: tr(context, 'reg_sim_reject'),
+                    onTap: _reject,
                   ),
                 ],
               ],
