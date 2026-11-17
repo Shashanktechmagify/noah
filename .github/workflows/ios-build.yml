@@ -1,0 +1,62 @@
+# Builds an unsigned iOS app and packs it as noah.ipa, to be installed on an iPhone with Sideloadly (free Apple ID).
+# Run it by hand: GitHub > Actions > "iOS build (unsigned ipa)" > Run workflow. Download noah.ipa from the run's Artifacts.
+# A macOS runner costs 10x the minutes of a Linux one, so it does not run on every push.
+name: iOS build (unsigned ipa)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "API address the app talks to (NOAH_API)"
+        required: true
+        default: "https://noahapp-60093443705.development.catalystserverless.in/server/noah_api"
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter (the version the app is built with)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Dependencies
+        run: flutter pub get
+
+      # Creates ios/Podfile (it is not in the repository) and the generated settings, without compiling yet.
+      - name: Prepare the iOS project
+        run: flutter build ios --config-only --release --no-codesign --dart-define=NOAH_API=${{ inputs.api_url }}
+
+      # Firebase and the other plugins need iOS 15; the Xcode project already says 15.0, the generated Podfile must agree.
+      - name: Podfile needs iOS 15
+        run: |
+          sed -i '' -E "s/^# *platform :ios, '[0-9.]+'/platform :ios, '15.0'/; s/^platform :ios, '[0-9.]+'/platform :ios, '15.0'/" ios/Podfile
+          grep -n "platform :ios" ios/Podfile
+
+      - name: Build (no code signing)
+        run: flutter build ios --release --no-codesign --dart-define=NOAH_API=${{ inputs.api_url }}
+
+      # An .ipa is a zip of a folder named Payload that holds Runner.app. Sideloadly signs it with the user's Apple ID.
+      - name: Pack noah.ipa
+        run: |
+          rm -rf Payload noah.ipa
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry noah.ipa Payload
+          ls -lh noah.ipa
+
+      - name: Upload noah.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: noah-ios-ipa
+          path: noah.ipa
+          retention-days: 14
