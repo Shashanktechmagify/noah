@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/family_data.dart';
 import '../../data/noahgram_data.dart';
+import '../../data/profile_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/page_scaffold.dart';
@@ -38,34 +40,54 @@ class _FamilyScreenState extends State<FamilyScreen> {
       .map((p) => p[0].toUpperCase())
       .join();
 
-  Widget _avatar(String initials, {required bool soft}) => Container(
-    width: 46,
-    height: 46,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: soft ? const Color(0xFFF7E8F4) : const Color(0xFFA719C8),
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Text(
-      initials,
-      style: TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w800,
-        color: soft ? const Color(0xFFB3641A) : Colors.white,
+  Widget _avatar(String initials, {required bool soft, String? photoUrl}) {
+    final letters = Container(
+      width: 46,
+      height: 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: soft ? const Color(0xFFF7E8F4) : const Color(0xFFA719C8),
+        borderRadius: BorderRadius.circular(15),
       ),
-    ),
-  );
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: soft ? const Color(0xFFB3641A) : Colors.white,
+        ),
+      ),
+    );
+    // The profile photo when there is one; the initials while it loads or when it cannot be shown.
+    if (photoUrl == null) return letters;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: SizedBox(
+        width: 46,
+        height: 46,
+        child: Image.network(
+          photoUrl,
+          headers: api.authHeaders,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => letters,
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : letters,
+        ),
+      ),
+    );
+  }
 
   Widget _row({
     required String name,
     required String subtitle,
     required bool soft,
+    String? photoUrl,
     StatusPill? pill,
   }) => Padding(
     padding: const EdgeInsets.all(14),
     child: Row(
       children: [
-        _avatar(_initials(name), soft: soft),
+        _avatar(_initials(name), soft: soft, photoUrl: photoUrl),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -116,7 +138,14 @@ class _FamilyScreenState extends State<FamilyScreen> {
             WhiteCard(
               child: Column(
                 children: [
-                  _row(name: me, subtitle: tr(context, 'fm_you'), soft: false),
+                  _row(
+                    name: me,
+                    subtitle: tr(context, 'fm_you'),
+                    soft: false,
+                    photoUrl: liveApi && (profile.photoId ?? '').isNotEmpty
+                        ? api.mediaUrl(profile.photoId!)
+                        : null,
+                  ),
                   for (final p in people) ...[
                     const Divider(height: 1, color: AppColors.border),
                     _row(
@@ -126,6 +155,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                 '${tr(context, 'fam_age', args: {'n': '${p.age}'})}'
                           : tr(context, 'rel_${p.relation}'),
                       soft: p.isKid,
+                      photoUrl: p.photoUrl,
                       pill: p.isKid
                           ? _pill(tr(context, 'fm_minor'), StatusPill.past)
                           : null,

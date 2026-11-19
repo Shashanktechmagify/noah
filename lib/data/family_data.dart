@@ -22,9 +22,17 @@ class FamilyPerson {
     required this.isKid,
     this.age,
     this.since,
+    this.photoFileId,
   });
 
   final String name;
+
+  /// The relative's profile photo on the server (a grown-up member); a child has none.
+  final String? photoFileId;
+
+  String? get photoUrl => photoFileId == null || photoFileId!.isEmpty
+      ? null
+      : api.mediaUrl(photoFileId!);
 
   /// `spouse`, `son`, `father`, `child`, ... what this person is to the member.
   final String relation;
@@ -38,6 +46,7 @@ class FamilyPerson {
     isKid: j['kind'] == 'kid',
     age: (j['age'] as num?)?.toInt(),
     since: j['since'] == null ? null : '${j['since']}',
+    photoFileId: j['photoFileId'] == null ? null : '${j['photoFileId']}',
   );
 
   String get initials => name
