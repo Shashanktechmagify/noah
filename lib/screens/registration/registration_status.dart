@@ -38,7 +38,9 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
     openRequest.addListener(_onApprovalPush);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onApprovalPush());
     // The office may have decided since the last look (a push was tapped, or the app was opened later).
-    if (liveApi && api.signedIn) WidgetsBinding.instance.addPostFrameCallback((_) => _refreshQuietly());
+    if (liveApi && api.signedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshQuietly());
+    }
     if (widget.showSuccess) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showSuccess();
@@ -52,7 +54,8 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
     if (t.type == 'registration_approved') {
       openRequest.value = null;
       if (liveApi && !_checking) _checkStatus();
-    } else if (t.type == 'registration_rejected' || t.type == 'registration_video_returned') {
+    } else if (t.type == 'registration_rejected' ||
+        t.type == 'registration_video_returned') {
       // "Please correct your registration": show what to correct.
       openRequest.value = null;
       if (liveApi) _refreshQuietly();
@@ -396,13 +399,14 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
         padding: EdgeInsets.zero,
         children: [
           Container(
-            height: 226 + top,
+            // At least this tall, and taller when the text is large or wraps, so the title never reaches the status bar.
+            constraints: BoxConstraints(minHeight: 226 + top),
             decoration: const BoxDecoration(gradient: AppColors.headerGradient),
             child: Stack(
               children: [
                 const Positioned.fill(child: HexPattern()),
                 Padding(
-                  padding: EdgeInsets.only(top: top),
+                  padding: EdgeInsets.only(top: top + 14, bottom: 18),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -424,7 +428,12 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          tr(context, r.status == RegStatus.rejected ? 'reg_rej_title' : 'reg_done_title'),
+                          tr(
+                            context,
+                            r.status == RegStatus.rejected
+                                ? 'reg_rej_title'
+                                : 'reg_done_title',
+                          ),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -435,7 +444,12 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 30),
                           child: Text(
-                            tr(context, r.status == RegStatus.rejected ? 'reg_rej_sub' : 'reg_done_sub'),
+                            tr(
+                              context,
+                              r.status == RegStatus.rejected
+                                  ? 'reg_rej_sub'
+                                  : 'reg_done_sub',
+                            ),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white70,
