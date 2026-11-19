@@ -810,7 +810,8 @@ void main() {
     expect(find.text('Registration Successful'), findsOneWidget);
     // The office number is on the page once the registration is done.
     expect(find.text('Office: $kOfficePhone'), findsOneWidget);
-    expect(find.text('Anitha Varghese · $kOfficePhone'), findsOneWidget);
+    // The name to call is no longer a card on the page: it is in the popup of "Check approval status".
+    expect(find.text('Anitha Varghese · $kOfficePhone'), findsNothing);
 
     // The office returns the video, then approves.
     await tester.ensureVisible(find.text('Simulate: admin approves'));

@@ -13,7 +13,6 @@ import '../events/events_widgets.dart' show fullDate;
 import '../login_screen.dart';
 import '../main_shell.dart';
 import 'registration_flow.dart';
-import 'registration_video.dart';
 
 String _clock(int seconds) =>
     '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
@@ -272,19 +271,111 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   bool _checking = false;
 
-  /// What the last check found, shown under the button (a snackbar alone is easy to miss).
-  String? _note;
-  bool _noteIsError = false;
-
-  void _say(String text, {bool error = false}) {
-    if (!mounted) return;
-    setState(() {
-      final t = TimeOfDay.now();
-      final hh = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-      final mm = t.minute.toString().padLeft(2, '0');
-      _note = '$text ($hh:$mm ${t.period == DayPeriod.am ? 'am' : 'pm'})';
-      _noteIsError = error;
-    });
+  /// What the last check found, in a popup with whom to call (a line under the button is easy to miss).
+  Future<void> _say(String text, {bool error = false}) {
+    if (!mounted) return Future.value();
+    final t = TimeOfDay.now();
+    final hh = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final mm = t.minute.toString().padLeft(2, '0');
+    final at = '$hh:$mm ${t.period == DayPeriod.am ? 'am' : 'pm'}';
+    return showDialog<void>(
+      context: context,
+      builder: (dialog) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tr(dialog, 'reg_check_status'),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: error ? Colors.red : AppColors.muted,
+                  fontSize: 14,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                at,
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.tint,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tr(dialog, 'reg_enq').toUpperCase(),
+                      style: TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: spacing(dialog, 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Anitha Varghese · $kOfficePhone',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      tr(dialog, 'reg_enq_sub'),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      tr(dialog, 'reg_hours'),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.of(dialog).pop(),
+                child: Text(
+                  tr(dialog, 'reg_close'),
+                  style: const TextStyle(
+                    color: AppColors.magenta,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Live mode: asks the server whether the office has decided yet.
@@ -540,57 +631,8 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                           title: rows[i].$2,
                           sub: rows[i].$3,
                           done: rows[i].$5,
-                          // The video row opens the recording.
-                          onTap: i == 5 ? () => showVideoDialog(context) : null,
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.tint,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tr(context, 'reg_enq').toUpperCase(),
-                        style: TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: spacing(context, 0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Anitha Varghese · $kOfficePhone',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        tr(context, 'reg_enq_sub'),
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12.5,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        tr(context, 'reg_hours'),
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12.5,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -620,18 +662,6 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                     label: _checking ? '...' : tr(context, 'reg_check_status'),
                     onTap: _checking ? () {} : _checkStatus,
                   ),
-                  if (_note != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _note!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _noteIsError ? Colors.red : AppColors.muted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
                 ] else ...[
                   Text(
                     tr(context, 'reg_proto').toUpperCase(),
@@ -673,10 +703,7 @@ class _StatusRow extends StatelessWidget {
     required this.title,
     required this.sub,
     required this.done,
-    this.onTap,
   });
-
-  final VoidCallback? onTap;
 
   final IconData icon;
   final String title;
@@ -684,59 +711,44 @@ class _StatusRow extends StatelessWidget {
   final bool done;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: done ? AppColors.tint : const Color(0xFFFDEBD3),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: done ? AppColors.magenta : const Color(0xFFC2620A),
-            ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    child: Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: done ? AppColors.tint : const Color(0xFFFDEBD3),
+            borderRadius: BorderRadius.circular(13),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  sub,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ],
-            ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: done ? AppColors.magenta : const Color(0xFFC2620A),
           ),
-          if (onTap != null)
-            const Padding(
-              padding: EdgeInsets.only(right: 8),
-              child: Icon(
-                Icons.play_circle_outline,
-                color: AppColors.magenta,
-                size: 22,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          if (done) const Icon(Icons.check, color: Color(0xFF1F8A4C), size: 20),
-        ],
-      ),
+              Text(
+                sub,
+                style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+              ),
+            ],
+          ),
+        ),
+        if (done) const Icon(Icons.check, color: Color(0xFF1F8A4C), size: 20),
+      ],
     ),
   );
 }

@@ -139,6 +139,10 @@ void main() {
       await tester.pump();
       expect(find.text('Correct my details'), findsNothing);
       expect(find.text('NOTE FROM THE OFFICE'), findsNothing);
+      // The video row only says it was submitted: no play icon. The office contact is in the popup of "Check approval status", not on the page.
+      expect(find.byIcon(Icons.play_circle_outline), findsNothing);
+      expect(find.textContaining('Anitha Varghese'), findsNothing);
+      expect(find.text('FOR FURTHER DETAILS OR ENQUIRIES'), findsNothing);
     },
   );
 }
