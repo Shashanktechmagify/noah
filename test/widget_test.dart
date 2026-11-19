@@ -1550,7 +1550,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Welcome to Noah'), findsOneWidget);
 
-      // Two choices: mobile number or email. Email asks for an address.
+      // The Login page takes a mobile number only: there is no email choice on it.
+      expect(find.text('Email'), findsNothing);
+      await tester.tap(find.text('New to Noah? Register', findRichText: true));
+      await tester.pumpAndSettle();
+      expect(find.text('Register with Noah'), findsOneWidget);
+
+      // The Register page has two choices: mobile number or email. Email asks for an address.
       await tester.tap(find.text('Email'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText), 'not-an-address');
@@ -1558,7 +1564,7 @@ void main() {
       // Continue does nothing while it is not an address.
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
-      expect(find.text('Welcome to Noah'), findsOneWidget);
+      expect(find.text('Register with Noah'), findsOneWidget);
       await tester.enterText(find.byType(EditableText), 'anitha@example.com');
       await tester.pump();
       await tester.tap(find.text('Continue'));

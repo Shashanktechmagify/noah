@@ -15,8 +15,12 @@ import 'me/terms_screen.dart';
 import '../data/registration_data.dart' show emailError;
 import 'otp_screen.dart';
 
+/// The Login page: a mobile number only, for a member who is already registered. With [register] it is the Register page:
+/// a mobile number or an email address, and a new one starts a registration.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.register = false});
+
+  final bool register;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -27,8 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
   DialCountry _country = DialData.fallback.first;
   final _email = TextEditingController();
 
-  /// Members sign in with a mobile number or an email address; the choice is remembered.
-  bool _byEmail = false;
+  /// Registering can start with a mobile number or an email address; the choice is remembered. Login has no email.
+  bool _byEmailChoice = false;
+  bool get _byEmail => widget.register && _byEmailChoice;
 
   bool get _valid => _byEmail
       ? emailError(_email.text) == null
@@ -39,14 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _controller.addListener(() => setState(() {}));
     _email.addListener(() => setState(() {}));
-    _loadChoice();
+    if (widget.register) _loadChoice();
   }
 
   Future<void> _loadChoice() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (mounted && prefs.getString('login_channel') == 'email') {
-        setState(() => _byEmail = true);
+        setState(() => _byEmailChoice = true);
       }
     } catch (_) {
       // Nothing remembered: start with the mobile number.
@@ -54,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _choose(bool email) async {
-    setState(() => _byEmail = email);
+    setState(() => _byEmailChoice = email);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('login_channel', email ? 'email' : 'mobile');
@@ -118,7 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _sending = true);
     try {
-      final sent = await api.sendOtp(_country.dial, _controller.text);
+      final sent = await api.sendOtp(
+        _country.dial,
+        _controller.text,
+        register: widget.register,
+      );
       if (!mounted) return;
       _openOtp(
         OtpScreen(
@@ -128,12 +137,25 @@ class _LoginScreenState extends State<LoginScreen> {
           otpLength: sent.otpLength,
           resendSeconds: sent.resendAfter,
           devOtp: sent.devOtp,
+          register: widget.register,
         ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          // A number nobody registered: offer the Register page.
+          action: e.code == 'not_registered'
+              ? SnackBarAction(
+                  label: tr(context, 'login_register_link'),
+                  onPressed: _switch,
+                )
+              : null,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -143,11 +165,20 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
+  /// From Login to Register and back.
+  void _switch() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(register: !widget.register),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
       icon: Icons.home_outlined,
-      title: tr(context, 'welcome_title'),
+      title: tr(context, widget.register ? 'register_title' : 'welcome_title'),
       subtitle: tr(context, ''),
       headerHeight: 312,
       topRight: const LanguageDropdown(),
@@ -164,8 +195,10 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ChannelToggle(byEmail: _byEmail, onChoose: _choose),
-          const SizedBox(height: 16),
+          if (widget.register) ...[
+            _ChannelToggle(byEmail: _byEmail, onChoose: _choose),
+            const SizedBox(height: 16),
+          ],
           if (_byEmail) ...[
             Text(
               tr(context, 'email_label'),
@@ -254,7 +287,47 @@ class _LoginScreenState extends State<LoginScreen> {
             label: tr(context, 'continue'),
             onPressed: _valid && !_sending ? _continue : null,
           ),
-          const SizedBox(height: 16),
+          if (widget.register && _byEmail) ...[
+            const SizedBox(height: 12),
+            Text(
+              tr(context, 'register_email_note'),
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          // Login and Register are two pages: the way to the other one.
+          Center(
+            child: TextButton(
+              onPressed: _switch,
+              child: Text.rich(
+                TextSpan(
+                  text: tr(
+                    context,
+                    widget.register ? 'register_have' : 'login_new',
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 13.5,
+                  ),
+                  children: [
+                    TextSpan(
+                      text:
+                          ' ${tr(context, widget.register ? 'register_login_link' : 'login_register_link')}',
+                      style: const TextStyle(
+                        color: AppColors.magenta,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
           const _TermsNote(),
           const SizedBox(height: 18),
           // Center(

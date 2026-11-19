@@ -265,11 +265,21 @@ class ApiClient {
 
   // ── Sign in ───────────────────────────────────────────────────────────
 
-  Future<OtpSent> sendOtp(String countryCode, String mobileNumber) async {
+  /// Sends a code to a mobile number. [register] false is the Login page (only a registered number gets a code);
+  /// true is the Register page (a new number starts a registration).
+  Future<OtpSent> sendOtp(
+    String countryCode,
+    String mobileNumber, {
+    bool register = false,
+  }) async {
     final d = await _send(
       'POST',
       '/auth/otp/send',
-      json: {'countryCode': countryCode, 'mobileNumber': mobileNumber},
+      json: {
+        'countryCode': countryCode,
+        'mobileNumber': mobileNumber,
+        'purpose': register ? 'register' : 'login',
+      },
       auth: false,
     );
     return _otpSent(d);
@@ -289,7 +299,7 @@ class ApiClient {
     await _send(
       'POST',
       '/auth/otp/send',
-      json: {'email': email.trim().toLowerCase()},
+      json: {'email': email.trim().toLowerCase(), 'purpose': 'register'},
       auth: false,
     ),
   );
@@ -323,13 +333,14 @@ class ApiClient {
   }
 
   /// Sends the code that confirms the WhatsApp number a member wants to put in My information.
-  Future<OtpSent> sendWhatsappCode(String dial, String number) async => _otpSent(
-    await _send(
-      'POST',
-      '/profile/whatsapp/code',
-      json: {'countryCode': dial, 'mobileNumber': number},
-    ),
-  );
+  Future<OtpSent> sendWhatsappCode(String dial, String number) async =>
+      _otpSent(
+        await _send(
+          'POST',
+          '/profile/whatsapp/code',
+          json: {'countryCode': dial, 'mobileNumber': number},
+        ),
+      );
 
   /// Checks that code; only then does the server take a request to change the WhatsApp number.
   Future<void> verifyWhatsapp(String dial, String number, String code) async {
@@ -351,10 +362,12 @@ class ApiClient {
     String otp, {
     String? deviceId,
     String? deviceName,
+    bool register = false,
   }) => _verify({
     'countryCode': countryCode,
     'mobileNumber': mobileNumber,
     'otp': otp,
+    'purpose': register ? 'register' : 'login',
     'deviceId': ?deviceId,
     'deviceName': ?deviceName,
   });
@@ -368,6 +381,7 @@ class ApiClient {
   }) => _verify({
     'email': email.trim().toLowerCase(),
     'otp': otp,
+    'purpose': 'register',
     'deviceId': ?deviceId,
     'deviceName': ?deviceName,
   });
@@ -505,8 +519,8 @@ class ApiClient {
   }) => _send(
     'GET',
     '/content/dictionary?lang=$lang&limit=$limit'
-    '${q.isEmpty ? '' : '&q=${Uri.encodeQueryComponent(q)}'}'
-    '${category == null ? '' : '&category=${Uri.encodeQueryComponent(category)}'}',
+        '${q.isEmpty ? '' : '&q=${Uri.encodeQueryComponent(q)}'}'
+        '${category == null ? '' : '&category=${Uri.encodeQueryComponent(category)}'}',
   );
 
   Future<Map<String, dynamic>> libDictionaryCategories(int lang) =>
@@ -521,8 +535,8 @@ class ApiClient {
   }) => _send(
     'GET',
     '/content/commentary?lang=$lang&limit=$limit'
-    '${book == null ? '' : '&book=$book'}'
-    '${chapter == null ? '' : '&chapter=$chapter'}',
+        '${book == null ? '' : '&book=$book'}'
+        '${chapter == null ? '' : '&chapter=$chapter'}',
   );
 
   // ── Noahgram ─────────────────────────────────────────────────────────
@@ -601,8 +615,15 @@ class ApiClient {
     json: {'text': text, 'parentId': ?parentId},
   );
 
-  Future<Map<String, dynamic>> ngLikeComment(String id, String commentId, bool liked) =>
-      _send('POST', '/noahgram/posts/$id/comments/$commentId/like', json: {'liked': liked});
+  Future<Map<String, dynamic>> ngLikeComment(
+    String id,
+    String commentId,
+    bool liked,
+  ) => _send(
+    'POST',
+    '/noahgram/posts/$id/comments/$commentId/like',
+    json: {'liked': liked},
+  );
 
   Future<Map<String, dynamic>> ngReportComment(String id, String commentId) =>
       _send('POST', '/noahgram/posts/$id/comments/$commentId/report', json: {});
@@ -743,12 +764,14 @@ class ApiClient {
     json: {'liked': liked},
   );
 
-  Future<Map<String, dynamic>> reportMannaComment(String id, String commentId) =>
-      _send(
-        'POST',
-        '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}/report',
-        json: {},
-      );
+  Future<Map<String, dynamic>> reportMannaComment(
+    String id,
+    String commentId,
+  ) => _send(
+    'POST',
+    '/content/manna/$id/comments/${Uri.encodeComponent(commentId)}/report',
+    json: {},
+  );
 
   Future<void> deleteMannaComment(String id, String commentId) => _send(
     'DELETE',
@@ -799,14 +822,17 @@ class ApiClient {
   );
 
   /// The member's own requests: `{ items: [{id, category, everyone, anonymous, text, state, prayedBy, createdAt}] }`.
-  Future<Map<String, dynamic>> myPrayerRequests() => _send('GET', '/prayer-requests');
+  Future<Map<String, dynamic>> myPrayerRequests() =>
+      _send('GET', '/prayer-requests');
 
   /// The prayer wall: `{ warrior, items: [{id, category, text, everyone, name, anonymous, mine, prayedBy, iPrayed, createdAt}] }`.
   /// A prayer warrior also gets the requests meant for the warriors only.
-  Future<Map<String, dynamic>> prayerWall() => _send('GET', '/prayer-requests/wall');
+  Future<Map<String, dynamic>> prayerWall() =>
+      _send('GET', '/prayer-requests/wall');
 
   /// "I prayed": counted once per member. `{ id, prayedBy, iPrayed }`.
-  Future<Map<String, dynamic>> prayFor(String id) => _send('POST', '/prayer-requests/$id/pray', json: {});
+  Future<Map<String, dynamic>> prayFor(String id) =>
+      _send('POST', '/prayer-requests/$id/pray', json: {});
 
   // ── Family ──────────────────────────────────────────────────────────
 

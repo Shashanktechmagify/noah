@@ -22,9 +22,13 @@ class OtpScreen extends StatefulWidget {
     this.resendSeconds = 24,
     this.devOtp,
     this.devMailError,
+    this.register = false,
   });
 
   final String phone;
+
+  /// Came from the Register page (a new number starts a registration); false: from the Login page.
+  final bool register;
 
   /// Set when the code was sent by the real API (otherwise the demo code is used).
   final String? dial;
@@ -108,7 +112,12 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       final r = widget.email != null
           ? await api.verifyEmailOtp(widget.email!, _controller.text)
-          : await api.verifyOtp(widget.dial!, widget.number!, _controller.text);
+          : await api.verifyOtp(
+              widget.dial!,
+              widget.number!,
+              _controller.text,
+              register: widget.register,
+            );
       if (!mounted) return;
       await routeAfterServer(context, widget.phone, r.next);
     } on ApiException catch (e) {
@@ -130,7 +139,11 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       final sent = widget.email != null
           ? await api.sendEmailOtp(widget.email!)
-          : await api.sendOtp(widget.dial!, widget.number!);
+          : await api.sendOtp(
+              widget.dial!,
+              widget.number!,
+              register: widget.register,
+            );
       if (!mounted) return;
       _controller.clear();
       setState(() {
