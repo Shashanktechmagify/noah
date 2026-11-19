@@ -32,6 +32,19 @@ void main() {
     expect(education.options, isNotEmpty);
   });
 
+  test('education is the office list, and High School asks for the school, marks and year', () {
+    final education = ids.firstWhere((f) => f.id == 'education');
+    final names = education.options!.map((o) => o.$1).toList();
+    expect(names.first, 'High School');
+    expect(names, containsAll(['Less than High School', 'Diploma in ITI', 'Bachelors in Arts', 'Masters in Technology', 'ICWA', 'PhD', 'Others']));
+    expect(names.toSet().length, names.length, reason: 'no entry twice');
+    expect(EduEntry('High School', school: 'St Mary', marks: '80%').complete, isFalse);
+    expect(EduEntry('High School', school: 'St Mary', marks: '80%', year: '2010-11').complete, isTrue);
+    expect(EduEntry('Bachelors in Arts').complete, isTrue);
+    // What a member chose before the list changed still reads back.
+    expect(parseEducation("Bachelor's degree").single.label, "Bachelor's degree");
+  });
+
   test('10th and 12th ask for the school, marks and academic year, and the text reads back', () {
     final entries = [
       EduEntry(kEduSsc, school: "St Mary's High; Thane", marks: '85%', year: '2008-09'),

@@ -443,9 +443,17 @@ String _shown(BuildContext context, PfField f) {
   if (f.id == 'age') {
     final a = profile.ageParts;
     if (a == null) return '';
-    final years = tr(context, a.years == 1 ? 'pf_year' : 'pf_years', args: {'n': '${a.years}'});
+    final years = tr(
+      context,
+      a.years == 1 ? 'pf_year' : 'pf_years',
+      args: {'n': '${a.years}'},
+    );
     if (a.months == 0) return years;
-    final months = tr(context, a.months == 1 ? 'pf_month' : 'pf_months', args: {'n': '${a.months}'});
+    final months = tr(
+      context,
+      a.months == 1 ? 'pf_month' : 'pf_months',
+      args: {'n': '${a.months}'},
+    );
     return '$years $months';
   }
   final v = profile.get(f.id);
@@ -899,7 +907,10 @@ class _EducationEditorState extends State<_EducationEditor> {
   final _controllers = <String, TextEditingController>{};
 
   TextEditingController _c(EduEntry e, String part, String initial) =>
-      _controllers.putIfAbsent('${e.label}|$part', () => TextEditingController(text: initial));
+      _controllers.putIfAbsent(
+        '${e.label}|$part',
+        () => TextEditingController(text: initial),
+      );
 
   @override
   void dispose() {
@@ -937,7 +948,13 @@ class _EducationEditorState extends State<_EducationEditor> {
     _report();
   }
 
-  Widget _input(EduEntry e, String part, String hintKey, String value, void Function(String) set) => Padding(
+  Widget _input(
+    EduEntry e,
+    String part,
+    String hintKey,
+    String value,
+    void Function(String) set,
+  ) => Padding(
     padding: const EdgeInsets.only(top: 8),
     child: TextField(
       controller: _c(e, part, value),
@@ -947,12 +964,17 @@ class _EducationEditorState extends State<_EducationEditor> {
         _report();
       },
       textCapitalization: TextCapitalization.words,
-      keyboardType: part == 'school' ? TextInputType.text : TextInputType.visiblePassword,
+      keyboardType: part == 'school'
+          ? TextInputType.text
+          : TextInputType.visiblePassword,
       decoration: InputDecoration(
         hintText: tr(context, hintKey),
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -984,7 +1006,9 @@ class _EducationEditorState extends State<_EducationEditor> {
                         : _entries.map((e) => e.label).join(', '),
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: _entries.isEmpty ? FontWeight.w500 : FontWeight.w800,
+                      fontWeight: _entries.isEmpty
+                          ? FontWeight.w500
+                          : FontWeight.w800,
                       color: _entries.isEmpty ? AppColors.muted : AppColors.ink,
                     ),
                   ),
@@ -1034,6 +1058,7 @@ class _MultiSheet extends StatefulWidget {
 }
 
 class _MultiSheetState extends State<_MultiSheet> {
+  String _query = '';
   late final Set<String> _picked = {
     for (final part in widget.selected.split(','))
       if (part.trim().isNotEmpty)
@@ -1043,54 +1068,88 @@ class _MultiSheetState extends State<_MultiSheet> {
   @override
   Widget build(BuildContext context) {
     final f = widget.field;
+    final q = _query.trim().toLowerCase();
     return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.75,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-              child: Text(
-                tr(context, f.labelKey),
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.75,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+                child: Text(
+                  tr(context, f.labelKey),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final (value, key) in f.options!)
-                    CheckboxListTile(
-                      value: _picked.contains(value),
-                      activeColor: AppColors.magenta,
-                      title: Text(key == null ? value : tr(context, key)),
-                      onChanged: (on) => setState(() {
-                        if (on == true) {
-                          _picked.add(value);
-                        } else {
-                          _picked.remove(value);
-                        }
-                      }),
+              // A long list: type to find a qualification.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  onChanged: (v) => setState(() => _query = v),
+                  decoration: InputDecoration(
+                    hintText: tr(context, 'pf_search'),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.muted,
                     ),
-                ],
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: GradientButton(
-                label: tr(context, 'pf_done'),
-                onPressed: () {
-                  // In the order of the list, not the order they were ticked.
-                  final ordered = [
-                    for (final (value, _) in f.options!)
-                      if (_picked.contains(value)) value,
-                    ..._picked.where((p) => f.optionFor(p) == null),
-                  ];
-                  Navigator.of(context).pop(ordered.join(', '));
-                },
+              const SizedBox(height: 6),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (final (value, key) in f.options!)
+                      if (q.isEmpty ||
+                          (key == null ? value : tr(context, key))
+                              .toLowerCase()
+                              .contains(q))
+                        CheckboxListTile(
+                          value: _picked.contains(value),
+                          activeColor: AppColors.magenta,
+                          title: Text(key == null ? value : tr(context, key)),
+                          onChanged: (on) => setState(() {
+                            if (on == true) {
+                              _picked.add(value);
+                            } else {
+                              _picked.remove(value);
+                            }
+                          }),
+                        ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: GradientButton(
+                  label: tr(context, 'pf_done'),
+                  onPressed: () {
+                    // In the order of the list, not the order they were ticked.
+                    final ordered = [
+                      for (final (value, _) in f.options!)
+                        if (_picked.contains(value)) value,
+                      ..._picked.where((p) => f.optionFor(p) == null),
+                    ];
+                    Navigator.of(context).pop(ordered.join(', '));
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

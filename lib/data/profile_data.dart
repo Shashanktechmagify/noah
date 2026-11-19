@@ -14,7 +14,7 @@ enum PfKind {
   /// Several of the options may be picked; kept as one text, separated by commas.
   multi,
 
-  /// Education: qualifications to tick; 10th (SSC) and 12th (HSC) also ask for the school, marks and academic year.
+  /// Education: qualifications to tick (a searchable list); High School also asks for the school, marks and academic year.
   education,
   phone,
   email,
@@ -95,21 +95,33 @@ const _bloodGroups = [
 
 /// What a member picks as their education (Professional Details).
 const _educations = [
-  ('No formal education', null),
-  ('Primary (up to 7th)', null),
-  ('10th (SSC)', null),
-  ('12th (HSC)', null),
-  ('ITI', null),
-  ('Diploma', null),
-  ('Bachelor\'s degree', null),
-  ('Master\'s degree', null),
-  ('Doctorate (PhD)', null),
-  ('MBBS / Medical', null),
-  ('Nursing', null),
-  ('Law (LLB / LLM)', null),
-  ('Chartered Accountant', null),
-  ('Company Secretary', null),
-  ('Other', null),
+  (kEduHigh, null),
+  ('Less than High School', null),
+  ('Diploma in ITI', null),
+  ('Diploma in AMIE', null),
+  ('Bachelors in Arts', null),
+  ('Bachelors in Science', null),
+  ('Bachelors in Commerce', null),
+  ('Bachelors in Computers', null),
+  ('Bachelors in Engineering', null),
+  ('Bachelors in Education', null),
+  ('Bachelors in Technology', null),
+  ('Masters in Arts', null),
+  ('Masters in Science', null),
+  ('Masters in Commerce', null),
+  ('Masters in Computers', null),
+  ('Masters in Engineering', null),
+  ('Masters in Education', null),
+  ('Masters in Technology', null),
+  ('Management - BBA/MBA/Others', null),
+  ('Legal (Law) - BL/ML/LLB/Others', null),
+  ('ACA/FCA/Chartered Accountant', null),
+  ('ACA/FCA/Company Secretary', null),
+  ('ICWA', null),
+  ('PhD', null),
+  ('Medicine - General/Dental/Surgeon/Others', null),
+  ('Services - IAS/IPS/Others', null),
+  ('Others', null),
 ];
 
 /// The mother tongues a member picks from.
@@ -352,7 +364,12 @@ const kProfileSections = [
   ]),
   PfSection('pf_sec_education', [
     // Kept in the office's educationDetail column, one line for each qualification.
-    PfField('education', 'pf_qualification', PfKind.education, options: _educations),
+    PfField(
+      'education',
+      'pf_qualification',
+      PfKind.education,
+      options: _educations,
+    ),
   ]),
   PfSection('pf_sec_documents', [
     PfField('pan', 'reg_id_pan', PfKind.idNumber, idType: 'pan'),
@@ -404,10 +421,13 @@ const kProfileSections = [
   ]),
 ];
 
-/// The qualifications that ask for more: the school, the marks and the academic year.
+/// The qualifications that ask for more: the school, the marks and the academic year. High School is on the office's
+/// list; 10th (SSC) and 12th (HSC) are what members chose before it, and still show their details.
+const kEduHigh = 'High School';
 const kEduSsc = '10th (SSC)';
 const kEduHsc = '12th (HSC)';
-bool eduNeedsDetails(String label) => label == kEduSsc || label == kEduHsc;
+bool eduNeedsDetails(String label) =>
+    label == kEduHigh || label == kEduSsc || label == kEduHsc;
 
 /// One qualification of a member, with what is asked for 10th and 12th.
 class EduEntry {
@@ -421,7 +441,9 @@ class EduEntry {
   /// The details of 10th and 12th are all needed.
   bool get complete =>
       !eduNeedsDetails(label) ||
-      (school.trim().isNotEmpty && marks.trim().isNotEmpty && year.trim().isNotEmpty);
+      (school.trim().isNotEmpty &&
+          marks.trim().isNotEmpty &&
+          year.trim().isNotEmpty);
 }
 
 String _eduClean(String v) => v.replaceAll(RegExp(r'[\n;]+'), ',').trim();
@@ -435,14 +457,21 @@ String composeEducation(List<EduEntry> entries) => [
 ].join('\n');
 
 /// Reads what [composeEducation] wrote. An older value, qualifications separated by commas, is read as well.
-List<EduEntry> parseEducation(String text, [Iterable<String> known = const []]) {
+List<EduEntry> parseEducation(
+  String text, [
+  Iterable<String> known = const [],
+]) {
   final out = <EduEntry>[];
   for (final line in text.split('\n')) {
     final l = line.trim();
     if (l.isEmpty) continue;
     final at = l.indexOf(' — ');
     if (at < 0) {
-      final parts = l.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+      final parts = l
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
       if (parts.length > 1 && parts.every(known.contains)) {
         out.addAll(parts.map(EduEntry.new));
       } else {
