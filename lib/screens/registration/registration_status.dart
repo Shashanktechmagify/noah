@@ -335,21 +335,13 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Anitha Varghese · $kOfficePhone',
+                      tr(dialog, 'reg_enq_sub', args: {'phone': kOfficePhone}),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      tr(dialog, 'reg_enq_sub'),
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       tr(dialog, 'reg_hours'),
                       style: const TextStyle(

@@ -65,6 +65,13 @@ void main() {
     );
   });
 
+  test('the office contact in the "Check approval status" popup', () {
+    expect(trIn(AppLang.en, 'reg_enq'), 'For further details and inquiries');
+    expect(trIn(AppLang.en, 'reg_enq_sub'), 'Contact KSM Office {phone}');
+    expect(trIn(AppLang.en, 'reg_hours'), 'Monday to Saturday - 10am to 7pm');
+    expect(kOfficePhone, '+91 82915 65758');
+  });
+
   testWidgets('the status page says what to correct and offers to correct it', (
     tester,
   ) async {
