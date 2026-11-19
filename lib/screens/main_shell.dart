@@ -11,6 +11,7 @@ import '../widgets/prayer_dialog.dart';
 import 'jodie/jodie_screen.dart';
 import 'bible_study_screen.dart';
 import 'manna_screen.dart';
+import 'prayer_wall_screen.dart';
 import 'menu_sheet.dart';
 import 'me_screen.dart';
 import 'library_screens.dart';
@@ -260,14 +261,17 @@ class _MainShellState extends State<MainShell> {
           context,
         ).push(MaterialPageRoute(builder: (_) => const WordsOfFaithScreen()));
       case 'dream' when liveApi:
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const DreamDictionaryScreen()));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DreamDictionaryScreen()),
+        );
       case 'commentary':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const CommentaryScreen()));
       case 'prayer_request':
         showPrayerDialog(context);
+      case 'prayer_wall':
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PrayerWallScreen()));
       default:
         final item = kMenuItems.firstWhere((i) => i.id == id);
         final messenger = ScaffoldMessenger.of(context);

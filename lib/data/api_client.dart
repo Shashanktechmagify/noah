@@ -798,6 +798,16 @@ class ApiClient {
     },
   );
 
+  /// The member's own requests: `{ items: [{id, category, everyone, anonymous, text, state, prayedBy, createdAt}] }`.
+  Future<Map<String, dynamic>> myPrayerRequests() => _send('GET', '/prayer-requests');
+
+  /// The prayer wall: `{ warrior, items: [{id, category, text, everyone, name, anonymous, mine, prayedBy, iPrayed, createdAt}] }`.
+  /// A prayer warrior also gets the requests meant for the warriors only.
+  Future<Map<String, dynamic>> prayerWall() => _send('GET', '/prayer-requests/wall');
+
+  /// "I prayed": counted once per member. `{ id, prayedBy, iPrayed }`.
+  Future<Map<String, dynamic>> prayFor(String id) => _send('POST', '/prayer-requests/$id/pray', json: {});
+
   // ── Family ──────────────────────────────────────────────────────────
 
   /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.

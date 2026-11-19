@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'api_client.dart';
+
 class PrayerRequest {
   PrayerRequest({
     required this.categoryKey,
@@ -23,10 +25,149 @@ class PrayerRequest {
   final DateTime at;
 }
 
+/// One request on the prayer wall (someone else's, or the member's own).
+class WallRequest {
+  WallRequest({
+    required this.id,
+    required this.category,
+    required this.text,
+    required this.everyone,
+    required this.name,
+    required this.mine,
+    required this.prayedBy,
+    required this.iPrayed,
+    required this.createdAt,
+  });
+
+  final String id;
+
+  /// `healing`, `family`, `guidance`, `thanks` or `other`.
+  final String category;
+  final String text;
+
+  /// false: meant for the prayer warriors only.
+  final bool everyone;
+
+  /// Null when the writer asked to be anonymous.
+  final String? name;
+  final bool mine;
+  int prayedBy;
+  bool iPrayed;
+  final DateTime? createdAt;
+
+  factory WallRequest.fromJson(Map<String, dynamic> j) => WallRequest(
+    id: '${j['id']}',
+    category: '${j['category']}',
+    text: '${j['text']}',
+    everyone: j['everyone'] == true,
+    name: j['name'] == null ? null : '${j['name']}',
+    mine: j['mine'] == true,
+    prayedBy: (j['prayedBy'] as num?)?.toInt() ?? 0,
+    iPrayed: j['iPrayed'] == true,
+    createdAt: DateTime.tryParse('${j['createdAt']}')?.toLocal(),
+  );
+}
+
+/// One of the member's own requests and where it stands.
+class MyPrayer {
+  MyPrayer({
+    required this.id,
+    required this.category,
+    required this.text,
+    required this.everyone,
+    required this.state,
+    required this.prayedBy,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String category;
+  final String text;
+  final bool everyone;
+
+  /// `Pending`, `Approved` or `Declined`.
+  final String state;
+  final int prayedBy;
+  final DateTime? createdAt;
+
+  factory MyPrayer.fromJson(Map<String, dynamic> j) => MyPrayer(
+    id: '${j['id']}',
+    category: '${j['category']}',
+    text: '${j['text']}',
+    everyone: j['everyone'] == true,
+    state: '${j['state']}',
+    prayedBy: (j['prayedBy'] as num?)?.toInt() ?? 0,
+    createdAt: DateTime.tryParse('${j['createdAt']}')?.toLocal(),
+  );
+}
+
 /// Demo store for prayer requests. Replace [add] with an API call; the
 /// backend should route requests to the prayer team.
 class PrayerState extends ChangeNotifier {
   final requests = <PrayerRequest>[];
+
+  // ── Live: the prayer wall and the member's own requests ───────────────
+  List<WallRequest> wall = [];
+  List<MyPrayer> mine = [];
+
+  /// The office marked this member as a prayer warrior: the wall also shows the warriors' requests.
+  bool warrior = false;
+  bool loaded = false;
+  bool loading = false;
+  bool failed = false;
+
+  Future<void> load() async {
+    if (!liveApi || !api.signedIn || loading) return;
+    loading = true;
+    failed = false;
+    notifyListeners();
+    try {
+      final w = await api.prayerWall();
+      final m = await api.myPrayerRequests();
+      warrior = w['warrior'] == true;
+      wall = ((w['items'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(WallRequest.fromJson)
+          .toList();
+      mine = ((m['items'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(MyPrayer.fromJson)
+          .toList();
+      loaded = true;
+    } on ApiException {
+      failed = true; // offline: what is shown stays
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// "I prayed": shown at once, undone if the server refuses.
+  Future<void> pray(WallRequest r) async {
+    if (r.iPrayed || r.mine) return;
+    r
+      ..iPrayed = true
+      ..prayedBy += 1;
+    notifyListeners();
+    try {
+      final d = await api.prayFor(r.id);
+      r.prayedBy = (d['prayedBy'] as num?)?.toInt() ?? r.prayedBy;
+    } on ApiException {
+      r
+        ..iPrayed = false
+        ..prayedBy -= 1;
+    }
+    notifyListeners();
+  }
+
+  void clear() {
+    wall = [];
+    mine = [];
+    warrior = false;
+    loaded = false;
+    failed = false;
+    notifyListeners();
+  }
 
   void add({
     required String categoryKey,

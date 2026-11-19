@@ -18,6 +18,7 @@ import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import 'events/events_widgets.dart' show monthShort;
 import 'library_screens.dart';
+import 'prayer_wall_screen.dart';
 import 'manna_screen.dart';
 import 'me/notifications_screen.dart';
 import 'word_screens.dart';
@@ -229,7 +230,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         RefreshIndicator(
           onRefresh: () async {
             final lang = AppLocale.of(context).lang;
-            await Future.wait([contentState.refresh(lang), library.refreshHome(lang)]);
+            await Future.wait([
+              contentState.refresh(lang),
+              library.refreshHome(lang),
+            ]);
           },
           child: ListView(
             controller: _scroll,
@@ -673,6 +677,16 @@ class _PrayerRequestCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PrayerWallScreen())),
+            child: Text(tr(context, 'pw_link')),
           ),
         ),
       ],

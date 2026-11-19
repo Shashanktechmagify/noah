@@ -5,6 +5,7 @@ import 'live_noahgram.dart';
 import 'ministry_data.dart';
 import 'notifications_data.dart';
 import 'pastor_data.dart';
+import 'prayer_data.dart';
 import 'push_service.dart';
 
 /// Live mode: starts what runs while a member is signed in (chats, the
@@ -27,6 +28,7 @@ Future<void> endLiveSession() async {
   pastorInbox.stop();
   notificationsState.clear();
   familyState.clear();
+  prayer.clear();
   liveNoahgram.clear();
   library.clear();
   await pushService.stop();
