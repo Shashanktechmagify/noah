@@ -73,12 +73,17 @@ Future<void> showVideoDialog(BuildContext context) {
 class _VideoPlayerBox extends StatefulWidget {
   const _VideoPlayerBox({
     super.key,
-    required this.path,
+    this.path,
+    this.url,
+    this.headers,
     required this.height,
     this.autoPlay = false,
-  });
+  }) : assert(path != null || url != null);
 
-  final String path;
+  /// A file on this phone, or an address (with the sign-in headers) of the one the server holds.
+  final String? path;
+  final String? url;
+  final Map<String, String>? headers;
   final double height;
   final bool autoPlay;
 
@@ -98,7 +103,12 @@ class _VideoPlayerBoxState extends State<_VideoPlayerBox> {
 
   Future<void> _init() async {
     try {
-      final c = VideoPlayerController.file(File(widget.path));
+      final c = widget.path != null
+          ? VideoPlayerController.file(File(widget.path!))
+          : VideoPlayerController.networkUrl(
+              Uri.parse(widget.url!),
+              httpHeaders: widget.headers ?? const {},
+            );
       await c.initialize();
       await c.setLooping(true);
       if (!mounted) {
@@ -423,6 +433,14 @@ class _VideoStepState extends State<VideoStep> {
           _VideoPlayerBox(
             key: ValueKey(r.videoPath),
             path: r.videoPath!,
+            height: 300,
+          )
+        else if (recorded && r.videoFileId != null)
+          // The video the server holds (the registration came back for correction): it plays here, no need to record again.
+          _VideoPlayerBox(
+            key: ValueKey(r.videoFileId),
+            url: api.fileUrl(r.videoFileId!),
+            headers: api.authHeaders,
             height: 300,
           )
         else

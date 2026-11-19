@@ -70,6 +70,25 @@ class RegDocument {
       (!isId || idNumberError(type, number) == null);
 }
 
+/// What the member entered for one kind of ID (its number and its file), kept while they look at another kind.
+class IdSlot {
+  IdSlot({
+    this.number = '',
+    this.file,
+    this.path,
+    this.fileId,
+    this.uploadedFrom,
+  });
+
+  final String number;
+  final String? file;
+  final String? path;
+  final String? fileId;
+  final String? uploadedFrom;
+
+  bool get isEmpty => number.isEmpty && file == null && fileId == null;
+}
+
 /// The Emirates ID is only offered to members whose address is in the UAE.
 const kUaeCountry = 'United Arab Emirates';
 
@@ -224,6 +243,9 @@ class RegistrationState extends ChangeNotifier {
   String? idFile; // display name
   String? idPath; // local path of the picked file
 
+  /// What was entered for the other kinds of ID the member tried: choosing Aadhaar again brings its number and picture back.
+  final Map<String, IdSlot> idSlots = {};
+
   // Step 4: photo
   String? photoFile; // display name
   String? photoPath; // local path of the picked image
@@ -260,6 +282,35 @@ class RegistrationState extends ChangeNotifier {
   /// Call after changing a field so listeners (the footer button) refresh.
   void touch() => notifyListeners();
 
+  /// Chooses the kind of ID. The number and picture of the kind left are kept; the kind chosen shows its own (empty
+  /// when nothing was entered for it yet), never the other one's.
+  void selectIdType(String type) {
+    if (idType == type) return;
+    final left = idType;
+    if (left != null) {
+      final slot = IdSlot(
+        number: idNumber,
+        file: idFile,
+        path: idPath,
+        fileId: idProofFileId,
+        uploadedFrom: idUploadedFrom,
+      );
+      if (slot.isEmpty) {
+        idSlots.remove(left);
+      } else {
+        idSlots[left] = slot;
+      }
+    }
+    final next = idSlots[type];
+    idType = type;
+    idNumber = next?.number ?? '';
+    idFile = next?.file;
+    idPath = next?.path;
+    idProofFileId = next?.fileId;
+    idUploadedFrom = next?.uploadedFrom;
+    notifyListeners();
+  }
+
   static String _digitsOf(String v) => v.replaceAll(RegExp(r'\D'), '');
 
   /// Signing in with an email address or a mobile number confirms that one; the other is confirmed in step 1.
@@ -292,6 +343,7 @@ class RegistrationState extends ChangeNotifier {
     referenceDial = '+91';
     state = '';
     idType = idFile = idPath = photoFile = photoPath = null;
+    idSlots.clear();
     documents.clear();
     agreed = false;
     signedOn = null;
@@ -548,6 +600,7 @@ class RegistrationState extends ChangeNotifier {
     pin = s('pin');
     idType = m['idType'] as String?;
     idNumber = s('idNumber');
+    idSlots.clear();
 
     final idProof = m['idProof'] as Map<String, dynamic>?;
     idProofFileId = idProof?['id'] as String?;
@@ -606,7 +659,8 @@ class RegistrationState extends ChangeNotifier {
 
   /// Where the form opens for a returning member: at the start when the office rejected the registration (everything
   /// can be checked and corrected), else at the first step that still needs work.
-  int firstStepToShow() => status == RegStatus.rejected ? 0 : firstIncompleteStep;
+  int firstStepToShow() =>
+      status == RegStatus.rejected ? 0 : firstIncompleteStep;
 
   /// The first step that still needs work (where a returning member resumes).
   int get firstIncompleteStep {

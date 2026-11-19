@@ -907,6 +907,17 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
   Future<void> _viewId() async {
     final path = registration.idPath;
     final isPdf = (registration.idFile ?? '').toLowerCase().endsWith('.pdf');
+    final fileId = registration.idProofFileId;
+    // A picture the server holds (the member signed in again, or the office sent the registration back).
+    if (!isPdf &&
+        fileId != null &&
+        (path == null || !File(path).existsSync())) {
+      openImageProviderViewer(
+        context,
+        NetworkImage(api.fileUrl(fileId), headers: api.authHeaders),
+      );
+      return;
+    }
     if (path == null || isPdf || !File(path).existsSync()) {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
@@ -943,10 +954,10 @@ class _IdStepState extends State<_IdStep> with _Live<_IdStep> {
                   GestureDetector(
                     onTap: () {
                       if (r.idType != t.$1) {
-                        r.idType = t.$1;
-                        r.idNumber = '';
-                        _number.clear();
-                        r.touch();
+                        // Each kind of ID keeps its own number and picture.
+                        r.selectIdType(t.$1);
+                        _number.text = r.idNumber;
+                        _uploadError = null;
                         setState(() {});
                       }
                     },
@@ -1181,6 +1192,14 @@ class _PhotoStepState extends State<_PhotoStep> with _Live<_PhotoStep> {
                         openImageProviderViewer(context, MemoryImage(bytes));
                       }
                     }
+                  : has && r.photoFileId != null
+                  ? () => openImageProviderViewer(
+                      context,
+                      NetworkImage(
+                        api.fileUrl(r.photoFileId!),
+                        headers: api.authHeaders,
+                      ),
+                    )
                   : null,
               child: Container(
                 width: 168,
@@ -1202,6 +1221,23 @@ class _PhotoStepState extends State<_PhotoStep> with _Live<_PhotoStep> {
                         width: 168,
                         height: 168,
                         fit: BoxFit.cover,
+                      )
+                    : has && r.photoFileId != null
+                    // The photo the server holds, loaded again when the registration comes back for correction.
+                    ? Image.network(
+                        api.fileUrl(r.photoFileId!),
+                        headers: api.authHeaders,
+                        width: 168,
+                        height: 168,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Text(
+                          initials,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 56,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       )
                     : has
                     ? Text(

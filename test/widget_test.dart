@@ -1635,7 +1635,7 @@ void main() {
     expect(r.detailsValid, isFalse);
   });
 
-  testWidgets('step 3 offers other documents, but not the main ID again', (
+  testWidgets('step 3 offers other documents, but no ID kinds', (
     tester,
   ) async {
     final loader = FontLoader('PlusJakartaSans')
@@ -1663,16 +1663,23 @@ void main() {
     expect(find.text('Other documents'), findsOneWidget);
     await tester.tap(find.text('Add another document'));
     await tester.pumpAndSettle();
-    // Every kind is offered except the main ID (PAN).
+    // Only the other documents are offered here: the IDs are chosen above, as the ID proof.
     for (final label in [
-      'Aadhaar card',
       'Salary slip',
       'Qualification certificate',
       'Marriage certificate',
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('PAN card'), findsNothing);
+    for (final id in [
+      'Aadhaar card',
+      'PAN card',
+      'Passport',
+      'Driving licence',
+      'Voter ID',
+    ]) {
+      expect(find.text(id), findsNothing, reason: id);
+    }
     // Nothing can be added until a file is chosen.
     await tester.tap(find.text('Salary slip'));
     await tester.pumpAndSettle();

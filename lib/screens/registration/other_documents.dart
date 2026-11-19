@@ -37,17 +37,11 @@ class _OtherDocumentsState extends State<OtherDocuments> {
     if (mounted) setState(() {});
   }
 
-  /// The kinds of document still to pick from: every ID except the main one and those already added, and the
-  /// other documents not yet added.
+  /// The kinds of document still to pick from: the other documents not yet added. The IDs (Aadhaar, PAN, passport,
+  /// driving licence, voter ID, Emirates ID) are chosen above, as the ID proof, so they are not offered here.
   List<String> _available() {
-    final r = registration;
-    final used = {
-      if (r.idType != null) r.idType!,
-      for (final d in r.documents) d.type,
-    };
+    final used = {for (final d in registration.documents) d.type};
     return [
-      for (final t in idTypesFor(r.country))
-        if (!used.contains(t.$1)) t.$1,
       for (final t in kOtherDocTypes)
         if (!used.contains(t.$1)) t.$1,
     ];
