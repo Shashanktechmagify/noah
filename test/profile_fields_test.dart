@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/profile_data.dart';
-import 'package:noah_frontend_flutter/data/registration_data.dart' show kSalutations;
+import 'package:noah_frontend_flutter/data/registration_data.dart'
+    show kSalutations;
 
 void main() {
   final ids = [
@@ -17,7 +18,17 @@ void main() {
 
   test('the salutations are the office list, in registration and in My information', () {
     expect(kSalutations.first, 'Mr.');
-    expect(kSalutations, containsAll(['Pastor', 'Bishop', 'Apostle', 'Dr. (Mrs.)', 'LT.-Col.', 'Maj.-Gen.']));
+    expect(
+      kSalutations,
+      containsAll([
+        'Pastor',
+        'Bishop',
+        'Apostle',
+        'Dr. (Mrs.)',
+        'LT.-Col.',
+        'Maj.-Gen.',
+      ]),
+    );
     expect(kSalutations.toSet().length, kSalutations.length);
     final field = ids.firstWhere((f) => f.id == 'salutation');
     expect(field.options!.map((o) => o.$1).toList(), kSalutations);
@@ -32,43 +43,54 @@ void main() {
     expect(education.options, isNotEmpty);
   });
 
-  test('education is the office list, and High School asks for the school, marks and year', () {
+  test('education is the office list and asks for nothing more', () {
     final education = ids.firstWhere((f) => f.id == 'education');
     final names = education.options!.map((o) => o.$1).toList();
     expect(names.first, 'High School');
-    expect(names, containsAll(['Less than High School', 'Diploma in ITI', 'Bachelors in Arts', 'Masters in Technology', 'ICWA', 'PhD', 'Others']));
+    expect(
+      names,
+      containsAll([
+        'Less than High School',
+        'Diploma in ITI',
+        'Bachelors in Arts',
+        'Masters in Technology',
+        'ICWA',
+        'PhD',
+        'Others',
+      ]),
+    );
     expect(names.toSet().length, names.length, reason: 'no entry twice');
-    expect(EduEntry('High School', school: 'St Mary', marks: '80%').complete, isFalse);
-    expect(EduEntry('High School', school: 'St Mary', marks: '80%', year: '2010-11').complete, isTrue);
-    expect(EduEntry('Bachelors in Arts').complete, isTrue);
-    // What a member chose before the list changed still reads back.
-    expect(parseEducation("Bachelor's degree").single.label, "Bachelor's degree");
+
+    // The qualifications are kept one to a line.
+    expect(
+      composeEducation(['High School', 'Bachelors in Arts']),
+      'High School\nBachelors in Arts',
+    );
+    expect(parseEducation('High School\nBachelors in Arts'), [
+      'High School',
+      'Bachelors in Arts',
+    ]);
   });
 
-  test('10th and 12th ask for the school, marks and academic year, and the text reads back', () {
-    final entries = [
-      EduEntry(kEduSsc, school: "St Mary's High; Thane", marks: '85%', year: '2008-09'),
-      EduEntry("Bachelor's degree"),
-      EduEntry(kEduHsc, school: 'Holy Cross', marks: '425/500', year: '2010-11'),
-    ];
-    final text = composeEducation(entries);
-    expect(text.split(r'\n').length, 1, reason: 'a raw backslash-n is not the separator');
-    expect(text.split('\n').length, 3);
-    expect(text.split('\n').first, startsWith('10th (SSC) — School: '));
-    final back = parseEducation(text);
-    expect(back.map((e) => e.label), [kEduSsc, "Bachelor's degree", kEduHsc]);
-    expect(back[0].school, "St Mary's High, Thane", reason: 'a semicolon in a name is kept out of the separators');
-    expect(back[0].marks, '85%');
-    expect(back[0].year, '2008-09');
-    expect(back[2].marks, '425/500');
-    expect(back.every((e) => e.complete), isTrue);
-
-    // Missing details are noticed; other qualifications ask for nothing more.
-    expect(EduEntry(kEduSsc, school: 'x').complete, isFalse);
-    expect(EduEntry('Diploma').complete, isTrue);
+  test('what was saved with the details of 10th and 12th reads back as the qualification alone', () {
+    const saved =
+        "10th (SSC) — School: St Mary's High, Thane; Marks: 85%; Academic year: 2008-09\n"
+        "Bachelor's degree\n"
+        '12th (HSC) — School: Holy Cross; Marks: 425/500; Academic year: 2010-11';
+    expect(parseEducation(saved), [
+      '10th (SSC)',
+      "Bachelor's degree",
+      '12th (HSC)',
+    ]);
     // An older value (qualifications separated by commas) is read as well.
-    final old = parseEducation("Diploma, Bachelor's degree", ['Diploma', "Bachelor's degree"]);
-    expect(old.map((e) => e.label), ['Diploma', "Bachelor's degree"]);
+    expect(
+      parseEducation("Diploma, Bachelor's degree", [
+        'Diploma',
+        "Bachelor's degree",
+      ]),
+      ['Diploma', "Bachelor's degree"],
+    );
+    expect(parseEducation(''), isEmpty);
   });
 
   test('born 27 September 2005 is 21 years 1 month on 12 November 2026', () {
@@ -79,7 +101,11 @@ void main() {
     });
     final on = p.ageOn(DateTime(2026, 11, 12))!;
     expect((on.years, on.months), (21, 1));
-    expect(p.ageOn(DateTime(2026, 11, 27))!.months, 2, reason: 'the day the month is complete');
+    expect(
+      p.ageOn(DateTime(2026, 11, 27))!.months,
+      2,
+      reason: 'the day the month is complete',
+    );
     expect(p.ageOn(DateTime(2026, 9, 26))!.years, 20);
     expect(p.ageOn(DateTime(2026, 9, 27))!.years, 21);
     expect(p.ageOn(DateTime(2026, 10, 12)), (years: 21, months: 0));

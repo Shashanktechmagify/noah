@@ -271,13 +271,9 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   bool _checking = false;
 
-  /// What the last check found, in a popup with whom to call (a line under the button is easy to miss).
-  Future<void> _say(String text, {bool error = false}) {
+  /// The popup of "Check approval status": whom to call. [error] is set only when the check itself failed.
+  Future<void> _say({String? error}) {
     if (!mounted) return Future.value();
-    final t = TimeOfDay.now();
-    final hh = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final mm = t.minute.toString().padLeft(2, '0');
-    final at = '$hh:$mm ${t.period == DayPeriod.am ? 'am' : 'pm'}';
     return showDialog<void>(
       context: context,
       builder: (dialog) => Dialog(
@@ -290,30 +286,19 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                tr(dialog, 'reg_check_status'),
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
+              if (error != null) ...[
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: error ? Colors.red : AppColors.muted,
-                  fontSize: 14,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                at,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 14),
+              ],
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -390,13 +375,13 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
             ),
           );
         default:
-          _say(tr(context, 'reg_still_pending'));
+          _say();
       }
     } on ApiException catch (e) {
-      _say(e.message, error: true);
+      _say(error: e.message);
     } catch (e) {
       // Anything unexpected is shown too, instead of the button seeming to do nothing.
-      _say('Could not check: $e', error: true);
+      _say(error: 'Could not check: $e');
     } finally {
       if (mounted) setState(() => _checking = false);
     }
