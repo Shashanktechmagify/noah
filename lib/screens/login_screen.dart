@@ -287,17 +287,6 @@ class _LoginScreenState extends State<LoginScreen> {
             label: tr(context, 'continue'),
             onPressed: _valid && !_sending ? _continue : null,
           ),
-          if (widget.register && _byEmail) ...[
-            const SizedBox(height: 12),
-            Text(
-              tr(context, 'register_email_note'),
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ],
           const SizedBox(height: 10),
           // Login and Register are two pages: the way to the other one.
           Center(
