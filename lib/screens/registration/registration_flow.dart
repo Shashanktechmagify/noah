@@ -17,7 +17,7 @@ import '../../widgets/auth_scaffold.dart';
 import '../../widgets/language_dropdown.dart';
 import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../events/events_widgets.dart' show fullDate;
-import '../login_screen.dart';
+import '../entry_screen.dart';
 import 'registration_video.dart';
 import 'contact_confirm.dart';
 import 'other_documents.dart';
@@ -78,7 +78,7 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
       // This flow replaced the OTP page, so there is nothing to pop to:
       // go back to the login page instead.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const EntryScreen()),
         (_) => false,
       );
     }

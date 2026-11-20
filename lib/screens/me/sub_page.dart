@@ -9,6 +9,7 @@ class SubPage extends StatelessWidget {
     required this.title,
     this.subtitle = '',
     this.bandHeight = 150,
+    this.actions = const [],
     this.headerExtra,
     this.bottomBar,
     required this.children,
@@ -17,6 +18,9 @@ class SubPage extends StatelessWidget {
   final String title;
   final String subtitle;
   final double bandHeight;
+
+  /// Round buttons at the right of the title (for example a plus).
+  final List<Widget> actions;
   final Widget? headerExtra;
 
   /// Stays at the bottom of the page while the content scrolls (for example a button that sends all changes).
@@ -32,6 +36,7 @@ class SubPage extends StatelessWidget {
       leadingIcon: Icons.arrow_back,
       onLeading: () => Navigator.of(context).pop(),
       bandHeight: bandHeight,
+      actions: actions,
       headerExtra: headerExtra,
       children: children,
     ),

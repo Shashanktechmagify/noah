@@ -66,11 +66,15 @@ class FamilyRequest {
     required this.state,
     required this.waiting,
     required this.remark,
+    this.kid = false,
   });
 
   final String id;
   final String name;
   final String relation;
+
+  /// A request to add a child (the office approves it, then the parent registers the child).
+  final bool kid;
 
   /// `Pending`, `Rejected` or `Approved` (an approved grown-up who has not joined Noah yet is [waiting]).
   final String state;
@@ -87,6 +91,7 @@ class FamilyRequest {
     state: '${j['state']}',
     waiting: j['waiting'] == true,
     remark: '${j['remark'] ?? ''}',
+    kid: j['kid'] == true,
   );
 }
 
@@ -127,6 +132,7 @@ class FamilyState extends ChangeNotifier {
   Future<void> ask({
     required String relation,
     required String firstName,
+    String middleName = '',
     String lastName = '',
     String? dateOfBirth,
     String? countryCode,
@@ -136,6 +142,7 @@ class FamilyState extends ChangeNotifier {
     await api.createFamilyRequest(
       relation: relation,
       firstName: firstName,
+      middleName: middleName,
       lastName: lastName,
       dateOfBirth: dateOfBirth,
       countryCode: countryCode,

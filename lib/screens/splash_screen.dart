@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/session_restore.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
+import 'entry_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (_, _, _) => home ?? const LoginScreen(),
+          pageBuilder: (_, _, _) => home ?? const EntryScreen(),
           transitionsBuilder: (_, a, _, child) =>
               FadeTransition(opacity: a, child: child),
         ),

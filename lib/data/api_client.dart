@@ -105,6 +105,9 @@ class ApiClient {
   /// A pastor answers messages instead of sending them to a pastor.
   bool get isPastor => roles.contains('pastor');
 
+  /// This account is a child's (a parent opened it from the Child section).
+  bool get isChild => roles.contains('child');
+
   bool get signedIn => accessToken != null;
 
   void clear() {
@@ -388,6 +391,11 @@ class ApiClient {
 
   Future<SignedIn> _verify(Map<String, dynamic> body) async {
     final d = await _send('POST', '/auth/otp/verify', json: body, auth: false);
+    return _accept(d);
+  }
+
+  /// Takes the tokens of a sign-in answer (a code checked, or a parent opening a child) and keeps them.
+  SignedIn _accept(Map<String, dynamic> d) {
     accessToken = d['accessToken'] as String?;
     refreshToken = d['refreshToken'] as String?;
     roles = ((d['roles'] as List?) ?? const []).map((e) => '$e').toList();
@@ -426,6 +434,21 @@ class ApiClient {
 
   /// `{ member, registration: {status}, next }`.
   Future<Map<String, dynamic>> me() => _send('GET', '/me');
+
+  // ── Child section ─────────────────────────────────────────────────────
+
+  /// The signed-in parent's children: `{ children: [{kidId, name, firstName, dob, age, gender, state, note, photoFileId}] }`.
+  /// `state` is `ready` (to register), `pending`, `approved` or `rejected`.
+  Future<Map<String, dynamic>> children() => _send('GET', '/children');
+
+  /// The parent picks a child: the app then works as that child (the tokens are replaced). `next` says where to go.
+  Future<SignedIn> openChildSession(String kidId) async => _accept(
+    await _send(
+      'POST',
+      '/children/$kidId/session',
+      json: {'deviceId': ?deviceId},
+    ),
+  );
 
   // ── Registration ──────────────────────────────────────────────────────
 
@@ -844,6 +867,7 @@ class ApiClient {
   Future<Map<String, dynamic>> createFamilyRequest({
     required String relation,
     required String firstName,
+    String middleName = '',
     String lastName = '',
     String? dateOfBirth,
     String? countryCode,
@@ -856,6 +880,7 @@ class ApiClient {
     json: {
       'relation': relation,
       'firstName': firstName.trim(),
+      'middleName': middleName.trim(),
       'lastName': lastName.trim(),
       'dateOfBirth': ?dateOfBirth,
       'countryCode': ?countryCode,

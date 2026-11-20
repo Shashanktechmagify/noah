@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../screens/child/child_registration_screen.dart';
+import '../screens/child/child_status_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/registration/registration_flow.dart';
 import '../screens/registration/registration_status.dart';
@@ -31,7 +33,10 @@ Future<Widget?> restoreSavedSession() async {
   );
   final boot = saved.bootstrap;
   try {
-    registration.loadFromServer(boot['registration'] as Map<String, dynamic>, saved.phone);
+    registration.loadFromServer(
+      boot['registration'] as Map<String, dynamic>,
+      saved.phone,
+    );
     profile.loadFromServer(boot['profile'] as Map<String, dynamic>);
     final list = boot['notifications'];
     if (list is Map<String, dynamic>) notificationsState.apply(list);
@@ -45,12 +50,23 @@ Future<Widget?> restoreSavedSession() async {
   final age = DateTime.now().millisecondsSinceEpoch - saved.savedAt;
   if (saved.savedAt == 0 || age > _freshFor.inMilliseconds) {
     // Read again quietly. If the sign-in has expired meanwhile the app sends the member to sign in.
-    unawaited(loadMemberFromServer(saved.phone, withNotifications: true).catchError((_) {}));
+    unawaited(
+      loadMemberFromServer(
+        saved.phone,
+        withNotifications: true,
+      ).catchError((_) {}),
+    );
   }
 
   if (registration.status == RegStatus.approved) {
     registration.approve();
     return const MainShell();
+  }
+  // A child's account (a parent opened it): its own registration and status pages.
+  if (api.isChild) {
+    return registration.status == RegStatus.pending
+        ? const ChildStatusScreen()
+        : const ChildRegistrationScreen();
   }
   // The office asked for corrections: the form opens again, with the office's note at the top.
   if (registration.status == RegStatus.rejected) {

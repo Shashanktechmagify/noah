@@ -4,6 +4,8 @@ import '../../data/registration_data.dart';
 import '../../data/live_session.dart';
 import '../../data/server_sync.dart';
 import '../main_shell.dart';
+import '../child/child_registration_screen.dart';
+import '../child/child_status_screen.dart';
 import 'registration_flow.dart';
 import 'registration_status.dart';
 
@@ -46,6 +48,11 @@ Future<void> routeAfterServer(
       screen = const MainShell();
     case 'registrationStatus':
       screen = const RegistrationStatusScreen();
+    // A child's own account: its smaller registration, and the wait for the office.
+    case 'childRegistration':
+      screen = const ChildRegistrationScreen();
+    case 'childStatus':
+      screen = const ChildStatusScreen();
     default:
       screen = RegistrationFlow(initialStep: registration.firstStepToShow());
   }

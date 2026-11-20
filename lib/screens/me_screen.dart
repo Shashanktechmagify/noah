@@ -11,7 +11,7 @@ import '../data/profile_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
-import 'login_screen.dart';
+import 'entry_screen.dart';
 import 'main_shell.dart' show ShellScope;
 import 'me/drive_screen.dart';
 import 'me/family_screen.dart';
@@ -41,7 +41,7 @@ class MeScreen extends StatelessWidget {
     endLiveSession();
     // The root navigator, so the login page replaces the whole app shell.
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const EntryScreen()),
       (_) => false,
     );
   }
@@ -206,7 +206,8 @@ class MeScreen extends StatelessWidget {
                         context,
                         'me2_members_linked',
                         args: {
-                          'n': '${liveApi ? familyState.count : rec.familyLinked}',
+                          'n':
+                              '${liveApi ? familyState.count : rec.familyLinked}',
                         },
                       ),
                     ),
@@ -324,7 +325,10 @@ class MeScreen extends StatelessWidget {
                 if (inboxEnabled)
                   _Row(
                     icon: Icons.inbox_outlined,
-                    title: tr(context, api.isStaff ? 'pastor_inbox' : 'leader_inbox'),
+                    title: tr(
+                      context,
+                      api.isStaff ? 'pastor_inbox' : 'leader_inbox',
+                    ),
                     subtitle: tr(context, 'pastor_inbox_sub'),
                     pill: pastorInbox.totalUnread > 0
                         ? _Pill(

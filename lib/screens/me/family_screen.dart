@@ -6,6 +6,7 @@ import '../../data/noahgram_data.dart';
 import '../../data/profile_data.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/add_child_dialog.dart';
 import '../../widgets/page_scaffold.dart';
 import '../main_shell.dart' show ShellScope;
 import 'sub_page.dart';
@@ -120,6 +121,14 @@ class _FamilyScreenState extends State<FamilyScreen> {
   StatusPill _pill(String text, (Color, Color) colors) =>
       StatusPill(text: text, background: colors.$1, foreground: colors.$2);
 
+  Future<void> _addChild() async {
+    final sent = await showAddChildDialog(context);
+    if (!sent || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(tr(context, 'add_child_sent'))));
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -132,6 +141,11 @@ class _FamilyScreenState extends State<FamilyScreen> {
           subtitle: tr(context, 'fm_sub'),
           // A shorter purple band, so the headings sit on the white page.
           bandHeight: 84,
+          // A parent adds a child with the plus (the office checks it, then the child is registered from the Child section).
+          actions: [
+            if (liveApi && !api.isChild)
+              GlassCircle(icon: Icons.add, onTap: _addChild),
+          ],
           children: [
             SectionTitle(title: tr(context, 'fm_linked')),
             const SizedBox(height: 12),
@@ -164,6 +178,53 @@ class _FamilyScreenState extends State<FamilyScreen> {
                 ],
               ),
             ),
+            if (liveApi && familyState.requests.any((q) => q.kid)) ...[
+              const SizedBox(height: 22),
+              SectionTitle(title: tr(context, 'fm_children_req')),
+              const SizedBox(height: 12),
+              WhiteCard(
+                child: Column(
+                  children: [
+                    for (final (i, q)
+                        in familyState.requests
+                            .where((q) => q.kid)
+                            .indexed) ...[
+                      if (i > 0)
+                        const Divider(height: 1, color: AppColors.border),
+                      _row(
+                        name: q.name,
+                        subtitle: q.rejected && q.remark.isNotEmpty
+                            ? q.remark
+                            : tr(
+                                context,
+                                q.rejected
+                                    ? 'fm_req_rejected'
+                                    : q.pending
+                                    ? 'fm_req_pending'
+                                    : 'fm_req_approved',
+                              ),
+                        soft: true,
+                        pill: _pill(
+                          tr(
+                            context,
+                            q.rejected
+                                ? 'fm_req_rejected_pill'
+                                : q.pending
+                                ? 'fm_req_pending_pill'
+                                : 'fm_req_approved_pill',
+                          ),
+                          q.rejected
+                              ? StatusPill.past
+                              : q.pending
+                              ? StatusPill.soon
+                              : StatusPill.booked,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
             SectionTitle(title: tr(context, 'fm_passes')),
             const SizedBox(height: 12),

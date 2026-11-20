@@ -10,7 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/hex_pattern.dart';
 import '../events/events_widgets.dart' show fullDate;
-import '../login_screen.dart';
+import '../entry_screen.dart';
 import '../main_shell.dart';
 import 'registration_flow.dart';
 
@@ -184,7 +184,7 @@ class _RegistrationStatusScreenState extends State<RegistrationStatusScreen> {
 
   void _signOut() =>
       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const EntryScreen()),
         (_) => false,
       );
 

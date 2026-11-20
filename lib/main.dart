@@ -9,7 +9,7 @@ import 'data/ministry_data.dart';
 import 'data/notifications_data.dart';
 import 'data/pastor_data.dart';
 import 'l10n/app_strings.dart';
-import 'screens/login_screen.dart';
+import 'screens/entry_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -24,7 +24,7 @@ void main() {
     notificationsState.clear();
     liveNoahgram.clear();
     appNavigatorKey.currentState?.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const EntryScreen()),
       (_) => false,
     );
   };
