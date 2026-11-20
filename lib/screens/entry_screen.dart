@@ -7,7 +7,7 @@ import '../widgets/language_dropdown.dart';
 import 'login_screen.dart';
 
 /// The first page when nobody is signed in: a child (who signs in through a parent's mobile number) or a member
-/// (everyone else).
+/// (everyone else). Two big square choices side by side, each a round icon with its name.
 class EntryScreen extends StatelessWidget {
   const EntryScreen({super.key});
 
@@ -15,71 +15,89 @@ class EntryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFBF8FD),
       body: Column(
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.fromLTRB(24, top + 12, 20, 34),
+            padding: EdgeInsets.fromLTRB(22, top + 10, 14, 18),
             decoration: const BoxDecoration(gradient: AppColors.headerGradient),
             child: Stack(
               children: [
                 const Positioned.fill(child: HexPattern()),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    const Align(
-                      alignment: Alignment.centerRight,
-                      child: LanguageDropdown(),
-                    ),
-                    const SizedBox(height: 26),
-                    Text(
-                      tr(context, 'welcome_title'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Text(
+                        tr(context, 'welcome_title'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      tr(context, 'entry_sub'),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
-                      ),
-                    ),
+                    const LanguageDropdown(),
                   ],
                 ),
               ],
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-              children: [
-                _Choice(
-                  icon: Icons.child_care,
-                  title: tr(context, 'entry_child'),
-                  subtitle: tr(context, 'entry_child_sub'),
-                  color: const Color(0xFFF59E0B),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(child: true),
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tr(context, 'entry_select'),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 26),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Choice(
+                            icon: Icons.child_care,
+                            title: tr(context, 'entry_child'),
+                            hint: tr(context, 'entry_child_hint'),
+                            colors: const [
+                              Color(0xFFFFB23F),
+                              Color(0xFFF2780C),
+                            ],
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(child: true),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _Choice(
+                            icon: Icons.groups_2_outlined,
+                            title: tr(context, 'entry_members'),
+                            hint: tr(context, 'entry_members_hint'),
+                            colors: const [
+                              Color(0xFFC72BE0),
+                              Color(0xFF7A12B5),
+                            ],
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _Choice(
-                  icon: Icons.groups_2_outlined,
-                  title: tr(context, 'entry_members'),
-                  subtitle: tr(context, 'entry_members_sub'),
-                  color: AppColors.magenta,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -92,70 +110,65 @@ class _Choice extends StatelessWidget {
   const _Choice({
     required this.icon,
     required this.title,
-    required this.subtitle,
-    required this.color,
+    required this.hint,
+    required this.colors,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String subtitle;
-  final Color color;
+  final String hint;
+  final List<Color> colors;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(10, 22, 10, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.10),
-            blurRadius: 16,
+            color: colors.last.withValues(alpha: 0.12),
+            blurRadius: 14,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 62,
-            height: 62,
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: colors,
+              ),
             ),
-            child: Icon(icon, color: color, size: 32),
+            child: Icon(icon, color: Colors.white, size: 52),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.3,
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.muted),
         ],
       ),
     ),

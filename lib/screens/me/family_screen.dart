@@ -8,7 +8,6 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/add_child_dialog.dart';
 import '../../widgets/page_scaffold.dart';
-import '../main_shell.dart' show ShellScope;
 import 'sub_page.dart';
 
 // Adding a relative, the "your requests" list and the green "Verified" tag are switched off for now.
@@ -225,80 +224,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 22),
-            SectionTitle(title: tr(context, 'fm_passes')),
-            const SizedBox(height: 12),
-            WhiteCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: AppColors.tint,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Icon(
-                      Icons.confirmation_number_outlined,
-                      color: AppColors.muted,
-                      size: 21,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tr(context, 'ev_sunday2'),
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          tr(
-                            context,
-                            'fm_passes_held',
-                            args: {'n': '4', 's': 'C-14 – C-17'},
-                          ),
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => ShellScope.maybeOf(context)?.selectSlot(3),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Text(
-                        tr(context, 'fm_view'),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Text(
-                tr(context, 'fm_pass_note'),
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 12.5,
-                  height: 1.4,
-                ),
-              ),
-            ),
           ],
         );
       },

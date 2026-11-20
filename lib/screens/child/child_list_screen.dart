@@ -44,6 +44,10 @@ class ChildInfo {
   );
 }
 
+/// The parent's own sign-in, kept while the app works as one of their children, so Back from the child's registration
+/// returns to the list of children.
+({String access, String refresh, List<String> roles})? parentSession;
+
 /// After a parent signs in from the Child section: their children, each with what can be done next (register, wait,
 /// correct, or log in as the child).
 class ChildListScreen extends StatefulWidget {
@@ -94,6 +98,11 @@ class _ChildListScreenState extends State<ChildListScreen> {
     if (_opening != null) return;
     setState(() => _opening = c.kidId);
     try {
+      parentSession = (
+        access: api.accessToken ?? '',
+        refresh: api.refreshToken ?? '',
+        roles: List.of(api.roles),
+      );
       final r = await api.openChildSession(c.kidId);
       if (!mounted) return;
       await routeAfterServer(context, c.name, r.next);

@@ -28,7 +28,7 @@ void main() {
     'the first page asks child or member; Child asks for the parent\'s mobile number',
     (tester) async {
       await _app(tester, const EntryScreen());
-      expect(find.text('Who is signing in?'), findsOneWidget);
+      expect(find.text('Select your login'), findsOneWidget);
       expect(find.text('Child'), findsOneWidget);
       expect(find.text('Members'), findsOneWidget);
 
