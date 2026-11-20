@@ -11,6 +11,7 @@ import '../data/profile_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
+import 'child/child_phone_screen.dart';
 import 'entry_screen.dart';
 import 'main_shell.dart' show ShellScope;
 import 'me/drive_screen.dart';
@@ -81,6 +82,13 @@ class MeScreen extends StatelessWidget {
           leadingIcon: Icons.settings_outlined,
           onLeading: () => _open(context, const LanguageScreen()),
           children: [
+            // A child who is old enough: add an own mobile number (and become a member).
+            if (childCanAddNumber()) ...[
+              AddNumberCard(
+                onTap: () => _open(context, const ChildPhoneScreen()),
+              ),
+              const SizedBox(height: 14),
+            ],
             // Pastor / cell leader / family
             WhiteCard(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),

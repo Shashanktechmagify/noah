@@ -162,6 +162,7 @@ class _ChildListScreenState extends State<ChildListScreen> {
     final (label, key, enabled) = switch (c.state) {
       'approved' => ('child_btn_login', 'approved', true),
       'pending' => ('child_pending', 'pending', false),
+      'member' => ('child_member', 'member', false),
       'rejected' => ('child_btn_fix', 'rejected', true),
       _ => ('child_btn_register', 'ready', true),
     };

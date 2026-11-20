@@ -437,6 +437,24 @@ class ApiClient {
 
   // ── Child section ─────────────────────────────────────────────────────
 
+  /// A child account (15 or older) asks for a code to the mobile number it wants to use.
+  Future<OtpSent> childPhoneCode(String dial, String number) async => _otpSent(
+    await _send(
+      'POST',
+      '/child/phone/code',
+      json: {'countryCode': dial, 'mobileNumber': number},
+    ),
+  );
+
+  /// Checks the code: the number becomes the child's own and the child is a member from then.
+  Future<void> childPhoneVerify(String dial, String number, String code) async {
+    await _send(
+      'POST',
+      '/child/phone/verify',
+      json: {'countryCode': dial, 'mobileNumber': number, 'code': code},
+    );
+  }
+
   /// The signed-in parent's children: `{ children: [{kidId, name, firstName, dob, age, gender, state, note, photoFileId}] }`.
   /// `state` is `ready` (to register), `pending`, `approved` or `rejected`.
   Future<Map<String, dynamic>> children() => _send('GET', '/children');

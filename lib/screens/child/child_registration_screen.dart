@@ -16,6 +16,7 @@ import '../entry_screen.dart';
 import '../registration/registration_widgets.dart';
 import '../registration/uploads.dart';
 import 'child_list_screen.dart';
+import 'child_phone_screen.dart' show kChildPhoneAge;
 import 'child_status_screen.dart';
 
 /// A child's registration: the name, date of birth and gender come from what the parent gave the office; the child
@@ -49,6 +50,19 @@ class _ChildRegistrationScreenState extends State<ChildRegistrationScreen> {
       out.write(d[i]);
     }
     return out.toString();
+  }
+
+  /// Until 15 the email is the parent's (when the parent has one); it cannot be changed.
+  bool get _emailLocked {
+    final dob = r.dob;
+    if (dob == null || r.email.isEmpty) return false;
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age -= 1;
+    }
+    return age < kChildPhoneAge;
   }
 
   bool get _hasPhoto => _photoPath != null || r.photoFileId != null;
@@ -125,7 +139,7 @@ class _ChildRegistrationScreenState extends State<ChildRegistrationScreen> {
 
   Future<void> _submit() async {
     setState(() => _tried = true);
-    if (emailError(_email.text) != null ||
+    if ((!_emailLocked && emailError(_email.text) != null) ||
         idNumberError('aadhaar', _aadhaarDigits) != null ||
         !_hasPhoto ||
         !_hasId) {
@@ -150,7 +164,7 @@ class _ChildRegistrationScreenState extends State<ChildRegistrationScreen> {
         idId = (await api.uploadFile('idProof', _idPath!, name: _idName)).id;
       }
       await api.saveRegistration({
-        'email': _email.text.trim().toLowerCase(),
+        'email': (_emailLocked ? r.email : _email.text).trim().toLowerCase(),
         'idType': 'aadhaar',
         'idNumber': _aadhaarDigits,
         'idProofFileId': idId,
@@ -389,13 +403,54 @@ class _ChildRegistrationScreenState extends State<ChildRegistrationScreen> {
                   if (_tried && !_hasPhoto && _photoError == null)
                     RegError(tr(context, 'child_photo_need')),
                   RegLabel(tr(context, 'child_email'), required: true),
-                  RegInput(
-                    controller: _email,
-                    hint: 'name@example.com',
-                    keyboardType: TextInputType.emailAddress,
-                    error: _emailErr,
-                    onChanged: (_) => setState(() {}),
-                  ),
+                  if (_emailLocked) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 15,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.tint,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              r.email,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 18,
+                            color: AppColors.muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        tr(context, 'child_email_locked'),
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ] else
+                    RegInput(
+                      controller: _email,
+                      hint: 'name@example.com',
+                      keyboardType: TextInputType.emailAddress,
+                      error: _emailErr,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   RegLabel(tr(context, 'child_aadhaar'), required: true),
                   RegInput(
                     controller: _aadhaar,

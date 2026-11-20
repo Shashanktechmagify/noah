@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/family_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/screens/child/child_list_screen.dart';
+import 'package:noah_frontend_flutter/screens/child/child_phone_screen.dart';
 import 'package:noah_frontend_flutter/screens/entry_screen.dart';
 import 'package:noah_frontend_flutter/screens/me/family_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
@@ -37,7 +38,8 @@ void main() {
       await tester.tap(find.text('Child'));
       await tester.pumpAndSettle();
       expect(find.text("Parent's mobile number"), findsOneWidget);
-      expect(find.textContaining("mother or father"), findsOneWidget);
+      // The line about the mother's or father's number is gone: the title says it.
+      expect(find.textContaining('mother or father'), findsNothing);
       // No email and no Register link here: a parent signs in with the number they are registered with.
       expect(find.text('Email'), findsNothing);
       expect(
@@ -183,4 +185,18 @@ void main() {
       expect(trIn(AppLang.hi, 'rel_$r'), isNotEmpty, reason: r);
     }
   });
+
+  testWidgets(
+    'a child of 15 or more adds an own mobile number: the number first, then Send code',
+    (tester) async {
+      await _app(tester, const ChildPhoneScreen());
+      expect(find.text('Add your mobile number'), findsOneWidget);
+      expect(find.textContaining('ignore this'), findsOneWidget);
+      expect(find.text('Send code'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, '9000000555');
+      await tester.pump();
+      expect(find.text('Send code'), findsOneWidget);
+      expect(kChildPhoneAge, 15);
+    },
+  );
 }
