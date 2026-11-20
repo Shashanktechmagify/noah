@@ -23,12 +23,18 @@ class FamilyPerson {
     this.age,
     this.since,
     this.photoFileId,
+    this.mobile,
+    this.email,
   });
 
   final String name;
 
   /// The relative's profile photo on the server (a grown-up member); a child has none.
   final String? photoFileId;
+
+  /// Shown for a child's parents (a child's Family page lists them with their number and email).
+  final String? mobile;
+  final String? email;
 
   String? get photoUrl => photoFileId == null || photoFileId!.isEmpty
       ? null
@@ -47,6 +53,8 @@ class FamilyPerson {
     age: (j['age'] as num?)?.toInt(),
     since: j['since'] == null ? null : '${j['since']}',
     photoFileId: j['photoFileId'] == null ? null : '${j['photoFileId']}',
+    mobile: j['mobile'] == null ? null : '${j['mobile']}',
+    email: j['email'] == null ? null : '${j['email']}',
   );
 
   String get initials => name

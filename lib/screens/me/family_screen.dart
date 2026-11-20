@@ -166,7 +166,11 @@ class _FamilyScreenState extends State<FamilyScreen> {
                       subtitle: p.isKid && p.age != null
                           ? '${tr(context, 'rel_${p.relation}')} · '
                                 '${tr(context, 'fam_age', args: {'n': '${p.age}'})}'
-                          : tr(context, 'rel_${p.relation}'),
+                          : [
+                              tr(context, 'rel_${p.relation}'),
+                              if ((p.mobile ?? '').isNotEmpty) p.mobile!,
+                              if ((p.email ?? '').isNotEmpty) p.email!,
+                            ].join('\n'),
                       soft: p.isKid,
                       photoUrl: p.photoUrl,
                       pill: p.isKid

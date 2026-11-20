@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:noah_frontend_flutter/data/family_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/screens/child/child_list_screen.dart';
 import 'package:noah_frontend_flutter/screens/entry_screen.dart';
+import 'package:noah_frontend_flutter/screens/me/family_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
 import 'package:noah_frontend_flutter/widgets/add_child_dialog.dart';
 
@@ -134,6 +136,30 @@ void main() {
         findsOneWidget,
         reason: 'the date of birth is still missing',
       );
+    },
+  );
+
+  testWidgets(
+    'a child sees the parents in Family, with their number and email',
+    (tester) async {
+      familyState
+        ..people = [
+          FamilyPerson(
+            name: 'John Thomas',
+            relation: 'father',
+            isKid: false,
+            mobile: '+919000000201',
+            email: 'dad@example.com',
+          ),
+        ]
+        ..loaded = true;
+      addTearDown(familyState.clear);
+      await _app(tester, const FamilyScreen());
+      expect(find.text('John Thomas'), findsOneWidget);
+      expect(find.textContaining('+919000000201'), findsOneWidget);
+      expect(find.textContaining('dad@example.com'), findsOneWidget);
+      // The sample passes are gone from this page.
+      expect(find.textContaining('Sunday'), findsNothing);
     },
   );
 }
