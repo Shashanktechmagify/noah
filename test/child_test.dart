@@ -162,4 +162,33 @@ void main() {
       expect(find.textContaining('Sunday'), findsNothing);
     },
   );
+
+  test('every relation a child can be shown has a name', () {
+    for (final r in [
+      'father',
+      'mother',
+      'parent',
+      'dada',
+      'dadi',
+      'nana',
+      'nani',
+      'grandfather',
+      'grandmother',
+      'grandparent',
+      'chacha',
+      'bua',
+      'mama',
+      'mausi',
+      'uncle',
+      'aunt',
+      'brother',
+      'sister',
+      'sibling',
+      'cousin',
+      'relative',
+    ]) {
+      expect(trIn(AppLang.en, 'rel_$r'), isNot('rel_$r'), reason: r);
+      expect(trIn(AppLang.hi, 'rel_$r'), isNotEmpty, reason: r);
+    }
+  });
 }
