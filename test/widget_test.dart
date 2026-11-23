@@ -349,6 +349,10 @@ void main() {
     await settle();
     await tester.tap(find.text('Prayer Request'));
     await settle();
+    // The menu opens the member's own requests page; writing a new one starts from there.
+    expect(find.text('Add a prayer request'), findsOneWidget);
+    await tester.tap(find.text('Add a prayer request'));
+    await settle();
     expect(find.text('New prayer request'), findsOneWidget);
     expect(find.textContaining('About this Manna'), findsNothing);
     await tester.tap(find.text('Everyone'));
@@ -359,6 +363,9 @@ void main() {
     await settle();
     expect(prayer.requests.length, 1);
     expect(prayer.requests.first.everyone, isTrue);
+    // Back from the member's requests page to the app.
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await settle();
 
     // Menu items without a screen yet say so.
     await tester.tap(find.text('Menu'));

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/prayer_data.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
+import 'package:noah_frontend_flutter/screens/my_prayer_requests_screen.dart';
 import 'package:noah_frontend_flutter/screens/prayer_wall_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
 
@@ -40,78 +41,106 @@ void main() {
     expect(m.prayedBy, 2);
   });
 
-  testWidgets('the wall shows the requests, the warriors tag and anonymous, and my requests show their state', (
-    tester,
-  ) async {
-    final loader = FontLoader('PlusJakartaSans')
-      ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
-    await tester.runAsync(loader.load);
-    tester.view.physicalSize = const Size(390, 2400);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'the wall goes one request at a time; my requests are a separate page with their state',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
-    prayer
-      ..loaded = true
-      ..wall = [
-        WallRequest(
-          id: '1',
-          category: 'healing',
-          text: 'Please pray for my mother.',
-          everyone: true,
-          name: 'Asha Thomas',
-          mine: false,
-          prayedBy: 2,
-          iPrayed: false,
-          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-        ),
-        WallRequest(
-          id: '2',
-          category: 'family',
-          text: 'A private matter.',
-          everyone: false,
-          name: null,
-          mine: false,
-          prayedBy: 0,
-          iPrayed: true,
-          createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
-        ),
-      ]
-      ..mine = [
-        MyPrayer(
-          id: '9',
-          category: 'thanks',
-          text: 'Thank you Lord',
-          everyone: true,
-          state: 'Pending',
-          prayedBy: 0,
-          createdAt: DateTime.now(),
-        ),
-      ];
-    addTearDown(prayer.clear);
+      prayer
+        ..loaded = true
+        ..wall = [
+          WallRequest(
+            id: '1',
+            category: 'healing',
+            text: 'Please pray for my mother.',
+            everyone: true,
+            name: 'Asha Thomas',
+            mine: false,
+            prayedBy: 2,
+            iPrayed: false,
+            createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+          ),
+          WallRequest(
+            id: '2',
+            category: 'family',
+            text: 'A private matter.',
+            everyone: false,
+            name: null,
+            mine: false,
+            prayedBy: 0,
+            iPrayed: true,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          ),
+        ]
+        ..mine = [
+          MyPrayer(
+            id: '9',
+            category: 'thanks',
+            text: 'Thank you Lord',
+            everyone: true,
+            state: 'Pending',
+            prayedBy: 0,
+            createdAt: DateTime.now(),
+          ),
+        ];
+      addTearDown(prayer.clear);
 
-    await tester.pumpWidget(
-      AppLocale(
-        controller: LocaleController(),
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const PrayerWallScreen(),
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: const PrayerWallScreen(),
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    expect(find.text('Please pray for my mother.'), findsOneWidget);
-    expect(find.textContaining('Asha Thomas'), findsOneWidget);
-    expect(find.text('I prayed'), findsOneWidget, reason: 'not yet prayed for');
-    expect(find.text('You prayed'), findsOneWidget, reason: 'already prayed');
-    expect(find.text('Prayer warriors'), findsOneWidget);
-    expect(find.textContaining('Anonymous'), findsOneWidget);
-    expect(find.text('2 praying'), findsOneWidget);
+      // One at a time: the first request only.
+      expect(find.text('1 of 2'), findsOneWidget);
+      expect(find.text('Please pray for my mother.'), findsOneWidget);
+      expect(find.textContaining('Asha Thomas'), findsOneWidget);
+      expect(
+        find.text('I prayed'),
+        findsOneWidget,
+        reason: 'not yet prayed for',
+      );
+      expect(find.text('2 praying'), findsOneWidget);
+      expect(find.text('A private matter.'), findsNothing);
+      expect(find.text('Previous'), findsOneWidget);
 
-    await tester.tap(find.text('My requests'));
-    await tester.pump();
-    expect(find.text('Thank you Lord'), findsOneWidget);
-    expect(find.text('Waiting for the office'), findsOneWidget);
-    expect(find.text('Please pray for my mother.'), findsNothing);
-  });
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2'), findsOneWidget);
+      expect(find.text('A private matter.'), findsOneWidget);
+      expect(find.text('Please pray for my mother.'), findsNothing);
+      expect(find.text('You prayed'), findsOneWidget, reason: 'already prayed');
+      expect(find.text('Prayer warriors'), findsOneWidget);
+      expect(find.textContaining('Anonymous'), findsOneWidget);
+      // My requests are not on the wall, and there is no tab for them here.
+      expect(find.text('Thank you Lord'), findsNothing);
+      expect(find.text('My requests'), findsNothing);
+
+      // The member's own requests are on their own page, waiting for approval.
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: const MyPrayerRequestsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Thank you Lord'), findsOneWidget);
+      expect(find.text('Waiting for Approval'), findsOneWidget);
+      expect(find.text('Add a prayer request'), findsOneWidget);
+      expect(find.text('Please pray for my mother.'), findsNothing);
+    },
+  );
 }

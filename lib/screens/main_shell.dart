@@ -7,10 +7,10 @@ import '../theme/app_theme.dart';
 import 'events/events_screen.dart';
 import 'events/live_events_screen.dart';
 import 'home_screen.dart';
-import '../widgets/prayer_dialog.dart';
 import 'jodie/jodie_screen.dart';
 import 'bible_study_screen.dart';
 import 'manna_screen.dart';
+import 'my_prayer_requests_screen.dart';
 import 'prayer_wall_screen.dart';
 import 'menu_sheet.dart';
 import 'me_screen.dart';
@@ -284,7 +284,9 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const CommentaryScreen()));
       case 'prayer_request':
-        showPrayerDialog(context);
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MyPrayerRequestsScreen()),
+        );
       case 'prayer_wall':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const PrayerWallScreen()));
