@@ -25,6 +25,12 @@ class FamilyPerson {
     this.photoFileId,
     this.mobile,
     this.email,
+    this.kidId,
+    this.memberState = 'none',
+    this.note = '',
+    this.canMakeMember = false,
+    this.aadhaarAdded = false,
+    this.dob,
   });
 
   final String name;
@@ -36,8 +42,23 @@ class FamilyPerson {
   final String? mobile;
   final String? email;
 
+  /// A child of the family (no account yet): their id, and where they stand on becoming a member.
+  final String? kidId;
+
+  /// `none`, `requested` (the office is checking), `rejected`, `login` (approved: the child logs in with their number and gives
+  /// the consent) or `waiting` (the consent is with the office).
+  final String memberState;
+  final String note;
+
+  /// The child is 15 or more and the parents can ask to make them a member.
+  final bool canMakeMember;
+  final bool aadhaarAdded;
+  final String? dob;
+
   String? get photoUrl => photoFileId == null || photoFileId!.isEmpty
       ? null
+      : isKid && kidId != null
+      ? api.childPhotoUrl(kidId!)
       : api.mediaUrl(photoFileId!);
 
   /// `spouse`, `son`, `father`, `child`, ... what this person is to the member.
@@ -55,6 +76,12 @@ class FamilyPerson {
     photoFileId: j['photoFileId'] == null ? null : '${j['photoFileId']}',
     mobile: j['mobile'] == null ? null : '${j['mobile']}',
     email: j['email'] == null ? null : '${j['email']}',
+    kidId: j['kidId'] == null ? null : '${j['kidId']}',
+    memberState: '${j['memberState'] ?? 'none'}',
+    note: '${j['note'] ?? ''}',
+    canMakeMember: j['canMakeMember'] == true,
+    aadhaarAdded: j['aadhaarAdded'] == true,
+    dob: j['dob'] == null ? null : '${j['dob']}',
   );
 
   String get initials => name

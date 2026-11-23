@@ -8,6 +8,7 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/add_child_dialog.dart';
 import '../../widgets/page_scaffold.dart';
+import 'make_member_screen.dart';
 import 'sub_page.dart';
 
 // Adding a relative, the "your requests" list and the green "Verified" tag are switched off for now.
@@ -83,6 +84,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     required bool soft,
     String? photoUrl,
     StatusPill? pill,
+    Widget? below,
   }) => Padding(
     padding: const EdgeInsets.all(14),
     child: Row(
@@ -109,6 +111,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                   height: 1.3,
                 ),
               ),
+              if (below != null) ...[const SizedBox(height: 8), below],
             ],
           ),
         ),
@@ -121,11 +124,74 @@ class _FamilyScreenState extends State<FamilyScreen> {
       StatusPill(text: text, background: colors.$1, foreground: colors.$2);
 
   Future<void> _addChild() async {
-    final sent = await showAddChildDialog(context);
-    if (!sent || !mounted) return;
+    final name = await showAddChildDialog(context);
+    if (name == null || !mounted) return;
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(tr(context, 'add_child_sent'))));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(tr(context, 'add_child_done', args: {'name': name})),
+        ),
+      );
+  }
+
+  /// Make member: not before 15 (a popup says so); from 15 the parents give the child's number and Aadhaar.
+  Future<void> _makeMember(FamilyPerson kid) async {
+    if (!kid.canMakeMember) {
+      await showDialog<void>(
+        context: context,
+        builder: (d) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          title: Text(tr(d, 'fm_too_young_title')),
+          content: Text(
+            tr(
+              d,
+              'fm_too_young',
+              args: {'name': kid.name.split(' ').first, 'age': '15'},
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(d).pop(),
+              child: Text(tr(d, 'fm_ok')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => MakeMemberScreen(child: kid)));
+  }
+
+  /// Where a child stands on becoming a member: the line under the name, and the pill.
+  (String?, StatusPill?) _memberState(FamilyPerson p) {
+    final first = p.name.split(' ').first;
+    switch (p.memberState) {
+      case 'requested':
+        return (
+          tr(context, 'fm_ms_requested'),
+          _pill(tr(context, 'fm_pill_checking'), StatusPill.soon),
+        );
+      case 'login':
+        return (
+          tr(context, 'fm_ms_login', args: {'name': first}),
+          _pill(tr(context, 'fm_pill_login'), StatusPill.booked),
+        );
+      case 'waiting':
+        return (
+          tr(context, 'fm_ms_waiting'),
+          _pill(tr(context, 'fm_pill_waiting'), StatusPill.soon),
+        );
+      case 'rejected':
+        return (
+          p.note.isNotEmpty ? p.note : tr(context, 'fm_ms_rejected'),
+          _pill(tr(context, 'fm_pill_rejected'), StatusPill.past),
+        );
+      default:
+        return (null, null);
+    }
   }
 
   @override
@@ -140,10 +206,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
           subtitle: tr(context, 'fm_sub'),
           // A shorter purple band, so the headings sit on the white page.
           bandHeight: 84,
-          // A parent adds a child with the plus (the office checks it, then the child is registered from the Child section).
+          // A parent adds a child with the plus (photo, name, age; the Aadhaar is optional).
           actions: [
-            if (liveApi && !api.isChild)
-              GlassCircle(icon: Icons.add, onTap: _addChild),
+            if (liveApi) GlassCircle(icon: Icons.add, onTap: _addChild),
           ],
           children: [
             SectionTitle(title: tr(context, 'fm_linked')),
@@ -164,8 +229,11 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     _row(
                       name: p.name,
                       subtitle: p.isKid && p.age != null
-                          ? '${tr(context, 'rel_${p.relation}')} · '
-                                '${tr(context, 'fam_age', args: {'n': '${p.age}'})}'
+                          ? [
+                              '${tr(context, 'rel_${p.relation}')} · '
+                                  '${tr(context, 'fam_age', args: {'n': '${p.age}'})}',
+                              ?_memberState(p).$1,
+                            ].join('\n')
                           : [
                               tr(context, 'rel_${p.relation}'),
                               if ((p.mobile ?? '').isNotEmpty) p.mobile!,
@@ -173,61 +241,35 @@ class _FamilyScreenState extends State<FamilyScreen> {
                             ].join('\n'),
                       soft: p.isKid,
                       photoUrl: p.photoUrl,
-                      pill: p.isKid
-                          ? _pill(tr(context, 'fm_minor'), StatusPill.past)
+                      pill: !p.isKid
+                          ? null
+                          : _memberState(p).$2 ??
+                                _pill(tr(context, 'fm_minor'), StatusPill.past),
+                      below:
+                          p.isKid &&
+                              p.kidId != null &&
+                              (p.memberState == 'none' ||
+                                  p.memberState == 'rejected')
+                          ? Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton(
+                                onPressed: () => _makeMember(p),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.magenta,
+                                  side: const BorderSide(
+                                    color: AppColors.magenta,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                child: Text(tr(context, 'fm_make_member')),
+                              ),
+                            )
                           : null,
                     ),
                   ],
                 ],
               ),
             ),
-            if (liveApi && familyState.requests.any((q) => q.kid)) ...[
-              const SizedBox(height: 22),
-              SectionTitle(title: tr(context, 'fm_children_req')),
-              const SizedBox(height: 12),
-              WhiteCard(
-                child: Column(
-                  children: [
-                    for (final (i, q)
-                        in familyState.requests
-                            .where((q) => q.kid)
-                            .indexed) ...[
-                      if (i > 0)
-                        const Divider(height: 1, color: AppColors.border),
-                      _row(
-                        name: q.name,
-                        subtitle: q.rejected && q.remark.isNotEmpty
-                            ? q.remark
-                            : tr(
-                                context,
-                                q.rejected
-                                    ? 'fm_req_rejected'
-                                    : q.pending
-                                    ? 'fm_req_pending'
-                                    : 'fm_req_approved',
-                              ),
-                        soft: true,
-                        pill: _pill(
-                          tr(
-                            context,
-                            q.rejected
-                                ? 'fm_req_rejected_pill'
-                                : q.pending
-                                ? 'fm_req_pending_pill'
-                                : 'fm_req_approved_pill',
-                          ),
-                          q.rejected
-                              ? StatusPill.past
-                              : q.pending
-                              ? StatusPill.soon
-                              : StatusPill.booked,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
           ],
         );
       },

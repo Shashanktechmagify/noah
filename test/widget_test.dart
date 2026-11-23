@@ -46,11 +46,6 @@ void main() {
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    // The first page asks who is signing in: a child or a member.
-    expect(find.text('Welcome to Noah'), findsOneWidget);
-    expect(find.text('Child'), findsOneWidget);
-    await tester.tap(find.text('Members'));
-    await tester.pumpAndSettle();
     expect(find.text('Welcome to Noah'), findsOneWidget);
 
     await tester.tap(find.text('Continue'));
@@ -530,8 +525,6 @@ void main() {
 
     await tester.pumpWidget(const NoahApp());
     await tester.pump(const Duration(seconds: 3));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Members'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome to Noah'), findsOneWidget);
     expect(find.text('English'), findsOneWidget); // the dropdown pill
@@ -1308,8 +1301,6 @@ void main() {
     await tester.pumpWidget(const NoahApp());
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Members'));
-    await tester.pumpAndSettle();
     expect(
       find.textContaining('By continuing, you agree to our'),
       findsOneWidget,
@@ -1557,8 +1548,6 @@ void main() {
       await tester.pumpWidget(const NoahApp());
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Members'));
-      await tester.pumpAndSettle();
       expect(find.text('Welcome to Noah'), findsOneWidget);
 
       // The Login page takes a mobile number only: there is no email choice on it.
@@ -1652,9 +1641,7 @@ void main() {
     expect(r.detailsValid, isFalse);
   });
 
-  testWidgets('step 3 offers other documents, but no ID kinds', (
-    tester,
-  ) async {
+  testWidgets('step 3 offers other documents, but no ID kinds', (tester) async {
     final loader = FontLoader('PlusJakartaSans')
       ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
     await tester.runAsync(loader.load);

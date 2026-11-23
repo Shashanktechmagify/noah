@@ -1,19 +1,20 @@
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/family_data.dart';
 import '../l10n/app_strings.dart';
+import '../screens/registration/uploads.dart';
 import '../theme/app_theme.dart';
 import 'auth_scaffold.dart' show GradientButton;
 
-/// Popup for a parent to add a child: first name, last name, middle name (optional), date of birth and gender. The
-/// office checks it, then the parent is asked to register the child. Returns true when it was sent.
-Future<bool> showAddChildDialog(BuildContext context) async =>
-    await showDialog<bool>(
-      context: context,
-      builder: (_) => const _AddChildDialog(),
-    ) ??
-    false;
+/// Popup for a parent to add a child under 18: photo, names, date of birth, boy or girl, and the Aadhaar if the parent has
+/// it (optional). The child joins the family at once. Returns the child's name when it was added, else null.
+Future<String?> showAddChildDialog(BuildContext context) => showDialog<String>(
+  context: context,
+  builder: (_) => const _AddChildDialog(),
+);
 
 class _AddChildDialog extends StatefulWidget {
   const _AddChildDialog();
@@ -26,29 +27,37 @@ class _AddChildDialogState extends State<_AddChildDialog> {
   final _first = TextEditingController();
   final _middle = TextEditingController();
   final _last = TextEditingController();
+  final _aadhaar = TextEditingController();
   DateTime? _dob;
-  String?
-  _gender; // 'son' (boy) or 'daughter' (girl): what the child is to the parent
+  String? _gender; // 'male' or 'female'
+  PickedUpload? _photo;
+  PickedUpload? _aadhaarDoc;
   bool _sending = false;
   String? _error;
+
+  String get _aadhaarDigits => _aadhaar.text.replaceAll(RegExp(r'\D'), '');
+
+  bool get _aadhaarOk => _aadhaarDigits.isEmpty || _aadhaarDigits.length == 12;
 
   bool get _valid =>
       _first.text.trim().isNotEmpty &&
       _last.text.trim().isNotEmpty &&
       _dob != null &&
-      _gender != null;
+      _gender != null &&
+      (_photo?.ok ?? false) &&
+      _aadhaarOk;
 
   @override
   void initState() {
     super.initState();
-    for (final c in [_first, _middle, _last]) {
+    for (final c in [_first, _middle, _last, _aadhaar]) {
       c.addListener(() => setState(() {}));
     }
   }
 
   @override
   void dispose() {
-    for (final c in [_first, _middle, _last]) {
+    for (final c in [_first, _middle, _last, _aadhaar]) {
       c.dispose();
     }
     super.dispose();
@@ -78,6 +87,24 @@ class _AddChildDialogState extends State<_AddChildDialog> {
     if (picked != null) setState(() => _dob = picked);
   }
 
+  Future<void> _pickPhoto() async {
+    final p = await pickPhoto(context);
+    if (p == null || !mounted) return;
+    setState(() {
+      _photo = p;
+      _error = p.ok ? null : tr(context, p.errorKey!);
+    });
+  }
+
+  Future<void> _pickAadhaar() async {
+    final p = await pickDocument(context);
+    if (p == null || !mounted) return;
+    setState(() {
+      _aadhaarDoc = p.ok ? p : null;
+      _error = p.ok ? null : tr(context, p.errorKey!);
+    });
+  }
+
   Future<void> _submit() async {
     if (_sending || !_valid) return;
     final navigator = Navigator.of(context);
@@ -86,14 +113,28 @@ class _AddChildDialogState extends State<_AddChildDialog> {
       _error = null;
     });
     try {
-      await familyState.ask(
-        relation: _gender!,
+      final photo = await api.uploadFile('photo', _photo!.path!);
+      String? doc;
+      if (_aadhaarDoc != null) {
+        doc = (await api.uploadFile('idProof', _aadhaarDoc!.path!)).id;
+      }
+      await api.addChild(
         firstName: _first.text,
         middleName: _middle.text,
         lastName: _last.text,
         dateOfBirth: _day(_dob!),
+        gender: _gender!,
+        photoFileId: photo.id,
+        aadhaarNumber: _aadhaarDigits.isEmpty ? null : _aadhaarDigits,
+        aadhaarFileId: doc,
       );
-      navigator.pop(true);
+      await familyState.load();
+      navigator.pop(
+        [
+          _first.text.trim(),
+          _last.text.trim(),
+        ].where((e) => e.isNotEmpty).join(' '),
+      );
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
@@ -104,24 +145,31 @@ class _AddChildDialogState extends State<_AddChildDialog> {
     }
   }
 
-  Widget _field(TextEditingController c, String hintKey) => Padding(
+  InputDecoration _deco(String hint) => InputDecoration(
+    hintText: hint,
+    filled: true,
+    fillColor: AppColors.surface,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    ),
+  );
+
+  Widget _field(
+    TextEditingController c,
+    String hintKey, {
+    TextInputType? type,
+    bool words = true,
+  }) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
       controller: c,
-      textCapitalization: TextCapitalization.words,
-      decoration: InputDecoration(
-        hintText: tr(context, hintKey),
-        filled: true,
-        fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 13,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
+      keyboardType: type,
+      textCapitalization: words
+          ? TextCapitalization.words
+          : TextCapitalization.none,
+      decoration: _deco(tr(context, hintKey)),
     ),
   );
 
@@ -149,6 +197,50 @@ class _AddChildDialogState extends State<_AddChildDialog> {
     ),
   );
 
+  Widget _photoPicker() {
+    final path = (_photo?.ok ?? false) ? _photo!.path : null;
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _sending ? null : _pickPhoto,
+            child: Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
+                image: path == null
+                    ? null
+                    : DecorationImage(
+                        image: FileImage(File(path)),
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              child: path == null
+                  ? const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: AppColors.magenta,
+                      size: 30,
+                    )
+                  : null,
+            ),
+          ),
+          TextButton(
+            onPressed: _sending ? null : _pickPhoto,
+            child: Text(
+              tr(
+                context,
+                path == null ? 'add_child_photo' : 'add_child_photo_change',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Dialog(
     backgroundColor: Colors.white,
@@ -175,6 +267,8 @@ class _AddChildDialogState extends State<_AddChildDialog> {
             ),
           ),
           const SizedBox(height: 16),
+          _photoPicker(),
+          const SizedBox(height: 6),
           _field(_first, 'add_child_first'),
           _field(_middle, 'add_child_middle'),
           _field(_last, 'add_child_last'),
@@ -200,10 +294,32 @@ class _AddChildDialogState extends State<_AddChildDialog> {
           ),
           Row(
             children: [
-              _genderChip('son', 'add_child_boy'),
+              _genderChip('male', 'add_child_boy'),
               const SizedBox(width: 10),
-              _genderChip('daughter', 'add_child_girl'),
+              _genderChip('female', 'add_child_girl'),
             ],
+          ),
+          const SizedBox(height: 14),
+          _field(
+            _aadhaar,
+            'add_child_aadhaar',
+            type: TextInputType.number,
+            words: false,
+          ),
+          OutlinedButton.icon(
+            onPressed: _sending ? null : _pickAadhaar,
+            icon: Icon(
+              _aadhaarDoc == null ? Icons.upload_file : Icons.check_circle,
+              size: 18,
+            ),
+            label: Text(
+              tr(
+                context,
+                _aadhaarDoc == null
+                    ? 'add_child_aadhaar_doc'
+                    : 'add_child_aadhaar_up',
+              ),
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -219,9 +335,7 @@ class _AddChildDialogState extends State<_AddChildDialog> {
           ),
           Center(
             child: TextButton(
-              onPressed: _sending
-                  ? null
-                  : () => Navigator.of(context).pop(false),
+              onPressed: _sending ? null : () => Navigator.of(context).pop(),
               child: Text(tr(context, 'add_child_cancel')),
             ),
           ),

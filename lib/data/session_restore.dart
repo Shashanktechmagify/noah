@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../screens/child/child_registration_screen.dart';
-import '../screens/child/child_status_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/registration/registration_flow.dart';
 import '../screens/registration/registration_status.dart';
@@ -62,11 +60,11 @@ Future<Widget?> restoreSavedSession() async {
     registration.approve();
     return const MainShell();
   }
-  // A child's account (a parent opened it): its own registration and status pages.
-  if (api.isChild) {
-    return registration.status == RegStatus.pending
-        ? const ChildStatusScreen()
-        : const ChildRegistrationScreen();
+  // A child made a member by the office: only the consent (declaration and video) is left.
+  if (registration.consentOnly &&
+      !registration.completed &&
+      registration.status != RegStatus.pending) {
+    return const RegistrationFlow(initialStep: 4);
   }
   // The office asked for corrections: the form opens again, with the office's note at the top.
   if (registration.status == RegStatus.rejected) {

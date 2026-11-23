@@ -18,12 +18,9 @@ import 'otp_screen.dart';
 /// The Login page: a mobile number only, for a member who is already registered. With [register] it is the Register page:
 /// a mobile number or an email address, and a new one starts a registration.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.register = false, this.child = false});
+  const LoginScreen({super.key, this.register = false});
 
   final bool register;
-
-  /// The Child section: the mobile number is the parent's, and what follows is the list of their children.
-  final bool child;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -141,7 +138,6 @@ class _LoginScreenState extends State<LoginScreen> {
           resendSeconds: sent.resendAfter,
           devOtp: sent.devOtp,
           register: widget.register,
-          child: widget.child,
         ),
       );
     } on ApiException catch (e) {
@@ -182,14 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       icon: Icons.home_outlined,
-      title: tr(
-        context,
-        widget.child
-            ? 'child_login_title'
-            : widget.register
-            ? 'register_title'
-            : 'welcome_title',
-      ),
+      title: tr(context, widget.register ? 'register_title' : 'welcome_title'),
       subtitle: tr(context, ''),
       headerHeight: 312,
       topRight: const LanguageDropdown(),
@@ -300,34 +289,33 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 10),
           // Login and Register are two pages: the way to the other one.
-          if (!widget.child)
-            Center(
-              child: TextButton(
-                onPressed: _switch,
-                child: Text.rich(
-                  TextSpan(
-                    text: tr(
-                      context,
-                      widget.register ? 'register_have' : 'login_new',
-                    ),
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 13.5,
-                    ),
-                    children: [
-                      TextSpan(
-                        text:
-                            ' ${tr(context, widget.register ? 'register_login_link' : 'login_register_link')}',
-                        style: const TextStyle(
-                          color: AppColors.magenta,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+          Center(
+            child: TextButton(
+              onPressed: _switch,
+              child: Text.rich(
+                TextSpan(
+                  text: tr(
+                    context,
+                    widget.register ? 'register_have' : 'login_new',
                   ),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 13.5,
+                  ),
+                  children: [
+                    TextSpan(
+                      text:
+                          ' ${tr(context, widget.register ? 'register_login_link' : 'login_register_link')}',
+                      style: const TextStyle(
+                        color: AppColors.magenta,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
+          ),
           const SizedBox(height: 6),
           const _TermsNote(),
           const SizedBox(height: 18),

@@ -17,7 +17,7 @@ import '../../widgets/auth_scaffold.dart';
 import '../../widgets/language_dropdown.dart';
 import '../../widgets/rich_html.dart' show openImageProviderViewer;
 import '../events/events_widgets.dart' show fullDate;
-import '../entry_screen.dart';
+import '../login_screen.dart';
 import 'registration_video.dart';
 import 'contact_confirm.dart';
 import 'other_documents.dart';
@@ -72,13 +72,13 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
   late int _step = widget.initialStep;
 
   void _back() {
-    if (_step > 0) {
+    if (_step > (registration.consentOnly ? 4 : 0)) {
       setState(() => _step--);
     } else {
       // This flow replaced the OTP page, so there is nothing to pop to:
       // go back to the login page instead.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const EntryScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
         (_) => false,
       );
     }
@@ -150,13 +150,20 @@ class _RegistrationFlowState extends State<RegistrationFlow> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RegProgress(step: _step + 1),
+                RegProgress(
+                  step: registration.consentOnly ? _step - 3 : _step + 1,
+                  total: registration.consentOnly ? 2 : 6,
+                ),
                 const SizedBox(height: 14),
                 Text(
                   tr(
                     context,
-                    'reg_step',
-                    args: {'n': '${_step + 1}', 'name': stepName},
+                    registration.consentOnly ? 'reg_step_consent' : 'reg_step',
+                    args: {
+                      'n':
+                          '${registration.consentOnly ? _step - 3 : _step + 1}',
+                      'name': stepName,
+                    },
                   ),
                   style: const TextStyle(
                     color: AppColors.muted,
@@ -1344,6 +1351,26 @@ class _DeclarationStepState extends State<_DeclarationStep>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 14),
+        if (r.consentOnly &&
+            r.status == RegStatus.rejected &&
+            r.reviewNote.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDEBD3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              '${tr(context, 'reg_rej_banner')}\n\n${r.reviewNote}',
+              style: const TextStyle(
+                color: Color(0xFFC2620A),
+                fontSize: 13,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         // The document can be read in English, Hindi or Marathi.
         Row(
           children: [

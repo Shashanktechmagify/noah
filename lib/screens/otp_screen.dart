@@ -8,7 +8,6 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/language_dropdown.dart';
-import 'child/child_list_screen.dart';
 import 'registration/registration_router.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -24,16 +23,12 @@ class OtpScreen extends StatefulWidget {
     this.devOtp,
     this.devMailError,
     this.register = false,
-    this.child = false,
   });
 
   final String phone;
 
   /// Came from the Register page (a new number starts a registration); false: from the Login page.
   final bool register;
-
-  /// Came from the Child section: the number is a parent's, and the children are listed next.
-  final bool child;
 
   /// Set when the code was sent by the real API (otherwise the demo code is used).
   final String? dial;
@@ -124,14 +119,6 @@ class _OtpScreenState extends State<OtpScreen> {
               register: widget.register,
             );
       if (!mounted) return;
-      if (widget.child) {
-        // The parent signed in only to choose a child (the app does not start, nothing is loaded for the parent).
-        await Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const ChildListScreen()),
-          (_) => false,
-        );
-        return;
-      }
       await routeAfterServer(context, widget.phone, r.next);
     } on ApiException catch (e) {
       if (!mounted) return;

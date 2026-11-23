@@ -329,8 +329,12 @@ class RegistrationState extends ChangeNotifier {
     confirmedMobile = _digitsOf(mobileNumber);
   }
 
+  /// A child the office made a member: the form holds only the consent (declaration and video); the rest the parents gave.
+  bool consentOnly = false;
+
   void start(String phoneNumber) {
     phone = phoneNumber;
+    consentOnly = false;
     firstName = middleName = lastName = email = gender = marital = salutation =
         '';
     _confirmSignInContact(phoneNumber);
@@ -509,6 +513,7 @@ class RegistrationState extends ChangeNotifier {
       if (v.trim().isNotEmpty) m[k] = v.trim();
     }
 
+    if (consentOnly) return _consentToApi();
     put('salutation', salutation);
     put('nationality', nationality);
     put('firstName', firstName);
@@ -563,6 +568,27 @@ class RegistrationState extends ChangeNotifier {
     return m;
   }
 
+  /// The consent alone: what a child sends (the rest is the parents' and the office's).
+  Map<String, dynamic> _consentToApi() {
+    final m = <String, dynamic>{};
+    if (agreed || signature.trim().isNotEmpty) {
+      m['declaration'] = {
+        'agreed': agreed,
+        'signature': signature.trim(),
+        'language': 'en',
+      };
+    }
+    if (videoSeconds != null || videoFileId != null) {
+      m['video'] = {
+        'fileId': ?videoFileId,
+        'seconds': ?videoSeconds,
+        'bytes': ?videoBytes,
+        'language': videoLang.name,
+      };
+    }
+    return m;
+  }
+
   /// Fills the form from what the server holds (resuming after sign-in).
   void loadFromServer(Map<String, dynamic> m, String phoneNumber) {
     String s(String k, [String fallback = '']) {
@@ -572,6 +598,7 @@ class RegistrationState extends ChangeNotifier {
 
     DateTime? d(String k) => m[k] == null ? null : DateTime.tryParse('${m[k]}');
     phone = phoneNumber;
+    consentOnly = m['consentOnly'] == true;
     salutation = s('salutation');
     nationality = s('nationality', 'India');
     firstName = s('firstName');

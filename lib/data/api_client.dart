@@ -105,8 +105,6 @@ class ApiClient {
   /// A pastor answers messages instead of sending them to a pastor.
   bool get isPastor => roles.contains('pastor');
 
-  /// This account is a child's (a parent opened it from the Child section).
-  bool get isChild => roles.contains('child');
 
   bool get signedIn => accessToken != null;
 
@@ -435,37 +433,52 @@ class ApiClient {
   /// `{ member, registration: {status}, next }`.
   Future<Map<String, dynamic>> me() => _send('GET', '/me');
 
-  // ── Child section ─────────────────────────────────────────────────────
+  // ── Children in the family ────────────────────────────────────────────
 
-  /// A child account (15 or older) asks for a code to the mobile number it wants to use.
-  Future<OtpSent> childPhoneCode(String dial, String number) async => _otpSent(
-    await _send(
-      'POST',
-      '/child/phone/code',
-      json: {'countryCode': dial, 'mobileNumber': number},
-    ),
+  /// A parent adds a child. The photo is uploaded first ([photoFileId]); the Aadhaar (number and picture) is optional.
+  Future<Map<String, dynamic>> addChild({
+    required String firstName,
+    String middleName = '',
+    required String lastName,
+    required String dateOfBirth,
+    required String gender,
+    required String photoFileId,
+    String? aadhaarNumber,
+    String? aadhaarFileId,
+  }) => _send(
+    'POST',
+    '/family/children',
+    json: {
+      'firstName': firstName.trim(),
+      'middleName': middleName.trim(),
+      'lastName': lastName.trim(),
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
+      'photoFileId': photoFileId,
+      'aadhaarNumber': ?aadhaarNumber,
+      'aadhaarFileId': ?aadhaarFileId,
+    },
   );
 
-  /// Checks the code: the number becomes the child's own and the child is a member from then.
-  Future<void> childPhoneVerify(String dial, String number, String code) async {
-    await _send(
-      'POST',
-      '/child/phone/verify',
-      json: {'countryCode': dial, 'mobileNumber': number, 'code': code},
-    );
-  }
+  /// The photo of a child, for a parent of the child.
+  String childPhotoUrl(String kidId) => '$kApiBase/family/children/$kidId/photo';
 
-  /// The signed-in parent's children: `{ children: [{kidId, name, firstName, dob, age, gender, state, note, photoFileId}] }`.
-  /// `state` is `ready` (to register), `pending`, `approved` or `rejected`.
-  Future<Map<String, dynamic>> children() => _send('GET', '/children');
-
-  /// The parent picks a child: the app then works as that child (the tokens are replaced). `next` says where to go.
-  Future<SignedIn> openChildSession(String kidId) async => _accept(
-    await _send(
-      'POST',
-      '/children/$kidId/session',
-      json: {'deviceId': ?deviceId},
-    ),
+  /// From 15 the parents ask the office to make the child a member: the child's own number and Aadhaar.
+  Future<Map<String, dynamic>> makeMember(
+    String kidId, {
+    required String dial,
+    required String number,
+    String? aadhaarNumber,
+    String? aadhaarFileId,
+  }) => _send(
+    'POST',
+    '/family/children/$kidId/member',
+    json: {
+      'countryCode': dial,
+      'mobileNumber': number,
+      'aadhaarNumber': ?aadhaarNumber,
+      'aadhaarFileId': ?aadhaarFileId,
+    },
   );
 
   // ── Registration ──────────────────────────────────────────────────────
