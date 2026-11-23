@@ -7,6 +7,7 @@ import '../../data/family_data.dart';
 import '../../data/registration_data.dart' show idNumberError;
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/aadhaar_upload_tile.dart';
 import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/dial_code_picker.dart';
 import '../../widgets/page_scaffold.dart';
@@ -310,18 +311,11 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                 const SizedBox(height: 10),
               ],
               if (!_haveFile)
-                OutlinedButton.icon(
-                  onPressed: _sending ? null : _pickDoc,
-                  icon: Icon(
-                    _doc == null ? Icons.upload_file : Icons.check_circle,
-                    size: 18,
-                  ),
-                  label: Text(
-                    tr(
-                      context,
-                      _doc == null ? 'mm_aadhaar_doc' : 'add_child_aadhaar_up',
-                    ),
-                  ),
+                AadhaarUploadTile(
+                  file: _doc,
+                  busy: _sending,
+                  onPick: _pickDoc,
+                  onRemove: () => setState(() => _doc = null),
                 ),
               if (_error != null) ...[
                 const SizedBox(height: 12),

@@ -9,6 +9,7 @@ import '../data/registration_data.dart' show idNumberError;
 import '../l10n/app_strings.dart';
 import '../screens/registration/uploads.dart';
 import '../theme/app_theme.dart';
+import 'aadhaar_upload_tile.dart';
 import 'auth_scaffold.dart' show GradientButton;
 
 /// Popup for a parent to add a child under 18: photo, names, date of birth, boy or girl, and the Aadhaar if the parent has
@@ -321,20 +322,11 @@ class _AddChildDialogState extends State<_AddChildDialog> {
                 ? null
                 : tr(context, _aadhaarError!),
           ),
-          OutlinedButton.icon(
-            onPressed: _sending ? null : _pickAadhaar,
-            icon: Icon(
-              _aadhaarDoc == null ? Icons.upload_file : Icons.check_circle,
-              size: 18,
-            ),
-            label: Text(
-              tr(
-                context,
-                _aadhaarDoc == null
-                    ? 'add_child_aadhaar_doc'
-                    : 'add_child_aadhaar_up',
-              ),
-            ),
+          AadhaarUploadTile(
+            file: _aadhaarDoc,
+            busy: _sending,
+            onPick: _pickAadhaar,
+            onRemove: () => setState(() => _aadhaarDoc = null),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
