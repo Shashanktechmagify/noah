@@ -10,6 +10,10 @@ import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 
 DateTime? _lastShown;
+DateTime? _lastChecked;
+
+/// One voice for the whole app, so the second greeting never has the first one's stop() cut it off.
+final FlutterTts _voice = FlutterTts();
 
 /// True when today is the day and month of the profile date [key] (29 February is kept on 28 February in other years).
 bool _isToday(String key, DateTime today) {
@@ -74,17 +78,30 @@ String _callName() {
 Future<void> maybeCelebrateBirthday(BuildContext context) async {
   // The demo (no server) has a sample profile: it never celebrates.
   if (!liveApi) return;
-  final kinds = [
-    if (isBirthdayToday()) _Kind.birthday,
-    if (isAnniversaryToday()) _Kind.anniversary,
-  ];
-  if (kinds.isEmpty) return;
   final last = _lastShown;
   if (last != null && DateTime.now().difference(last).inMinutes < 20) return;
-  _lastShown = DateTime.now();
-  if (kinds.contains(_Kind.birthday) && api.signedIn) {
-    api.sendBirthdayWish().catchError((_) => <String, dynamic>{});
+  // What the phone saved may be old (a date changed since): the server is asked, and it also sends the birthday
+  // notification if it has not been sent yet. Without the server the saved profile decides.
+  var birthday = isBirthdayToday();
+  var anniversary = isAnniversaryToday();
+  final checked = _lastChecked;
+  if (api.signedIn &&
+      (checked == null || DateTime.now().difference(checked).inMinutes >= 20)) {
+    _lastChecked = DateTime.now();
+    try {
+      final r = await api.sendBirthdayWish();
+      birthday = r['birthday'] == true;
+      anniversary = r['anniversary'] == true;
+    } catch (_) {
+      // Offline: the saved profile decides.
+    }
   }
+  final kinds = [
+    if (birthday) _Kind.birthday,
+    if (anniversary) _Kind.anniversary,
+  ];
+  if (kinds.isEmpty) return;
+  _lastShown = DateTime.now();
   final name = _callName();
   for (final kind in kinds) {
     if (!context.mounted) return;
@@ -117,7 +134,6 @@ class _BirthdayPageState extends State<_BirthdayPage>
     vsync: this,
     duration: const Duration(seconds: 7),
   )..repeat();
-  FlutterTts? _tts;
 
   @override
   void initState() {
@@ -133,8 +149,8 @@ class _BirthdayPageState extends State<_BirthdayPage>
     final text = tr(context, widget.kind.speech, args: {'name': widget.name});
     final lang = AppLocale.of(context).lang;
     try {
-      final tts = FlutterTts();
-      _tts = tts;
+      final tts = _voice;
+      await tts.stop(); // the greeting before this one, if it is still speaking
       const codes = {
         AppLang.hi: 'hi-IN',
         AppLang.mr: 'mr-IN',
@@ -161,7 +177,6 @@ class _BirthdayPageState extends State<_BirthdayPage>
   @override
   void dispose() {
     _c.dispose();
-    _tts?.stop();
     super.dispose();
   }
 
@@ -236,7 +251,10 @@ class _BirthdayPageState extends State<_BirthdayPage>
                   ),
                   const SizedBox(height: 14),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      _voice.stop();
+                      Navigator.of(context).pop();
+                    },
                     child: Text(
                       tr(context, 'bday_thanks'),
                       style: const TextStyle(
