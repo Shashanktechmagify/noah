@@ -104,4 +104,12 @@ void main() {
       expect(isBirthdayToday(DateTime(2026, 11, 23)), isFalse);
     },
   );
+
+  test('the anniversary is today by day and month', () {
+    profile.set('anniversary', '2020-11-23');
+    expect(isAnniversaryToday(DateTime(2026, 11, 23)), isTrue);
+    expect(isAnniversaryToday(DateTime(2026, 11, 22)), isFalse);
+    profile.set('anniversary', '');
+    expect(isAnniversaryToday(DateTime(2026, 11, 23)), isFalse);
+  });
 }

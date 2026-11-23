@@ -11,19 +11,37 @@ import '../theme/app_theme.dart';
 
 DateTime? _lastShown;
 
-/// True when today is the member's birthday (their date of birth, day and month; 29 February is kept on 28 February in other years).
-bool isBirthdayToday([DateTime? now]) {
-  final today = now ?? DateTime.now();
-  final dob = DateTime.tryParse(profile.get('dob'));
-  if (dob == null) return false;
-  if (dob.month == today.month && dob.day == today.day) return true;
+/// True when today is the day and month of the profile date [key] (29 February is kept on 28 February in other years).
+bool _isToday(String key, DateTime today) {
+  final d = DateTime.tryParse(profile.get(key));
+  if (d == null) return false;
+  if (d.month == today.month && d.day == today.day) return true;
   final leap =
       (today.year % 4 == 0 && today.year % 100 != 0) || today.year % 400 == 0;
-  return dob.month == 2 &&
-      dob.day == 29 &&
+  return d.month == 2 &&
+      d.day == 29 &&
       !leap &&
       today.month == 2 &&
       today.day == 28;
+}
+
+/// True when today is the member's birthday (their date of birth).
+bool isBirthdayToday([DateTime? now]) => _isToday('dob', now ?? DateTime.now());
+
+/// True when today is the member's wedding anniversary.
+bool isAnniversaryToday([DateTime? now]) =>
+    _isToday('anniversary', now ?? DateTime.now());
+
+/// What a greeting says: its texts (translation keys) and its icon.
+enum _Kind {
+  birthday('bday_title', 'bday_wish', 'bday_speech', Icons.cake_rounded),
+  anniversary('anv_title', 'anv_wish', 'anv_speech', Icons.favorite_rounded);
+
+  const _Kind(this.title, this.wish, this.speech, this.icon);
+  final String title;
+  final String wish;
+  final String speech;
+  final IconData icon;
 }
 
 /// The name the greeting uses: the first name, but not a title or "Jr" (then the middle name: "Jr Ayush Jain" is Ayush).
@@ -49,36 +67,45 @@ String _callName() {
   return noahgram.me.name.split(' ').first;
 }
 
-/// On the member's birthday, as soon as the app opens: the birthday song, falling confetti and the greeting. Shown again
-/// when the app is opened again later in the day (not more often than every 20 minutes). Also asks the server to send the
-/// birthday notification, if it has not been sent yet.
+/// On the member's birthday and on the wedding anniversary, as soon as the app opens: the greeting card with confetti and the
+/// voice reading it. When both fall on the same day the birthday comes first and, once it is closed, the anniversary. Shown
+/// again when the app is opened again later in the day (not more often than every 20 minutes). The birthday also asks the
+/// server for its notification, if it has not been sent yet. (An anniversary has no notification.)
 Future<void> maybeCelebrateBirthday(BuildContext context) async {
   // The demo (no server) has a sample profile: it never celebrates.
-  if (!liveApi || !isBirthdayToday()) return;
+  if (!liveApi) return;
+  final kinds = [
+    if (isBirthdayToday()) _Kind.birthday,
+    if (isAnniversaryToday()) _Kind.anniversary,
+  ];
+  if (kinds.isEmpty) return;
   final last = _lastShown;
   if (last != null && DateTime.now().difference(last).inMinutes < 20) return;
   _lastShown = DateTime.now();
-  if (api.signedIn) {
+  if (kinds.contains(_Kind.birthday) && api.signedIn) {
     api.sendBirthdayWish().catchError((_) => <String, dynamic>{});
   }
-  if (!context.mounted) return;
   final name = _callName();
-  await Navigator.of(context, rootNavigator: true).push(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (_, _, _) => _BirthdayPage(name: name),
-      transitionsBuilder: (_, a, _, child) =>
-          FadeTransition(opacity: a, child: child),
-    ),
-  );
+  for (final kind in kinds) {
+    if (!context.mounted) return;
+    await Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, _, _) => _BirthdayPage(name: name, kind: kind),
+        transitionsBuilder: (_, a, _, child) =>
+            FadeTransition(opacity: a, child: child),
+      ),
+    );
+  }
 }
 
 class _BirthdayPage extends StatefulWidget {
-  const _BirthdayPage({required this.name});
+  const _BirthdayPage({required this.name, required this.kind});
 
   final String name;
+  final _Kind kind;
 
   @override
   State<_BirthdayPage> createState() => _BirthdayPageState();
@@ -103,7 +130,7 @@ class _BirthdayPageState extends State<_BirthdayPage>
   /// "On behalf of Karuna Sadan, we wish you a happy birthday."
   Future<void> _speak() async {
     if (!mounted) return;
-    final text = tr(context, 'bday_speech', args: {'name': widget.name});
+    final text = tr(context, widget.kind.speech, args: {'name': widget.name});
     final lang = AppLocale.of(context).lang;
     try {
       final tts = FlutterTts();
@@ -121,7 +148,10 @@ class _BirthdayPageState extends State<_BirthdayPage>
       await tts.speak(
         ok == true
             ? text
-            : trIn(AppLang.en, 'bday_speech').replaceAll('{name}', widget.name),
+            : trIn(
+                AppLang.en,
+                widget.kind.speech,
+              ).replaceAll('{name}', widget.name),
       );
     } catch (_) {
       // No voice on this device: the greeting still shows.
@@ -178,15 +208,15 @@ class _BirthdayPageState extends State<_BirthdayPage>
                         colors: [Color(0xFFA719C8), Color(0xFFE0409A)],
                       ),
                     ),
-                    child: const Icon(
-                      Icons.cake_rounded,
+                    child: Icon(
+                      widget.kind.icon,
                       color: Colors.white,
                       size: 44,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    tr(context, 'bday_title'),
+                    tr(context, widget.kind.title),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -196,7 +226,7 @@ class _BirthdayPageState extends State<_BirthdayPage>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    tr(context, 'bday_wish', args: {'name': widget.name}),
+                    tr(context, widget.kind.wish, args: {'name': widget.name}),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 15,
