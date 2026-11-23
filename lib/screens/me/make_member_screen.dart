@@ -34,7 +34,13 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
   bool _sending = false;
   String? _error;
 
-  FamilyPerson get _kid => widget.child;
+  /// The child as the family list holds it now (the Aadhaar may have been removed meanwhile).
+  FamilyPerson get _kid => familyState.people.firstWhere(
+    (p) => p.kidId == widget.child.kidId,
+    orElse: () => widget.child,
+  );
+  bool get _haveNumber => (_kid.aadhaarNo ?? '').isNotEmpty;
+  bool get _haveFile => _kid.aadhaarFile;
   String get _firstName => _kid.name.split(' ').first;
 
   String get _digits => _number.text.replaceAll(RegExp(r'\D'), '');
@@ -56,8 +62,8 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
   bool get _valid =>
       _digits.isNotEmpty &&
       _numberError == null &&
-      (_kid.aadhaarAdded ||
-          (_aadhaarDigits.isNotEmpty && _aadhaarError == null && _doc != null));
+      (_haveNumber || (_aadhaarDigits.isNotEmpty && _aadhaarError == null)) &&
+      (_haveFile || _doc != null);
 
   @override
   void initState() {
@@ -148,7 +154,12 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: familyState,
+    builder: (context, _) => _page(context),
+  );
+
+  Widget _page(BuildContext context) {
     final args = {'name': _firstName};
     return SubPage(
       title: tr(context, 'mm_title', args: args),
@@ -200,22 +211,88 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                 style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
               const SizedBox(height: 16),
-              if (_kid.aadhaarAdded)
-                Text(
-                  tr(context, 'mm_aadhaar_have'),
-                  style: const TextStyle(
-                    color: Color(0xFF1F8A4C),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+              // What the parents already gave is shown, not asked again.
+              if (_haveNumber || _haveFile) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr(context, 'mm_aadhaar_have'),
+                        style: const TextStyle(
+                          color: Color(0xFF1F8A4C),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (_haveNumber) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          (_kid.aadhaarNo ?? '').replaceAllMapped(
+                            RegExp(r'(\d{4})(?=\d)'),
+                            (m) => '${m[1]} ',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                      if (_haveFile && _kid.kidId != null) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => openAadhaar(context, _kid),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              api.childAadhaarUrl(_kid.kidId!),
+                              headers: api.authHeaders,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => openAadhaar(context, _kid),
+                            icon: const Icon(
+                              Icons.visibility_outlined,
+                              size: 18,
+                            ),
+                            label: Text(tr(context, 'aadhaar_view')),
+                          ),
+                          TextButton.icon(
+                            onPressed: _sending
+                                ? null
+                                : () async {
+                                    await confirmRemoveAadhaar(context, _kid);
+                                    if (mounted) setState(() {});
+                                  },
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFFD6334B),
+                            ),
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: Text(tr(context, 'aadhaar_remove')),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              if (_kid.aadhaarAdded)
-                TextButton.icon(
-                  onPressed: () => openAadhaar(context, _kid),
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: Text(tr(context, 'aadhaar_view')),
-                )
-              else ...[
+                const SizedBox(height: 12),
+              ],
+              if (!_haveNumber) ...[
                 _label(tr(context, 'mm_aadhaar')),
                 TextField(
                   controller: _aadhaar,
@@ -231,6 +308,8 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
+              ],
+              if (!_haveFile)
                 OutlinedButton.icon(
                   onPressed: _sending ? null : _pickDoc,
                   icon: Icon(
@@ -244,7 +323,6 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                     ),
                   ),
                 ),
-              ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(

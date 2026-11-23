@@ -12,6 +12,47 @@ void openAadhaar(BuildContext context, FamilyPerson kid) =>
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => AadhaarViewScreen(kid: kid)));
 
+/// Asks, then takes the Aadhaar (number and picture) of the child away. True when it was removed.
+Future<bool> confirmRemoveAadhaar(
+  BuildContext context,
+  FamilyPerson kid,
+) async {
+  final yes = await showDialog<bool>(
+    context: context,
+    builder: (d) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      title: Text(tr(d, 'aadhaar_remove')),
+      content: Text(tr(d, 'aadhaar_remove_q')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(d).pop(false),
+          child: Text(tr(d, 'add_child_cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(d).pop(true),
+          child: Text(
+            tr(d, 'aadhaar_remove'),
+            style: const TextStyle(color: Color(0xFFD6334B)),
+          ),
+        ),
+      ],
+    ),
+  );
+  if (yes != true || kid.kidId == null) return false;
+  try {
+    await api.removeChildAadhaar(kid.kidId!);
+    await familyState.load();
+    return true;
+  } on ApiException catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    }
+    return false;
+  }
+}
+
 class AadhaarViewScreen extends StatelessWidget {
   const AadhaarViewScreen({super.key, required this.kid});
 
@@ -82,6 +123,24 @@ class AadhaarViewScreen extends StatelessWidget {
                 tr(context, 'aadhaar_none'),
                 style: const TextStyle(color: AppColors.muted),
               ),
+            // Until the office is deciding the parents can take it away and give it again.
+            if (kid.memberState == 'none' || kid.memberState == 'rejected') ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  if (await confirmRemoveAadhaar(context, kid)) {
+                    navigator.pop();
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD6334B),
+                  side: const BorderSide(color: Color(0xFFD6334B)),
+                ),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: Text(tr(context, 'aadhaar_remove')),
+              ),
+            ],
           ],
         ),
       ),

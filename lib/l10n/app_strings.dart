@@ -10562,7 +10562,7 @@ const Map<String, List<String>> _strings = {
     'ஆதாரைப் பதிவேற்று',
   ],
 'mm_aadhaar_have': [
-    'The Aadhaar is already added. You can keep it.',
+    'The Aadhaar given earlier',
     'आधार पहले से जुड़ा है। उसे रख सकते हैं।',
     'आधार आधीच जोडला आहे. तो ठेवता येईल.',
     '',
@@ -10650,5 +10650,23 @@ const Map<String, List<String>> _strings = {
     '',
     '',
     'படத்தை இங்கே காட்ட முடியவில்லை (PDF ஆக இருக்கலாம்).',
+  ],
+'aadhaar_remove': [
+    'Remove Aadhaar',
+    'आधार हटाएँ',
+    'आधार काढा',
+    '',
+    '',
+    '',
+    'ஆதாரை நீக்கு',
+  ],
+'aadhaar_remove_q': [
+    'The Aadhaar number and picture will be removed. You can add them again later.',
+    'आधार नंबर और तस्वीर हटा दी जाएगी। बाद में फिर जोड़ सकते हैं।',
+    'आधार क्रमांक आणि चित्र काढले जाईल. नंतर पुन्हा जोडता येईल.',
+    '',
+    '',
+    '',
+    'ஆதார் எண்ணும் படமும் நீக்கப்படும். பின்னர் மீண்டும் சேர்க்கலாம்.',
   ],
 };

@@ -464,6 +464,10 @@ class ApiClient {
   String childAadhaarUrl(String kidId) =>
       '$kApiBase/family/children/$kidId/aadhaar';
 
+  /// The parents take the Aadhaar (number and picture) of a child away.
+  Future<Map<String, dynamic>> removeChildAadhaar(String kidId) =>
+      _send('DELETE', '/family/children/$kidId/aadhaar');
+
   /// The photo of a child, for a parent of the child.
   String childPhotoUrl(String kidId) => '$kApiBase/family/children/$kidId/photo';
 
