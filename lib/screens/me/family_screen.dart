@@ -8,6 +8,7 @@ import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/add_child_dialog.dart';
 import '../../widgets/page_scaffold.dart';
+import 'aadhaar_view_screen.dart';
 import 'make_member_screen.dart';
 import 'sub_page.dart';
 
@@ -245,24 +246,37 @@ class _FamilyScreenState extends State<FamilyScreen> {
                           ? null
                           : _memberState(p).$2 ??
                                 _pill(tr(context, 'fm_minor'), StatusPill.past),
-                      below:
-                          p.isKid &&
-                              p.kidId != null &&
-                              (p.memberState == 'none' ||
-                                  p.memberState == 'rejected')
-                          ? Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton(
-                                onPressed: () => _makeMember(p),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.magenta,
-                                  side: const BorderSide(
-                                    color: AppColors.magenta,
+                      below: p.isKid && p.kidId != null
+                          ? Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                if (p.memberState == 'none' ||
+                                    p.memberState == 'rejected')
+                                  OutlinedButton(
+                                    onPressed: () => _makeMember(p),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.magenta,
+                                      side: const BorderSide(
+                                        color: AppColors.magenta,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    child: Text(tr(context, 'fm_make_member')),
                                   ),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                child: Text(tr(context, 'fm_make_member')),
-                              ),
+                                if (p.aadhaarAdded)
+                                  TextButton.icon(
+                                    onPressed: () => openAadhaar(context, p),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 17,
+                                    ),
+                                    label: Text(tr(context, 'aadhaar_view')),
+                                  ),
+                              ],
                             )
                           : null,
                     ),

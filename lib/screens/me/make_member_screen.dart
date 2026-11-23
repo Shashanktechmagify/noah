@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/api_client.dart';
 import '../../data/dial_data.dart';
 import '../../data/family_data.dart';
+import '../../data/registration_data.dart' show idNumberError;
 import '../../l10n/app_strings.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_scaffold.dart' show GradientButton;
 import '../../widgets/dial_code_picker.dart';
 import '../../widgets/page_scaffold.dart';
 import '../registration/uploads.dart';
+import 'aadhaar_view_screen.dart';
 import 'sub_page.dart';
 
 /// From 15 the parents ask the office to make their child a member: the child's own mobile number and the Aadhaar (the
@@ -37,9 +40,24 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
   String get _digits => _number.text.replaceAll(RegExp(r'\D'), '');
   String get _aadhaarDigits => _aadhaar.text.replaceAll(RegExp(r'\D'), '');
 
+  /// The number must have the length of its country (India: 10 digits starting with 6 to 9).
+  String? get _numberError {
+    if (_digits.isEmpty) return null;
+    if (!_dial.validLength(_digits.length)) return 'reg_err_phone';
+    if (_dial.dial == '+91' && !RegExp(r'^[6-9]').hasMatch(_digits)) {
+      return 'reg_err_phone';
+    }
+    return null;
+  }
+
+  String? get _aadhaarError =>
+      _aadhaarDigits.isEmpty ? null : idNumberError('aadhaar', _aadhaarDigits);
+
   bool get _valid =>
-      _digits.length >= 6 &&
-      (_kid.aadhaarAdded || (_aadhaarDigits.length == 12 && _doc != null));
+      _digits.isNotEmpty &&
+      _numberError == null &&
+      (_kid.aadhaarAdded ||
+          (_aadhaarDigits.isNotEmpty && _aadhaarError == null && _doc != null));
 
   @override
   void initState() {
@@ -163,7 +181,15 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                     child: TextField(
                       controller: _number,
                       keyboardType: TextInputType.phone,
-                      decoration: _deco(''),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_dial.maxDigits),
+                      ],
+                      decoration: _deco('').copyWith(
+                        errorText: _numberError == null
+                            ? null
+                            : tr(context, _numberError!),
+                      ),
                     ),
                   ),
                 ],
@@ -182,13 +208,27 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
+                ),
+              if (_kid.aadhaarAdded)
+                TextButton.icon(
+                  onPressed: () => openAadhaar(context, _kid),
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: Text(tr(context, 'aadhaar_view')),
                 )
               else ...[
                 _label(tr(context, 'mm_aadhaar')),
                 TextField(
                   controller: _aadhaar,
                   keyboardType: TextInputType.number,
-                  decoration: _deco('1234 5678 9012'),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(12),
+                  ],
+                  decoration: _deco('2345 6789 0123').copyWith(
+                    errorText: _aadhaarError == null
+                        ? null
+                        : tr(context, _aadhaarError!),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(

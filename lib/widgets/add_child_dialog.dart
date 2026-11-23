@@ -1,9 +1,11 @@
 import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/api_client.dart';
 import '../data/family_data.dart';
+import '../data/registration_data.dart' show idNumberError;
 import '../l10n/app_strings.dart';
 import '../screens/registration/uploads.dart';
 import '../theme/app_theme.dart';
@@ -37,7 +39,10 @@ class _AddChildDialogState extends State<_AddChildDialog> {
 
   String get _aadhaarDigits => _aadhaar.text.replaceAll(RegExp(r'\D'), '');
 
-  bool get _aadhaarOk => _aadhaarDigits.isEmpty || _aadhaarDigits.length == 12;
+  String? get _aadhaarError =>
+      _aadhaarDigits.isEmpty ? null : idNumberError('aadhaar', _aadhaarDigits);
+
+  bool get _aadhaarOk => _aadhaarError == null;
 
   bool get _valid =>
       _first.text.trim().isNotEmpty &&
@@ -161,6 +166,8 @@ class _AddChildDialogState extends State<_AddChildDialog> {
     String hintKey, {
     TextInputType? type,
     bool words = true,
+    List<TextInputFormatter>? formatters,
+    String? errorText,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
@@ -169,7 +176,8 @@ class _AddChildDialogState extends State<_AddChildDialog> {
       textCapitalization: words
           ? TextCapitalization.words
           : TextCapitalization.none,
-      decoration: _deco(tr(context, hintKey)),
+      inputFormatters: formatters,
+      decoration: _deco(tr(context, hintKey)).copyWith(errorText: errorText),
     ),
   );
 
@@ -305,6 +313,13 @@ class _AddChildDialogState extends State<_AddChildDialog> {
             'add_child_aadhaar',
             type: TextInputType.number,
             words: false,
+            formatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(12),
+            ],
+            errorText: _aadhaarError == null
+                ? null
+                : tr(context, _aadhaarError!),
           ),
           OutlinedButton.icon(
             onPressed: _sending ? null : _pickAadhaar,

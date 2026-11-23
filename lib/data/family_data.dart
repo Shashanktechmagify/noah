@@ -30,6 +30,8 @@ class FamilyPerson {
     this.note = '',
     this.canMakeMember = false,
     this.aadhaarAdded = false,
+    this.aadhaarNo,
+    this.aadhaarFile = false,
     this.dob,
   });
 
@@ -53,6 +55,10 @@ class FamilyPerson {
   /// The child is 15 or more and the parents can ask to make them a member.
   final bool canMakeMember;
   final bool aadhaarAdded;
+
+  /// What the parents gave: the number, and whether a picture can be opened.
+  final String? aadhaarNo;
+  final bool aadhaarFile;
   final String? dob;
 
   String? get photoUrl => photoFileId == null || photoFileId!.isEmpty
@@ -81,6 +87,8 @@ class FamilyPerson {
     note: '${j['note'] ?? ''}',
     canMakeMember: j['canMakeMember'] == true,
     aadhaarAdded: j['aadhaarAdded'] == true,
+    aadhaarNo: j['aadhaarNo'] == null ? null : '${j['aadhaarNo']}',
+    aadhaarFile: j['aadhaarFile'] == true,
     dob: j['dob'] == null ? null : '${j['dob']}',
   );
 

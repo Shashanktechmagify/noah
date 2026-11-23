@@ -460,6 +460,10 @@ class ApiClient {
     },
   );
 
+  /// The Aadhaar picture of a child, for a parent of the child.
+  String childAadhaarUrl(String kidId) =>
+      '$kApiBase/family/children/$kidId/aadhaar';
+
   /// The photo of a child, for a parent of the child.
   String childPhotoUrl(String kidId) => '$kApiBase/family/children/$kidId/photo';
 

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/family_data.dart';
+import 'package:noah_frontend_flutter/data/dial_data.dart';
 import 'package:noah_frontend_flutter/data/registration_data.dart';
 
 void main() {
@@ -59,5 +60,31 @@ void main() {
     r.loadFromServer({'consentOnly': true, 'status': 'draft'}, '+919000000001');
     r.start('+919000000002');
     expect(r.consentOnly, isFalse);
+  });
+
+  test('the Aadhaar the parents gave can be viewed', () {
+    final p = FamilyPerson.fromJson({
+      'name': 'Asha Jain',
+      'relation': 'daughter',
+      'kind': 'kid',
+      'kidId': 'k1',
+      'aadhaarAdded': true,
+      'aadhaarNo': '234567890123',
+      'aadhaarFile': true,
+    });
+    expect(p.aadhaarNo, '234567890123');
+    expect(p.aadhaarFile, isTrue);
+  });
+
+  test('Aadhaar and mobile number checks', () {
+    expect(idNumberError('aadhaar', '234567890123'), isNull);
+    expect(
+      idNumberError('aadhaar', '123456789012'),
+      isNotNull,
+    ); // starts with 1
+    expect(idNumberError('aadhaar', '2345'), isNotNull);
+    const india = DialCountry('India', 'IN', '+91');
+    expect(india.validLength(10), isTrue);
+    expect(india.validLength(9), isFalse);
   });
 }
