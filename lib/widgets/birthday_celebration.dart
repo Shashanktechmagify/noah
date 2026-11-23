@@ -26,6 +26,29 @@ bool isBirthdayToday([DateTime? now]) {
       today.day == 28;
 }
 
+/// The name the greeting uses: the first name, but not a title or "Jr" (then the middle name: "Jr Ayush Jain" is Ayush).
+String _callName() {
+  const skip = {
+    'jr',
+    'sr',
+    'mr',
+    'mrs',
+    'ms',
+    'miss',
+    'dr',
+    'master',
+    'rev',
+    'pastor',
+  };
+  for (final k in ['first_name', 'middle_name', 'last_name']) {
+    final v = profile.get(k).trim();
+    if (v.isNotEmpty && !skip.contains(v.toLowerCase().replaceAll('.', ''))) {
+      return v.split(' ').first;
+    }
+  }
+  return noahgram.me.name.split(' ').first;
+}
+
 /// On the member's birthday, as soon as the app opens: the birthday song, falling confetti and the greeting. Shown again
 /// when the app is opened again later in the day (not more often than every 20 minutes). Also asks the server to send the
 /// birthday notification, if it has not been sent yet.
@@ -39,8 +62,7 @@ Future<void> maybeCelebrateBirthday(BuildContext context) async {
     api.sendBirthdayWish().catchError((_) => <String, dynamic>{});
   }
   if (!context.mounted) return;
-  final first = profile.get('first_name').trim();
-  final name = first.isNotEmpty ? first : noahgram.me.name.split(' ').first;
+  final name = _callName();
   await Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
       opaque: false,
@@ -81,7 +103,7 @@ class _BirthdayPageState extends State<_BirthdayPage>
   /// "On behalf of Karuna Sadan, we wish you a happy birthday."
   Future<void> _speak() async {
     if (!mounted) return;
-    final text = tr(context, 'bday_speech');
+    final text = tr(context, 'bday_speech', args: {'name': widget.name});
     final lang = AppLocale.of(context).lang;
     try {
       final tts = FlutterTts();
@@ -96,7 +118,11 @@ class _BirthdayPageState extends State<_BirthdayPage>
       await tts.setLanguage(ok == true ? code : 'en-IN');
       await tts.setSpeechRate(0.42);
       await tts.setVolume(1);
-      await tts.speak(ok == true ? text : trIn(AppLang.en, 'bday_speech'));
+      await tts.speak(
+        ok == true
+            ? text
+            : trIn(AppLang.en, 'bday_speech').replaceAll('{name}', widget.name),
+      );
     } catch (_) {
       // No voice on this device: the greeting still shows.
     }

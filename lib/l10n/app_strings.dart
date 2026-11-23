@@ -10706,13 +10706,13 @@ const Map<String, List<String>> _strings = {
     'நன்றி',
   ],
 'bday_speech': [
-    'On behalf of Karuna Sadan, we wish you a happy birthday.',
-    'करुणा सदन की ओर से, आपको जन्मदिन की हार्दिक शुभकामनाएँ।',
-    'करुणा सदनच्या वतीने, तुम्हाला वाढदिवसाच्या हार्दिक शुभेच्छा.',
+    'Hey {name}, wishing you a very happy birthday!',
+    'अरे {name}, आपको जन्मदिन की बहुत बहुत शुभकामनाएँ!',
+    'अरे {name}, तुम्हाला वाढदिवसाच्या खूप खूप शुभेच्छा!',
     '',
     '',
     '',
-    'கருணா சதன் சார்பாக, உங்களுக்கு பிறந்தநாள் வாழ்த்துகள்.',
+    'ஹே {name}, உங்களுக்கு இனிய பிறந்தநாள் வாழ்த்துகள்!',
   ],
 'mn_celebrations': [
     'Birthdays & anniversaries',
