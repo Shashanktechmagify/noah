@@ -186,7 +186,7 @@ class _BirthdayPageState extends State<_BirthdayPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    tr(context, 'bday_title', args: {'name': widget.name}),
+                    tr(context, 'bday_title'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -196,22 +196,12 @@ class _BirthdayPageState extends State<_BirthdayPage>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    tr(context, 'bday_congrats'),
+                    tr(context, 'bday_wish', args: {'name': widget.name}),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.magenta,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    tr(context, 'bday_wish'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      height: 1.4,
-                      color: AppColors.muted,
+                      height: 1.45,
+                      color: AppColors.ink,
                     ),
                   ),
                   const SizedBox(height: 14),
