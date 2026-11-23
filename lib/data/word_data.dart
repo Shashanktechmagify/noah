@@ -9,11 +9,15 @@ class DailyPrayer {
     required this.daysAgo,
     this.image,
     this.mannaId,
+    this.fallback = false,
   });
 
   /// A picture the office attached (a link), and the Daily Manna this prayer is the ending of, if any.
   final String? image;
   final String? mannaId;
+
+  /// Not translated into the member's language yet: it is the original (English).
+  final bool fallback;
 
   final String title;
   final String ref;
@@ -68,10 +72,14 @@ class Confession {
     this.prayer = '',
     this.image,
     this.mannaId,
+    this.fallback = false,
   });
 
   final String? image;
   final String? mannaId;
+
+  /// Not translated into the member's language yet: it is the original (English).
+  final bool fallback;
 
   final String title;
   final String ref;

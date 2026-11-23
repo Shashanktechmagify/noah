@@ -120,6 +120,14 @@ class _MannaDetailScreenState extends State<MannaDetailScreen> {
               title: tr(context, manna.titleKey),
             ),
           ),
+          if (manna.fallback && AppLocale.of(context).lang != AppLang.en)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+              child: Text(
+                tr(context, 'content_in_english'),
+                style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+              ),
+            ),
           const SizedBox(height: 16),
           // A picture the office attached to this Manna. Tap it to see it full screen.
           if (manna.image != null)

@@ -83,6 +83,7 @@ Manna mannaFromJson(Map<String, dynamic> j) {
     likes: (j['likes'] as num?)?.toInt() ?? 0,
     views: (j['views'] as num?)?.toInt() ?? 0,
     comments: (j['comments'] as num?)?.toInt() ?? 0,
+    fallback: j['fallback'] == true,
     media: [
       for (final m in (j['media'] as List?) ?? const [])
         if (m is Map && '${m['url'] ?? ''}'.startsWith('http'))
@@ -99,6 +100,7 @@ DailyPrayer prayerFromJson(Map<String, dynamic> j) => DailyPrayer(
   image: _img(j['image']),
   // A prayer that is the ending of a Daily Manna opens that Manna.
   mannaId: j['source'] == 'manna' ? _s(j['id']) : null,
+  fallback: j['fallback'] == true,
 );
 
 Confession confessionFromJson(Map<String, dynamic> j) => Confession(
@@ -109,6 +111,7 @@ Confession confessionFromJson(Map<String, dynamic> j) => Confession(
   prayer: _s(j['prayer']),
   image: _img(j['image']),
   mannaId: j['source'] == 'manna' ? _s(j['id']) : null,
+  fallback: j['fallback'] == true,
 );
 
 class ContentState extends ChangeNotifier {

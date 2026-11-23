@@ -49,6 +49,12 @@ class _NoahAppState extends State<NoahApp> {
   final _locale = LocaleController();
 
   @override
+  void initState() {
+    super.initState();
+    _locale.restore(); // the saved language, or the phone's
+  }
+
+  @override
   void dispose() {
     _locale.dispose();
     super.dispose();

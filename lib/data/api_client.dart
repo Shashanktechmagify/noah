@@ -109,7 +109,6 @@ class ApiClient {
   bool get canSeeCelebrations =>
       roles.contains('pastor') || roles.contains('cellLeader');
 
-
   bool get signedIn => accessToken != null;
 
   void clear() {
@@ -473,7 +472,8 @@ class ApiClient {
       _send('DELETE', '/family/children/$kidId/aadhaar');
 
   /// The photo of a child, for a parent of the child.
-  String childPhotoUrl(String kidId) => '$kApiBase/family/children/$kidId/photo';
+  String childPhotoUrl(String kidId) =>
+      '$kApiBase/family/children/$kidId/photo';
 
   /// From 15 the parents ask the office to make the child a member: the child's own number and Aadhaar.
   Future<Map<String, dynamic>> makeMember(
@@ -570,6 +570,10 @@ class ApiClient {
   // ── Banners, announcements, dream dictionary, Bible commentary ───────
 
   /// `{ items: [{id, caption, landscapeImage, portraitImage, url, order}] }`: the carousel on the home screen.
+  /// `{ source, languages: [{ code, number, name, native }] }`: the languages the office translates its content into.
+  Future<Map<String, dynamic>> contentLanguages() =>
+      _send('GET', '/content/languages');
+
   Future<Map<String, dynamic>> libBanners(int lang) =>
       _send('GET', '/home/banners?lang=$lang');
 

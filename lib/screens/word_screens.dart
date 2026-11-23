@@ -51,9 +51,13 @@ class _FeatureCard extends StatelessWidget {
     required this.ref,
     this.prayer = '',
     this.image,
+    this.fallback = false,
   });
 
   final String? image;
+
+  /// Not in the member's language yet: a small line says it is shown in English.
+  final bool fallback;
   final String pill;
   final String title;
   final String body;
@@ -73,6 +77,14 @@ class _FeatureCard extends StatelessWidget {
           title,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
         ),
+        if (fallback && AppLocale.of(context).lang != AppLang.en)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              tr(context, 'content_in_english'),
+              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+            ),
+          ),
         const SizedBox(height: 10),
         RichHtml(
           body,
@@ -214,6 +226,7 @@ class DailyPrayersScreen extends StatelessWidget {
                     },
                   ),
                   title: today.title,
+                  fallback: today.fallback,
                   body: today.body,
                   ref: today.ref,
                   image: today.image,
@@ -331,6 +344,7 @@ class _WordsOfFaithScreenState extends State<WordsOfFaithScreen> {
             _FeatureCard(
               pill: tr(context, 'wf_cotd'),
               title: featured.title,
+              fallback: featured.fallback,
               body: featured.body,
               ref: featured.ref,
               prayer: featured.prayer,

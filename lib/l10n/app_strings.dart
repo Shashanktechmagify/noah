@@ -1,4 +1,7 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Languages the whole app can be switched to from the Me tab.
 enum AppLang {
@@ -19,7 +22,42 @@ enum AppLang {
 class LocaleController extends ValueNotifier<AppLang> {
   LocaleController([super.value = AppLang.en]);
 
+  static const _key = 'noah_app_lang';
+
   AppLang get lang => value;
+
+  /// The language of a phone setting ("kn" or "kn-IN" is Kannada), or null when the app has none for it.
+  static AppLang? fromCode(String? code) {
+    final c = (code ?? '').toLowerCase().split(RegExp('[-_]')).first;
+    for (final l in AppLang.values) {
+      if (l.name == c) return l;
+    }
+    return null;
+  }
+
+  /// At start: the language the member chose before, otherwise the phone's language, otherwise English.
+  Future<void> restore({String? phoneLanguage}) async {
+    AppLang? saved;
+    try {
+      saved = fromCode((await SharedPreferences.getInstance()).getString(_key));
+    } catch (_) {
+      // No saved choice can be read: the phone's language is used.
+    }
+    value =
+        saved ??
+        fromCode(phoneLanguage ?? PlatformDispatcher.instance.locale.languageCode) ??
+        AppLang.en;
+  }
+
+  /// The member picks a language: it is used at once and remembered for the next start.
+  Future<void> choose(AppLang lang) async {
+    value = lang;
+    try {
+      await (await SharedPreferences.getInstance()).setString(_key, lang.name);
+    } catch (_) {
+      // Not remembered this time; the choice still holds until the app is closed.
+    }
+  }
 }
 
 /// Widgets that call [tr] rebuild automatically when the language changes.
@@ -10839,5 +10877,32 @@ const Map<String, List<String>> _strings = {
     '',
     '',
     'அடுத்தது',
+  ],
+'content_in_english': [
+    'Shown in English',
+    'अंग्रेज़ी में दिखाया गया',
+    'इंग्रजीत दाखवले आहे',
+    'ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ',
+    'ഇംഗ്ലീഷിൽ കാണിക്കുന്നു',
+    'ఇంగ్లీషులో చూపబడింది',
+    'ஆங்கிலத்தில் காட்டப்படுகிறது',
+  ],
+'lang_content_note': [
+    'Daily messages, prayers and confessions are translated into: {langs}. In other languages they are shown in English.',
+    'दैनिक संदेश, प्रार्थनाएँ और अंगीकार इन भाषाओं में अनूदित हैं: {langs}। अन्य भाषाओं में वे अंग्रेज़ी में दिखाए जाते हैं।',
+    'दैनंदिन संदेश, प्रार्थना आणि कबुली या भाषांमध्ये भाषांतरित आहेत: {langs}. इतर भाषांमध्ये ते इंग्रजीत दाखवले जातात.',
+    '',
+    '',
+    '',
+    'தினசரி செய்திகள், ஜெபங்கள் மற்றும் அறிக்கைகள் இந்த மொழிகளில் மொழிபெயர்க்கப்பட்டுள்ளன: {langs}. மற்ற மொழிகளில் அவை ஆங்கிலத்தில் காட்டப்படும்.',
+  ],
+'lang_content_none': [
+    'Daily messages, prayers and confessions are shown in English.',
+    'दैनिक संदेश, प्रार्थनाएँ और अंगीकार अंग्रेज़ी में दिखाए जाते हैं।',
+    'दैनंदिन संदेश, प्रार्थना आणि कबुली इंग्रजीत दाखवले जातात.',
+    '',
+    '',
+    '',
+    'தினசரி செய்திகள், ஜெபங்கள் மற்றும் அறிக்கைகள் ஆங்கிலத்தில் காட்டப்படுகின்றன.',
   ],
 };

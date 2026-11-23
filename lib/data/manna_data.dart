@@ -47,6 +47,7 @@ class Manna {
     this.views = 0,
     this.comments = 0,
     this.media = const [],
+    this.fallback = false,
   });
 
   final String id;
@@ -74,6 +75,9 @@ class Manna {
 
   /// Videos and links the office attached (shown under the message).
   final List<EmbedMedia> media;
+
+  /// The server could not give this Manna in the member's language yet: it is the original (English).
+  final bool fallback;
 }
 
 /// Newest first. The first entry is "today's Manna".
