@@ -133,4 +133,23 @@ void main() {
       expect(find.text('Shown in English'), findsNothing);
     },
   );
+
+  test('the in-law relations have words in every language the app shows', () {
+    for (final key in [
+      'rel_father_in_law',
+      'rel_mother_in_law',
+      'rel_parent_in_law',
+      'rel_brother_in_law',
+      'rel_sister_in_law',
+      'rel_sibling_in_law',
+    ]) {
+      expect(trIn(AppLang.en, key), isNot(key), reason: key);
+      expect(trIn(AppLang.hi, key), isNot(trIn(AppLang.en, key)), reason: key);
+      expect(trIn(AppLang.mr, key), isNot(trIn(AppLang.en, key)), reason: key);
+      expect(trIn(AppLang.ta, key), isNot(trIn(AppLang.en, key)), reason: key);
+      // A language without its own word shows the English one, never the key.
+      expect(trIn(AppLang.ml, key), isNot(key), reason: key);
+    }
+    expect(trIn(AppLang.hi, 'rel_father_in_law'), 'ससुर');
+  });
 }
