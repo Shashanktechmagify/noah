@@ -1,3 +1,4 @@
+import '../data/api_client.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
@@ -57,6 +58,8 @@ const kMenuItems = [
   MenuItem('commentary', Icons.comment_bank_outlined, key: 'mn_commentary'),
   MenuItem('prayer_wall', Icons.view_quilt_outlined, key: 'mn_prayer_wall'),
   MenuItem('obituaries', Icons.local_florist_outlined, key: 'mn_obituaries'),
+  // Only for pastors and cell leaders (the sheet hides it from everyone else).
+  MenuItem('celebrations', Icons.cake_outlined, key: 'mn_celebrations'),
 ];
 
 /// Bottom popup with the icon grid. Resolves to the tapped item's id.
@@ -88,6 +91,7 @@ class _MenuSheetState extends State<_MenuSheet> {
   Widget build(BuildContext context) {
     final q = _query.trim().toLowerCase();
     final items = kMenuItems
+        .where((i) => i.id != 'celebrations' || api.canSeeCelebrations)
         .where((i) => q.isEmpty || i.label(context).toLowerCase().contains(q))
         .toList();
     return SafeArea(

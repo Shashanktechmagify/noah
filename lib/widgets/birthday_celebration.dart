@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../data/api_client.dart';
 import '../data/noahgram_data.dart';
@@ -68,31 +68,44 @@ class _BirthdayPageState extends State<_BirthdayPage>
     vsync: this,
     duration: const Duration(seconds: 7),
   )..repeat();
-  VideoPlayerController? _player;
+  FlutterTts? _tts;
 
   @override
   void initState() {
     super.initState();
-    _play();
+    // After the first frame, so the language of the app is known.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
   }
 
-  /// The song is a sound file played with the video player the app already has (no extra plugin).
-  Future<void> _play() async {
+  /// The greeting is read aloud by the phone's own voice, in the language of the app (English when the phone has no voice for it):
+  /// "On behalf of Karuna Sadan, we wish you a happy birthday."
+  Future<void> _speak() async {
+    if (!mounted) return;
+    final text = tr(context, 'bday_speech');
+    final lang = AppLocale.of(context).lang;
     try {
-      final p = VideoPlayerController.asset('assets/audio/happy_birthday.wav');
-      _player = p;
-      await p.initialize();
-      await p.setVolume(1);
-      await p.play();
+      final tts = FlutterTts();
+      _tts = tts;
+      const codes = {
+        AppLang.hi: 'hi-IN',
+        AppLang.mr: 'mr-IN',
+        AppLang.ta: 'ta-IN',
+      };
+      final code = codes[lang] ?? 'en-IN';
+      final ok = await tts.isLanguageAvailable(code);
+      await tts.setLanguage(ok == true ? code : 'en-IN');
+      await tts.setSpeechRate(0.42);
+      await tts.setVolume(1);
+      await tts.speak(ok == true ? text : trIn(AppLang.en, 'bday_speech'));
     } catch (_) {
-      // No sound on this device: the greeting still shows.
+      // No voice on this device: the greeting still shows.
     }
   }
 
   @override
   void dispose() {
     _c.dispose();
-    _player?.dispose();
+    _tts?.stop();
     super.dispose();
   }
 

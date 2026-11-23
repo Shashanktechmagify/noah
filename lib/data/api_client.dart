@@ -105,6 +105,10 @@ class ApiClient {
   /// A pastor answers messages instead of sending them to a pastor.
   bool get isPastor => roles.contains('pastor');
 
+  /// A pastor or a cell leader: may open the list of birthdays and anniversaries.
+  bool get canSeeCelebrations =>
+      roles.contains('pastor') || roles.contains('cellLeader');
+
 
   bool get signedIn => accessToken != null;
 
@@ -900,6 +904,10 @@ class ApiClient {
 
   /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.
   Future<Map<String, dynamic>> family() => _send('GET', '/family');
+
+  /// Everyone's birthdays and anniversaries of a month (the current one when [month] is null). Pastors and cell leaders only.
+  Future<Map<String, dynamic>> celebrations({int? month}) =>
+      _send('GET', '/celebrations${month == null ? '' : '?month=$month'}');
 
   /// On the member's birthday: asks the server to send the birthday notification (once a day). `{ birthday, sent }`.
   Future<Map<String, dynamic>> sendBirthdayWish() =>

@@ -20,6 +20,7 @@ import 'noahgram/live/ng_pages.dart';
 import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
 import 'word_screens.dart';
+import 'celebrations_screen.dart';
 import '../widgets/birthday_celebration.dart';
 import '../widgets/tab_navigator.dart';
 import '../data/ministry_data.dart';
@@ -287,6 +288,12 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       case 'prayer_wall':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const PrayerWallScreen()));
+      case 'celebrations':
+        if (api.canSeeCelebrations) {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const CelebrationsScreen()));
+        }
       default:
         final item = kMenuItems.firstWhere((i) => i.id == id);
         final messenger = ScaffoldMessenger.of(context);
