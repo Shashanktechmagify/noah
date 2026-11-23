@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/family_data.dart';
+import 'package:noah_frontend_flutter/data/profile_data.dart';
+import 'package:noah_frontend_flutter/widgets/birthday_celebration.dart';
 import 'package:noah_frontend_flutter/data/dial_data.dart';
 import 'package:noah_frontend_flutter/data/registration_data.dart';
 
@@ -87,4 +89,19 @@ void main() {
     expect(india.validLength(10), isTrue);
     expect(india.validLength(9), isFalse);
   });
+
+  test(
+    'a birthday is today by day and month, and 29 February on 28 February',
+    () {
+      profile.set('dob', '1990-11-23');
+      expect(isBirthdayToday(DateTime(2026, 11, 23)), isTrue);
+      expect(isBirthdayToday(DateTime(2026, 11, 24)), isFalse);
+      profile.set('dob', '2000-02-29');
+      expect(isBirthdayToday(DateTime(2026, 2, 28)), isTrue); // not a leap year
+      expect(isBirthdayToday(DateTime(2028, 2, 28)), isFalse);
+      expect(isBirthdayToday(DateTime(2028, 2, 29)), isTrue);
+      profile.set('dob', '');
+      expect(isBirthdayToday(DateTime(2026, 11, 23)), isFalse);
+    },
+  );
 }

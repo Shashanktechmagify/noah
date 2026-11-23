@@ -901,6 +901,10 @@ class ApiClient {
   /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.
   Future<Map<String, dynamic>> family() => _send('GET', '/family');
 
+  /// On the member's birthday: asks the server to send the birthday notification (once a day). `{ birthday, sent }`.
+  Future<Map<String, dynamic>> sendBirthdayWish() =>
+      _send('POST', '/me/birthday');
+
   /// Asks the office to add someone to the family: `{ id, state: Pending, kid }`. A child under 18 needs
   /// [dateOfBirth] (YYYY-MM-DD) and no number; a grown-up needs [mobileNumber], to link their account.
   Future<Map<String, dynamic>> createFamilyRequest({

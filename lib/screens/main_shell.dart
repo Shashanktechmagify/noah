@@ -20,6 +20,7 @@ import 'noahgram/live/ng_pages.dart';
 import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
 import 'word_screens.dart';
+import '../widgets/birthday_celebration.dart';
 import '../widgets/tab_navigator.dart';
 import '../data/ministry_data.dart';
 import '../data/pastor_data.dart';
@@ -96,7 +97,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _page = 0;
   bool _menuOpen = false;
   final _meNav = GlobalKey<NavigatorState>();
@@ -106,12 +107,26 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     openRequest.addListener(_handleOpen);
+    WidgetsBinding.instance.addObserver(this);
     // A push that launched the app may already be waiting.
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleOpen());
+    // On the member's birthday: the song, the confetti and the greeting, as soon as the app opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeCelebrateBirthday(context);
+    });
+  }
+
+  /// Coming back to the app later on the birthday: the greeting again.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      maybeCelebrateBirthday(context);
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     openRequest.removeListener(_handleOpen);
     super.dispose();
   }
