@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/api_client.dart';
 import 'package:noah_frontend_flutter/data/help_data.dart';
+import 'package:noah_frontend_flutter/data/registration_data.dart'
+    show kOfficePhone;
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/screens/help_chat_screen.dart';
+import 'package:noah_frontend_flutter/screens/home_screen.dart';
 import 'package:noah_frontend_flutter/screens/menu_sheet.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
 
@@ -171,6 +174,15 @@ void main() {
       'help_ex2',
       'help_ex3',
       'help_ex4',
+      'help_ex5',
+      'help_ex6',
+      'help_ex7',
+      'help_ex8',
+      'help_talk_title',
+      'help_chat_office',
+      'help_call_office',
+      'help_call_fail',
+      'help_also',
     ];
     for (final key in keys) {
       final english = trIn(AppLang.en, key);
@@ -360,6 +372,106 @@ void main() {
         find.text('How do I register?'),
         findsOneWidget,
         reason: 'the question is not shown twice',
+      );
+    },
+  );
+
+  testWidgets(
+    'after an answer other questions are offered (not the ones already asked), and Talk to us gives chat and call',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 2200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final asked = <String>[];
+      final chat = HelpChat(
+        ask: (q) async {
+          asked.add(q);
+          return _answer('An answer.');
+        },
+        feedback: (id, helpful) async {},
+      );
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: HelpChatScreen(chat: chat),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Nothing is offered "also" before the first answer.
+      expect(find.text('You can also ask:'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('help_ex2')));
+      await tester.pumpAndSettle();
+      expect(find.text('You can also ask:'), findsOneWidget);
+      // Three others, never the one just asked.
+      expect(find.byKey(const ValueKey('help-also-help_ex1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('help-also-help_ex2')), findsNothing);
+      expect(find.byKey(const ValueKey('help-also-help_ex3')), findsOneWidget);
+      expect(find.byKey(const ValueKey('help-also-help_ex4')), findsOneWidget);
+      expect(find.byKey(const ValueKey('help-also-help_ex5')), findsNothing);
+
+      // Tapping one asks it, and the next offer has moved on.
+      await tester.tap(find.byKey(const ValueKey('help-also-help_ex3')));
+      await tester.pumpAndSettle();
+      expect(asked, [
+        'How many prayer requests can I send in a day?',
+        'How do I add my child?',
+      ]);
+      expect(find.byKey(const ValueKey('help-also-help_ex3')), findsNothing);
+      expect(find.byKey(const ValueKey('help-also-help_ex1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('help-also-help_ex5')), findsOneWidget);
+
+      // "No" offers Talk to us; it gives a choice: chat with the office or call its number.
+      await tester.tap(find.byKey(const ValueKey('help-no')).last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('help-talk')));
+      await tester.tap(find.byKey(const ValueKey('help-talk')));
+      await tester.pumpAndSettle();
+      expect(find.text('How would you like to reach us?'), findsOneWidget);
+      expect(find.text('Chat with the church office'), findsOneWidget);
+      expect(find.text('Call the office $kOfficePhone'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Home has the round help button at the bottom right, and one tap opens Help',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(theme: buildTheme(), home: const HomeScreen()),
+        ),
+      );
+      await tester.pump();
+
+      final button = find.byKey(const ValueKey('home-help'));
+      expect(button, findsOneWidget);
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final at = tester.getCenter(button);
+      expect(at.dx, greaterThan(screen.width / 2), reason: 'on the right');
+      expect(at.dy, greaterThan(screen.height / 2), reason: 'low on the page');
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.byType(HelpChatScreen), findsOneWidget);
+      expect(
+        find.textContaining('I can answer questions about the Noah app'),
+        findsOneWidget,
       );
     },
   );

@@ -53,6 +53,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Calling the church office from Help > Talk to us (url_launcher). -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
         <!-- Opening an event's place in Maps, and its online link in the browser (url_launcher). -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>

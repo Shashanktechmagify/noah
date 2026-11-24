@@ -17,6 +17,7 @@ import '../widgets/header_band.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/prayer_dialog.dart';
 import 'events/events_widgets.dart' show monthShort;
+import 'help_chat_screen.dart';
 import 'library_screens.dart';
 import 'prayer_wall_screen.dart';
 import 'manna_screen.dart';
@@ -320,6 +321,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
+        // Bottom right, above the bar: the help assistant is always one tap away.
+        const Positioned(right: 16, bottom: 104, child: _HelpButton()),
       ],
     );
   }
@@ -624,6 +627,43 @@ class _DashedRRect extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedRRect old) => false;
+}
+
+/// The round help button at the bottom right of Home (like the chat bubble of a website): one tap opens the help assistant.
+class _HelpButton extends StatelessWidget {
+  const _HelpButton();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: tr(context, 'mn_help'),
+    child: GestureDetector(
+      key: const ValueKey('home-help'),
+      onTap: () =>
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const HelpChatScreen())),
+      child: Container(
+        width: 58,
+        height: 58,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: AppColors.buttonGradient,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x4D5E2CA5),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.support_agent_outlined,
+          color: Colors.white,
+          size: 30,
+        ),
+      ),
+    ),
+  );
 }
 
 /// "Do you need prayers?" card: tapping the field opens the request popup.

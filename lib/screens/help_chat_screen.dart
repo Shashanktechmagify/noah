@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/help_data.dart';
 import '../data/ministry_data.dart';
+import '../data/registration_data.dart' show kOfficePhone;
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/header_band.dart';
 import '../widgets/page_scaffold.dart';
 import 'me/ministry_chat_screen.dart';
+
+/// The questions offered as examples: the first four when the chat is empty, and after every answer three that were not
+/// asked yet.
+const _exampleKeys = [
+  'help_ex1',
+  'help_ex2',
+  'help_ex3',
+  'help_ex4',
+  'help_ex5',
+  'help_ex6',
+  'help_ex7',
+  'help_ex8',
+];
 
 /// "Help" in the Menu: the member asks a question about the app and gets an answer from the office's FAQ. When the FAQ has
 /// nothing (or the answer did not help) there is always a way on: "Talk to us" opens the chat with the church office.
@@ -46,13 +61,129 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
     await _chat.send(question);
   }
 
-  void _talk() {
-    ministry.ensureLoaded();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MinistryChatScreen(contact: ministry.office),
+  /// "Talk to us": the member picks how, chat with the church office or a call to its number.
+  Future<void> _talk() async {
+    final how = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr(sheet, 'help_talk_title'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                key: const ValueKey('help-chat-office'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: AppColors.purple,
+                ),
+                title: Text(tr(sheet, 'help_chat_office')),
+                onTap: () => Navigator.of(sheet).pop('chat'),
+              ),
+              ListTile(
+                key: const ValueKey('help-call-office'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.call_outlined,
+                  color: AppColors.purple,
+                ),
+                title: Text(
+                  tr(sheet, 'help_call_office', args: {'phone': kOfficePhone}),
+                ),
+                onTap: () => Navigator.of(sheet).pop('call'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+    if (!mounted) return;
+    if (how == 'chat') {
+      ministry.ensureLoaded();
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MinistryChatScreen(contact: ministry.office),
+        ),
+      );
+    } else if (how == 'call') {
+      await _call();
+    }
+  }
+
+  Future<void> _call() async {
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri(scheme: 'tel', path: kOfficePhone.replaceAll(' ', '')),
+      );
+    } catch (_) {
+      // No phone app (a tablet, an emulator): the message below gives the number.
+    }
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(context, 'help_call_fail', args: {'phone': kOfficePhone}),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// After an answer (or "no answer") the member is offered other questions to ask: three of the examples they have not
+  /// asked yet, so the chat can go on in one tap.
+  List<Widget> _alsoAsk(BuildContext context) {
+    final last = _chat.messages.isEmpty ? null : _chat.messages.last;
+    if (last == null ||
+        (last.kind != HelpKind.answer && last.kind != HelpKind.noAnswer)) {
+      return const [];
+    }
+    final asked = {
+      for (final m in _chat.messages)
+        if (m.kind == HelpKind.mine) m.text,
+    };
+    final more = [
+      for (final key in _exampleKeys)
+        if (!asked.contains(tr(context, key))) key,
+    ].take(3).toList();
+    if (more.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 8),
+        child: Text(
+          tr(context, 'help_also'),
+          style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+        ),
+      ),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final key in more)
+            ActionChip(
+              key: ValueKey('help-also-$key'),
+              label: Text(tr(context, key)),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: AppColors.border),
+              onPressed: () => _send(tr(context, key)),
+            ),
+        ],
+      ),
+    ];
   }
 
   void _toBottom() {
@@ -264,12 +395,7 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              for (final key in const [
-                                'help_ex1',
-                                'help_ex2',
-                                'help_ex3',
-                                'help_ex4',
-                              ])
+                              for (final key in _exampleKeys.take(4))
                                 ActionChip(
                                   key: ValueKey(key),
                                   label: Text(tr(context, key)),
@@ -283,6 +409,7 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
                           ),
                         for (final m in _chat.messages) _message(context, m),
                         if (_chat.busy) _thinking(context),
+                        if (!_chat.busy) ..._alsoAsk(context),
                         const SizedBox(height: 12),
                         Text(
                           tr(context, 'help_note'),
