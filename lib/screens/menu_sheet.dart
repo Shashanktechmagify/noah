@@ -1,4 +1,5 @@
 import '../data/api_client.dart';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
@@ -24,6 +25,7 @@ class MenuItem {
 const kMenuItems = [
   MenuItem('info', Icons.person_outline, key: 'mn_info'),
   MenuItem('notifications', Icons.notifications_none, key: 'me_notifications'),
+  MenuItem('help', Icons.support_agent_outlined, key: 'mn_help'),
   MenuItem('ebooks', Icons.menu_book_outlined, key: 'mn_ebooks'),
   MenuItem('chat', Icons.chat_bubble_outline, key: 'mn_chat'),
   MenuItem('donations', Icons.volunteer_activism_outlined, key: 'mn_donations'),

@@ -9,6 +9,7 @@ import 'events/live_events_screen.dart';
 import 'home_screen.dart';
 import 'jodie/jodie_screen.dart';
 import 'bible_study_screen.dart';
+import 'help_chat_screen.dart';
 import 'manna_screen.dart';
 import 'my_prayer_requests_screen.dart';
 import 'prayer_wall_screen.dart';
@@ -290,6 +291,9 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       case 'prayer_wall':
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const PrayerWallScreen()));
+      case 'help':
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const HelpChatScreen()));
       case 'celebrations':
         if (api.canSeeCelebrations) {
           Navigator.of(

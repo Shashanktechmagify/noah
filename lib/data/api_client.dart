@@ -904,6 +904,23 @@ class ApiClient {
   Future<Map<String, dynamic>> prayFor(String id) =>
       _send('POST', '/prayer-requests/$id/pray', json: {});
 
+  // ── Help bot ────────────────────────────────────────────────────────
+
+  /// A question for the help bot: `{ id, answered, answer, left }` (`answer` is null when the FAQ has nothing on it).
+  /// The model reads the FAQ for every question, so an answer can take up to half a minute: it waits longer than other calls.
+  /// Fails with `too_many_questions` (the daily limit), `help_unavailable` or `help_not_configured`.
+  Future<Map<String, dynamic>> helpAsk(String question) => _send(
+    'POST',
+    '/help/ask',
+    json: {'question': question.trim()},
+    timeout: const Duration(seconds: 50),
+  );
+
+  /// "Was this helpful?" for one of the member's own questions.
+  Future<void> helpFeedback(String id, bool helpful) async {
+    await _send('POST', '/help/$id/feedback', json: {'helpful': helpful});
+  }
+
   // ── Family ──────────────────────────────────────────────────────────
 
   /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.
