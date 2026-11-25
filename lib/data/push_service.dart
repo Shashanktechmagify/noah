@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_strings.dart' show AppLang;
 import 'api_client.dart';
 import 'live_events.dart';
 import 'ministry_data.dart';
@@ -24,6 +25,18 @@ class PushService {
   bool _started = false;
   String? _deviceId;
   String? _token;
+
+  /// The language the app is in now. It goes to the server with the phone, so a notification can be sent in it (set by the app
+  /// at start and whenever the member changes the language).
+  AppLang? language;
+
+  /// The member changed the language: the server is told again (the same phone, the new language).
+  Future<void> languageChanged(AppLang lang) async {
+    if (language == lang) return;
+    language = lang;
+    final token = _token;
+    if (token != null) await _register(token);
+  }
 
   /// A random id for this install, kept between launches.
   Future<String> _id() async {
@@ -83,7 +96,7 @@ class PushService {
     if (!api.signedIn) return;
     // Registered with this token in the last 12 hours: the server already knows (each call is a read).
     final prefs = await SharedPreferences.getInstance();
-    final mine = '${registration.phone}|$token';
+    final mine = '${registration.phone}|$token|${language?.name}';
     final seen = (prefs.getString('noah_push_reg') ?? '').split('@');
     final recent =
         seen.length == 2 &&
@@ -96,6 +109,7 @@ class PushService {
         await _id(),
         token,
         defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+        lang: language?.name,
       );
       await prefs.setString(
         'noah_push_reg',

@@ -374,129 +374,132 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          HeaderBand(controller: _band, height: 120),
-          Column(
-            children: [
-              SizedBox(height: top + 14),
-              PageHeaderRow(
-                title: tr(context, 'mn_help'),
-                subtitle: tr(context, 'help_sub'),
-                leadingIcon: Icons.arrow_back,
-                onLeading: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: _chat,
-                  builder: (context, _) {
-                    _toBottom();
-                    return ListView(
-                      controller: _scroll,
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      children: [
-                        _plain(context, 'help_hello'),
-                        if (_chat.messages.isEmpty)
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final key in _exampleKeys.take(4))
-                                ActionChip(
-                                  key: ValueKey(key),
-                                  label: Text(tr(context, key)),
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(
-                                    color: AppColors.border,
-                                  ),
-                                  onPressed: () => _send(tr(context, key)),
-                                ),
-                            ],
-                          ),
-                        for (final m in _chat.messages) _message(context, m),
-                        if (_chat.busy) _thinking(context),
-                        if (!_chat.busy) ..._alsoAsk(context),
-                        const SizedBox(height: 12),
-                        Text(
-                          tr(context, 'help_note'),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+          // The purple band with the title, then the chat: the chat starts exactly where the band ends, so the messages scroll
+          // on the pale page and never go up into the purple.
+          SizedBox(
+            height: top + 120,
+            child: Stack(
+              children: [
+                HeaderBand(controller: _band, height: 120),
+                Column(
+                  children: [
+                    SizedBox(height: top + 14),
+                    PageHeaderRow(
+                      title: tr(context, 'mn_help'),
+                      subtitle: tr(context, 'help_sub'),
+                      leadingIcon: Icons.arrow_back,
+                      onLeading: () => Navigator.of(context).pop(),
+                    ),
+                  ],
                 ),
-              ),
-              ListenableBuilder(
-                listenable: _chat,
-                builder: (context, _) {
-                  final ready =
-                      _controller.text.trim().isNotEmpty && !_chat.busy;
-                  return Container(
-                    color: Colors.white,
-                    padding: EdgeInsets.fromLTRB(
-                      14,
-                      10,
-                      10,
-                      10 + MediaQuery.of(context).padding.bottom,
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListenableBuilder(
+              listenable: _chat,
+              builder: (context, _) {
+                _toBottom();
+                return ListView(
+                  controller: _scroll,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  children: [
+                    _plain(context, 'help_hello'),
+                    if (_chat.messages.isEmpty)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final key in _exampleKeys.take(4))
+                            ActionChip(
+                              key: ValueKey(key),
+                              label: Text(tr(context, key)),
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: AppColors.border),
+                              onPressed: () => _send(tr(context, key)),
+                            ),
+                        ],
+                      ),
+                    for (final m in _chat.messages) _message(context, m),
+                    if (_chat.busy) _thinking(context),
+                    if (!_chat.busy) ..._alsoAsk(context),
+                    const SizedBox(height: 12),
+                    Text(
+                      tr(context, 'help_note'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 18),
-                            decoration: BoxDecoration(
-                              color: AppColors.tint,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: TextField(
-                              key: const ValueKey('help-input'),
-                              controller: _controller,
-                              enabled: !_chat.busy,
-                              maxLength: kHelpQuestionMax,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (_) => _send(),
-                              decoration: InputDecoration(
-                                hintText: tr(context, 'help_write'),
-                                hintStyle: const TextStyle(
-                                  color: AppColors.muted,
-                                ),
-                                border: InputBorder.none,
-                                counterText: '',
-                              ),
-                            ),
+                  ],
+                );
+              },
+            ),
+          ),
+          ListenableBuilder(
+            listenable: _chat,
+            builder: (context, _) {
+              final ready = _controller.text.trim().isNotEmpty && !_chat.busy;
+              return Container(
+                color: Colors.white,
+                padding: EdgeInsets.fromLTRB(
+                  14,
+                  10,
+                  10,
+                  10 + MediaQuery.of(context).padding.bottom,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.tint,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: TextField(
+                          key: const ValueKey('help-input'),
+                          controller: _controller,
+                          enabled: !_chat.busy,
+                          maxLength: kHelpQuestionMax,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            hintText: tr(context, 'help_write'),
+                            hintStyle: const TextStyle(color: AppColors.muted),
+                            border: InputBorder.none,
+                            counterText: '',
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          key: const ValueKey('help-send'),
-                          onTap: ready ? _send : null,
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: ready ? AppColors.buttonGradient : null,
-                              color: ready ? null : const Color(0xFFE2DDF1),
-                            ),
-                            child: const Icon(
-                              Icons.send_outlined,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  );
-                },
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      key: const ValueKey('help-send'),
+                      onTap: ready ? _send : null,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: ready ? AppColors.buttonGradient : null,
+                          color: ready ? null : const Color(0xFFE2DDF1),
+                        ),
+                        child: const Icon(
+                          Icons.send_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

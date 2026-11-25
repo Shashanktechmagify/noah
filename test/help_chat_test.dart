@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noah_frontend_flutter/data/api_client.dart';
 import 'package:noah_frontend_flutter/data/help_data.dart';
+import 'package:noah_frontend_flutter/data/push_service.dart';
 import 'package:noah_frontend_flutter/data/registration_data.dart'
     show kOfficePhone;
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
@@ -529,4 +530,61 @@ void main() {
       expect(bandTop(), 0);
     },
   );
+
+  testWidgets(
+    'the chat starts where the purple band ends: messages never go up into the purple',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final chat = HelpChat(ask: (q) async => _answer('An answer to $q.'));
+      for (var i = 0; i < 12; i++) {
+        await chat.send('Question number $i');
+      }
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: HelpChatScreen(chat: chat),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final bandBottom = tester
+          .getRect(
+            find.descendant(
+              of: find.byType(HeaderBand),
+              matching: find.byType(Container),
+            ),
+          )
+          .bottom;
+      final listTop = tester.getTopLeft(find.byType(ListView)).dy;
+      expect(
+        listTop,
+        greaterThanOrEqualTo(bandBottom),
+        reason: 'the list starts at or below the band',
+      );
+      // The title row is inside the band, above the list.
+      expect(
+        tester.getBottomLeft(find.text('Help').first).dy,
+        lessThan(bandBottom),
+      );
+    },
+  );
+
+  test('the phone tells the server the app language once it is known, and again when the member changes it', () async {
+    final push = PushService();
+    expect(push.language, isNull);
+    await push.languageChanged(AppLang.kn);
+    expect(push.language, AppLang.kn);
+    await push.languageChanged(AppLang.kn); // the same: nothing to do
+    await push.languageChanged(AppLang.ta);
+    expect(push.language, AppLang.ta);
+  });
 }

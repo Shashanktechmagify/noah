@@ -8,6 +8,7 @@ import 'data/live_noahgram.dart';
 import 'data/ministry_data.dart';
 import 'data/notifications_data.dart';
 import 'data/pastor_data.dart';
+import 'data/push_service.dart';
 import 'l10n/app_strings.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -51,7 +52,10 @@ class _NoahAppState extends State<NoahApp> {
   @override
   void initState() {
     super.initState();
-    _locale.restore(); // the saved language, or the phone's
+    // The saved language, or the phone's. The server is told which one (with this phone, for notifications), and again when
+    // the member changes it.
+    _locale.restore().then((_) => pushService.languageChanged(_locale.lang));
+    _locale.addListener(() => pushService.languageChanged(_locale.lang));
   }
 
   @override

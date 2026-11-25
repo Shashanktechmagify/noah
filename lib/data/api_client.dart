@@ -969,14 +969,22 @@ class ApiClient {
 
   // ── Push and notifications ───────────────────────────────────────────
 
+  /// [lang] is the app's language code (`kn`): the server keeps it with the phone, so a notification can go out in the
+  /// member's language.
   Future<void> registerDevice(
     String deviceId,
     String pushToken,
-    String platform,
-  ) => _send(
+    String platform, {
+    String? lang,
+  }) => _send(
     'PUT',
     '/devices',
-    json: {'deviceId': deviceId, 'pushToken': pushToken, 'platform': platform},
+    json: {
+      'deviceId': deviceId,
+      'pushToken': pushToken,
+      'platform': platform,
+      'lang': ?lang,
+    },
   );
 
   Future<void> unregisterDevice(String deviceId) =>
