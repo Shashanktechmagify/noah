@@ -7,6 +7,8 @@ import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/screens/my_prayer_requests_screen.dart';
 import 'package:noah_frontend_flutter/screens/prayer_wall_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
+import 'package:noah_frontend_flutter/widgets/page_scaffold.dart'
+    show WhiteCard;
 
 WallRequest _request(String id, String text, {bool prayed = false}) =>
     WallRequest(
@@ -96,11 +98,14 @@ void main() {
       await _open(tester, const PrayerWallScreen());
 
       // One card on top: the first request only. The other waits behind it.
-      expect(find.text('To pray for: 2'), findsOneWidget);
       expect(find.text('Please pray for my mother.'), findsOneWidget);
       expect(find.textContaining('Member 1'), findsOneWidget);
       expect(find.text('1 praying'), findsOneWidget);
       expect(find.text('A private matter.'), findsNothing);
+      // No count, no cards behind it, and the card is as wide as the page (the page has 16 on each side).
+      expect(find.textContaining('To pray for'), findsNothing);
+      expect(find.byType(WhiteCard), findsOneWidget);
+      expect(tester.getSize(find.byType(WhiteCard)).width, 390 - 32);
       // No Previous, Next, Skip or swipe hint: "I prayed" is the one button.
       expect(find.text('Previous'), findsNothing);
       expect(find.text('Next'), findsNothing);
@@ -147,7 +152,6 @@ void main() {
       await _open(tester, const PrayerWallScreen());
 
       // One the member prayed for is not on the wall.
-      expect(find.text('To pray for: 3'), findsOneWidget);
       expect(find.text('First request'), findsOneWidget);
       expect(find.text('Already prayed for'), findsNothing);
 
@@ -167,7 +171,6 @@ void main() {
       expect(sent, ['1']);
       expect(find.text('First request'), findsNothing);
       expect(find.text('Second request'), findsOneWidget);
-      expect(find.text('To pray for: 2'), findsOneWidget);
       expect(
         find.text('You prayed'),
         findsOneWidget,
@@ -179,7 +182,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(sent, ['1', '2']);
       expect(find.text('Third request'), findsOneWidget);
-      expect(find.text('To pray for: 1'), findsOneWidget);
 
       // The server refuses: the request comes back where it was.
       refuse = true;
@@ -187,7 +189,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(sent, ['1', '2', '3']);
       expect(find.text('Third request'), findsOneWidget);
-      expect(find.text('To pray for: 1'), findsOneWidget);
 
       // The last one prayed for: nothing is left.
       refuse = false;
@@ -208,17 +209,5 @@ void main() {
     await _open(tester, const PrayerWallScreen());
     expect(find.byKey(const ValueKey('wall-pray')), findsNothing);
     expect(find.text('Prayed already'), findsNothing);
-  });
-
-  test('the "to pray for" words exist in every language the app shows', () {
-    final english = trIn(AppLang.en, 'pw_left');
-    expect(english, isNot('pw_left'));
-    for (final lang in AppLang.values) {
-      expect(trIn(lang, 'pw_left').trim(), isNotEmpty, reason: lang.name);
-      expect(trIn(lang, 'pw_left').contains('{n}'), isTrue, reason: lang.name);
-      if (lang != AppLang.en) {
-        expect(trIn(lang, 'pw_left'), isNot(english), reason: lang.name);
-      }
-    }
   });
 }

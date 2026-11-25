@@ -252,18 +252,46 @@ class _MakeMemberScreenState extends State<MakeMemberScreen> {
                           onTap: () => openAadhaar(context, _kid),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              api.childAadhaarUrl(_kid.kidId!),
-                              headers: api.authHeaders,
+                            // A box of its own size, so the page does not jump: a spinner while it loads, an icon when it cannot.
+                            child: SizedBox(
+                              width: double.infinity,
                               height: 130,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const SizedBox.shrink(),
+                              child: Image.network(
+                                api.childAadhaarUrl(_kid.kidId!),
+                                headers: api.authHeaders,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) =>
+                                    progress == null
+                                    ? child
+                                    : const ColoredBox(
+                                        color: Color(0xFFE2DDF1),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.4,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                errorBuilder: (_, _, _) => const ColoredBox(
+                                  color: Color(0xFFE2DDF1),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.credit_card_outlined,
+                                      color: AppColors.muted,
+                                      size: 34,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ],
-                      Row(
+                      Wrap(
+                        spacing: 4,
                         children: [
                           TextButton.icon(
                             onPressed: () => openAadhaar(context, _kid),

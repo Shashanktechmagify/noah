@@ -587,4 +587,41 @@ void main() {
     await push.languageChanged(AppLang.ta);
     expect(push.language, AppLang.ta);
   });
+
+  testWidgets(
+    'the round help button on Home sits above the whole bottom bar, whatever the height of the bar',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      for (final bar in [92.0, 126.0]) {
+        // Like the app's shell: the page runs under the bar (extendBody).
+        await tester.pumpWidget(
+          AppLocale(
+            controller: LocaleController(),
+            child: MaterialApp(
+              theme: buildTheme(),
+              home: Scaffold(
+                extendBody: true,
+                body: const HomeScreen(),
+                bottomNavigationBar: SizedBox(height: bar),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final button = tester.getRect(find.byKey(const ValueKey('home-help')));
+        expect(
+          button.bottom,
+          lessThanOrEqualTo(800 - bar),
+          reason: 'clear of a bar of $bar',
+        );
+        expect(button.right, lessThanOrEqualTo(390));
+      }
+    },
+  );
 }
