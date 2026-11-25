@@ -10,6 +10,7 @@ import 'package:noah_frontend_flutter/screens/help_chat_screen.dart';
 import 'package:noah_frontend_flutter/screens/home_screen.dart';
 import 'package:noah_frontend_flutter/screens/menu_sheet.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
+import 'package:noah_frontend_flutter/widgets/header_band.dart';
 
 Map<String, dynamic> _answer(String text, {String id = '7'}) => {
   'id': id,
@@ -473,6 +474,59 @@ void main() {
         find.textContaining('I can answer questions about the Noah app'),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'the purple band behind the title stays put when a long chat is scrolled (it used to scroll away and leave a white title)',
+    (tester) async {
+      final loader = FontLoader('PlusJakartaSans')
+        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+      await tester.runAsync(loader.load);
+      tester.view.physicalSize = const Size(390, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final chat = HelpChat(ask: (q) async => _answer('An answer to $q.'));
+      for (var i = 0; i < 12; i++) {
+        await chat.send('Question number $i');
+      }
+      await tester.pumpWidget(
+        AppLocale(
+          controller: LocaleController(),
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: HelpChatScreen(chat: chat),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double bandTop() => tester
+          .widget<Positioned>(
+            find.descendant(
+              of: find.byType(HeaderBand),
+              matching: find.byType(Positioned),
+            ),
+          )
+          .top!;
+
+      expect(bandTop(), 0);
+      // Scroll the chat to its top and back to its end: the band does not move.
+      final list = find.byType(ListView);
+      await tester.drag(list, const Offset(0, 900));
+      await tester.pumpAndSettle();
+      await tester.drag(list, const Offset(0, -2500));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .pixels,
+        greaterThan(300),
+        reason: 'the chat really scrolled',
+      );
+      expect(bandTop(), 0);
     },
   );
 }

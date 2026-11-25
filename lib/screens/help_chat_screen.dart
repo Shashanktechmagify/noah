@@ -36,9 +36,15 @@ class HelpChatScreen extends StatefulWidget {
 }
 
 class _HelpChatScreenState extends State<HelpChatScreen> {
-  late final HelpChat _chat = widget.chat ?? HelpChat();
+  // The language the app is in now (it may be changed while the chat is open): the answer comes in it.
+  late final HelpChat _chat =
+      widget.chat ?? HelpChat(language: () => AppLocale.of(context).lang.name);
   final _controller = TextEditingController();
   final _scroll = ScrollController();
+
+  // The purple band behind the title stays where it is: tied to the list, it would scroll away and leave the white title on
+  // the pale page. This controller is never attached to a list.
+  final _band = ScrollController();
 
   @override
   void initState() {
@@ -51,6 +57,7 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
     if (widget.chat == null) _chat.dispose();
     _controller.dispose();
     _scroll.dispose();
+    _band.dispose();
     super.dispose();
   }
 
@@ -369,7 +376,7 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          HeaderBand(controller: _scroll, height: 120),
+          HeaderBand(controller: _band, height: 120),
           Column(
             children: [
               SizedBox(height: top + 14),

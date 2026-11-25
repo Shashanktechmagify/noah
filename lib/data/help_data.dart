@@ -76,7 +76,7 @@ typedef HelpFeedback = Future<void> Function(String id, bool helpful);
 const kHelpQuestionMax = 300;
 
 class HelpChat extends ChangeNotifier {
-  HelpChat({HelpAsk? ask, HelpFeedback? feedback})
+  HelpChat({HelpAsk? ask, HelpFeedback? feedback, String Function()? language})
     : _ask =
           ask ??
           ((q) {
@@ -87,7 +87,7 @@ class HelpChat extends ChangeNotifier {
                 'Help needs the server.',
               );
             }
-            return api.helpAsk(q);
+            return api.helpAsk(q, language: language?.call());
           }),
       _feedback = feedback ?? ((id, helpful) => api.helpFeedback(id, helpful));
 
