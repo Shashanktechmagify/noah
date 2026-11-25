@@ -334,6 +334,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
+        // The status bar keeps its own strip once the band has scrolled off (no text under the clock and the battery).
+        StatusBarScrim(controller: _scroll),
         // Bottom right, above the bar: the help assistant is always one tap away.
         const Positioned(right: 16, bottom: 104, child: _HelpButton()),
       ],

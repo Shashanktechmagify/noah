@@ -72,7 +72,7 @@ void main() {
   });
 
   testWidgets(
-    'the wall is a deck of cards, one on top, with no Previous / Next; my requests are a separate page with their state',
+    'the wall is a deck of cards, one on top, and "I prayed" is the only button; my requests are a separate page with their state',
     (tester) async {
       prayer
         ..loaded = true
@@ -95,21 +95,19 @@ void main() {
 
       await _open(tester, const PrayerWallScreen());
 
-      // One card on top: the first request only. The others wait behind it.
+      // One card on top: the first request only. The other waits behind it.
       expect(find.text('To pray for: 2'), findsOneWidget);
       expect(find.text('Please pray for my mother.'), findsOneWidget);
       expect(find.textContaining('Member 1'), findsOneWidget);
       expect(find.text('1 praying'), findsOneWidget);
       expect(find.text('A private matter.'), findsNothing);
+      // No Previous, Next, Skip or swipe hint: "I prayed" is the one button.
       expect(find.text('Previous'), findsNothing);
       expect(find.text('Next'), findsNothing);
-      // What to do is told, and the two round buttons do the same as a swipe.
-      expect(
-        find.text('Swipe right when you have prayed, left to skip'),
-        findsOneWidget,
-      );
+      expect(find.text('Skip'), findsNothing);
+      expect(find.textContaining('Swipe'), findsNothing);
       expect(find.byKey(const ValueKey('wall-pray')), findsOneWidget);
-      expect(find.byKey(const ValueKey('wall-skip')), findsOneWidget);
+      expect(find.text('I prayed'), findsOneWidget);
       // My requests are not on the wall.
       expect(find.text('Thank you Lord'), findsNothing);
       expect(find.text('My requests'), findsNothing);
@@ -124,7 +122,7 @@ void main() {
   );
 
   testWidgets(
-    'swipe right: prayed, the request leaves the wall for good and the next card comes up; swipe left: skipped, it goes to the back; a short drag does nothing; nothing moves by itself',
+    'the card stays until "I prayed" is pressed (a swipe or the time passing do nothing); then the request is gone for good and the next card comes up',
     (tester) async {
       final sent = <String>[];
       var refuse = false;
@@ -148,80 +146,59 @@ void main() {
 
       await _open(tester, const PrayerWallScreen());
 
-      // One the member prayed for is not on the wall. Time passing does not move the card on.
+      // One the member prayed for is not on the wall.
       expect(find.text('To pray for: 3'), findsOneWidget);
       expect(find.text('First request'), findsOneWidget);
       expect(find.text('Already prayed for'), findsNothing);
-      await tester.pump(const Duration(seconds: 30));
-      expect(find.text('First request'), findsOneWidget);
 
-      // A short drag springs back: nothing prayed, nothing skipped.
-      await tester.drag(
-        find.byKey(const ValueKey('wall-top')),
-        const Offset(60, 0),
-      );
+      // Nothing moves it on: not time, not a swipe either way.
+      await tester.pump(const Duration(seconds: 30));
+      await tester.drag(find.text('First request'), const Offset(300, 0));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('First request'), const Offset(-300, 0));
       await tester.pumpAndSettle();
       expect(find.text('First request'), findsOneWidget);
       expect(sent, isEmpty);
       expect(prayer.wall.map((r) => r.id), ['1', '2', '3', '4']);
 
-      // Swipe left: skipped. The first card goes to the back, the second is on top; the server is not told.
-      await tester.drag(
-        find.byKey(const ValueKey('wall-top')),
-        const Offset(-300, 0),
-      );
+      // "I prayed": the server is told, the request is gone, the next card comes up.
+      await tester.tap(find.byKey(const ValueKey('wall-pray')));
       await tester.pumpAndSettle();
-      expect(sent, isEmpty);
-      expect(find.text('Second request'), findsOneWidget);
+      expect(sent, ['1']);
       expect(find.text('First request'), findsNothing);
-      expect(prayer.wall.map((r) => r.id), ['2', '3', '4', '1']);
-      expect(
-        find.text('To pray for: 3'),
-        findsOneWidget,
-        reason: 'still on the wall',
-      );
-
-      // Swipe right: prayed. The server is told, the request is gone, the next card comes up.
-      await tester.drag(
-        find.byKey(const ValueKey('wall-top')),
-        const Offset(300, 0),
-      );
-      await tester.pumpAndSettle();
-      expect(sent, ['2']);
-      expect(find.text('Second request'), findsNothing);
-      expect(find.text('Third request'), findsOneWidget);
+      expect(find.text('Second request'), findsOneWidget);
       expect(find.text('To pray for: 2'), findsOneWidget);
       expect(
         find.text('You prayed'),
         findsOneWidget,
         reason: 'told in a message',
       );
-      expect(prayer.wall.map((r) => r.id), ['3', '4', '1']);
+      expect(prayer.wall.map((r) => r.id), ['2', '3', '4']);
 
-      // The round buttons do the same: the prayer button prays for the top card.
       await tester.tap(find.byKey(const ValueKey('wall-pray')));
       await tester.pumpAndSettle();
-      expect(sent, ['2', '3']);
-      expect(find.text('First request'), findsOneWidget);
+      expect(sent, ['1', '2']);
+      expect(find.text('Third request'), findsOneWidget);
       expect(find.text('To pray for: 1'), findsOneWidget);
-
-      // The last card cannot be skipped to the back (nothing is behind it): it stays.
-      await tester.tap(find.byKey(const ValueKey('wall-skip')));
-      await tester.pumpAndSettle();
-      expect(find.text('First request'), findsOneWidget);
-      expect(sent, ['2', '3']);
 
       // The server refuses: the request comes back where it was.
       refuse = true;
       await tester.tap(find.byKey(const ValueKey('wall-pray')));
       await tester.pumpAndSettle();
-      expect(sent, ['2', '3', '1']);
-      expect(find.text('First request'), findsOneWidget);
+      expect(sent, ['1', '2', '3']);
+      expect(find.text('Third request'), findsOneWidget);
       expect(find.text('To pray for: 1'), findsOneWidget);
+
+      // The last one prayed for: nothing is left.
+      refuse = false;
+      await tester.tap(find.byKey(const ValueKey('wall-pray')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('wall-pray')), findsNothing);
+      expect(find.text('Third request'), findsNothing);
     },
   );
 
-  testWidgets('a wall with nothing to pray for says so, and shows no buttons', (
+  testWidgets('a wall with nothing to pray for says so, and shows no button', (
     tester,
   ) async {
     prayer
@@ -230,33 +207,18 @@ void main() {
     addTearDown(prayer.clear);
     await _open(tester, const PrayerWallScreen());
     expect(find.byKey(const ValueKey('wall-pray')), findsNothing);
-    expect(find.byKey(const ValueKey('wall-skip')), findsNothing);
     expect(find.text('Prayed already'), findsNothing);
   });
 
-  test('the new wall words exist in every language the app shows', () {
-    for (final key in ['pw_skip', 'pw_left', 'pw_swipe_hint']) {
-      final english = trIn(AppLang.en, key);
-      expect(english, isNot(key), reason: key);
-      for (final lang in AppLang.values) {
-        expect(
-          trIn(lang, key).trim(),
-          isNotEmpty,
-          reason: '$key in ${lang.name}',
-        );
-        if (lang != AppLang.en) {
-          expect(
-            trIn(lang, key),
-            isNot(english),
-            reason: '$key in ${lang.name} is translated',
-          );
-        }
+  test('the "to pray for" words exist in every language the app shows', () {
+    final english = trIn(AppLang.en, 'pw_left');
+    expect(english, isNot('pw_left'));
+    for (final lang in AppLang.values) {
+      expect(trIn(lang, 'pw_left').trim(), isNotEmpty, reason: lang.name);
+      expect(trIn(lang, 'pw_left').contains('{n}'), isTrue, reason: lang.name);
+      if (lang != AppLang.en) {
+        expect(trIn(lang, 'pw_left'), isNot(english), reason: lang.name);
       }
     }
-    expect(
-      trIn(AppLang.hi, 'pw_left').contains('{n}'),
-      isTrue,
-      reason: 'the count goes in',
-    );
   });
 }

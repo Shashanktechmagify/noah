@@ -165,13 +165,6 @@ class PrayerState extends ChangeNotifier {
     }
   }
 
-  /// Skip: the request goes to the back of the deck for now (it stays on the wall, and the server is not told).
-  void skip(WallRequest r) {
-    if (wall.length < 2 || !wall.remove(r)) return;
-    wall.add(r);
-    notifyListeners();
-  }
-
   void clear() {
     wall = [];
     mine = [];

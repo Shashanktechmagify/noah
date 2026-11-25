@@ -92,6 +92,7 @@ class _PageScaffoldState extends State<PageScaffold> {
             ],
           ),
         ),
+        StatusBarScrim(controller: _controller, bandHeight: widget.bandHeight),
       ],
     );
   }
