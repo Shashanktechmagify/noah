@@ -928,9 +928,24 @@ class ApiClient {
   /// `{ family: [{kind: member|kid, name, relation, ...}], requests: [{id, relation, name, state, ...}] }`.
   Future<Map<String, dynamic>> family() => _send('GET', '/family');
 
-  /// Everyone's birthdays and anniversaries of a month (the current one when [month] is null). Pastors and cell leaders only.
-  Future<Map<String, dynamic>> celebrations({int? month}) =>
-      _send('GET', '/celebrations${month == null ? '' : '?month=$month'}');
+  /// Pastors and cell leaders only.
+  /// The birthdays and anniversaries between [from] and [to] (dates like `2026-11-25`, at most a year apart): each with the day it
+  /// falls on and how to reach the person (`mobile`, `whatsapp`, `email`, `address`, `maritalStatus`). Without them, one [month]
+  /// (1 to 12) of the current year.
+  Future<Map<String, dynamic>> celebrations({
+    String? from,
+    String? to,
+    int? month,
+    int? year,
+  }) {
+    final query = [
+      if (from != null) 'from=$from',
+      if (to != null) 'to=$to',
+      if (month != null) 'month=$month',
+      if (year != null) 'year=$year',
+    ].join('&');
+    return _send('GET', '/celebrations${query.isEmpty ? '' : '?$query'}');
+  }
 
   /// On the member's birthday: asks the server to send the birthday notification (once a day). `{ birthday, sent }`.
   Future<Map<String, dynamic>> sendBirthdayWish() =>
