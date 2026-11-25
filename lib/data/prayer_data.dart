@@ -128,6 +128,9 @@ class PrayerState extends ChangeNotifier {
       wall = ((w['items'] as List?) ?? const [])
           .cast<Map<String, dynamic>>()
           .map(WallRequest.fromJson)
+          .where(
+            (r) => !r.iPrayed,
+          ) // one the member prayed for is not shown again
           .toList();
       mine = ((m['items'] as List?) ?? const [])
           .cast<Map<String, dynamic>>()
@@ -142,22 +145,24 @@ class PrayerState extends ChangeNotifier {
     }
   }
 
-  /// "I prayed": shown at once, undone if the server refuses.
+  /// How "I prayed" reaches the server (a test gives its own).
+  Future<Map<String, dynamic>> Function(String id) sendPrayer = (id) =>
+      api.prayFor(id);
+
+  /// "I prayed": the request leaves the wall at once (the wall then shows the one that follows), and comes back to its place
+  /// if the server refuses.
   Future<void> pray(WallRequest r) async {
-    if (r.iPrayed || r.mine) return;
-    r
-      ..iPrayed = true
-      ..prayedBy += 1;
+    if (r.mine) return;
+    final at = wall.indexOf(r);
+    if (at < 0) return;
+    wall.removeAt(at);
     notifyListeners();
     try {
-      final d = await api.prayFor(r.id);
-      r.prayedBy = (d['prayedBy'] as num?)?.toInt() ?? r.prayedBy;
+      await sendPrayer(r.id);
     } on ApiException {
-      r
-        ..iPrayed = false
-        ..prayedBy -= 1;
+      wall.insert(at.clamp(0, wall.length), r);
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   void clear() {

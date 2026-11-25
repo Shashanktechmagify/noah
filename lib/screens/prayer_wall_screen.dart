@@ -8,8 +8,9 @@ import '../widgets/prayer_bits.dart';
 import 'me/sub_page.dart';
 
 /// The prayer wall: other members' open requests (and the prayer warriors' own, for a warrior), one at a time, with an
-/// "I prayed" button. Swipe, or use Previous / Next, to go to the next one. The member's own requests are not here: they
-/// have their own page (My prayer requests).
+/// "I prayed" button. Tapping it takes that request off the wall and shows the one that follows; nothing moves on by itself.
+/// Swipe, or use Previous / Next, to look at the others. The member's own requests are not here: they have their own page
+/// (My prayer requests).
 class PrayerWallScreen extends StatefulWidget {
   const PrayerWallScreen({super.key});
 
@@ -25,6 +26,21 @@ class _PrayerWallScreenState extends State<PrayerWallScreen> {
   void initState() {
     super.initState();
     prayer.load();
+  }
+
+  /// "I prayed": the request goes off the wall and the next one comes in (the index stays, the list is one shorter).
+  void _pray(BuildContext context, WallRequest r) {
+    _forward = true;
+    prayer.pray(r);
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(tr(context, 'pw_prayed')),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   void _go(int to, int count) {
@@ -71,12 +87,10 @@ class _PrayerWallScreenState extends State<PrayerWallScreen> {
               ),
             ),
             StatusPill(
-              text: r.iPrayed
-                  ? tr(context, 'pw_prayed')
-                  : tr(context, 'pw_pray'),
-              background: r.iPrayed ? StatusPill.booked.$1 : StatusPill.book.$1,
-              foreground: r.iPrayed ? StatusPill.booked.$2 : StatusPill.book.$2,
-              onTap: r.iPrayed ? null : () => prayer.pray(r),
+              text: tr(context, 'pw_pray'),
+              background: StatusPill.book.$1,
+              foreground: StatusPill.book.$2,
+              onTap: () => _pray(context, r),
             ),
           ],
         ),
@@ -132,7 +146,7 @@ class _PrayerWallScreenState extends State<PrayerWallScreen> {
       listenable: prayer,
       builder: (context, _) {
         // Never the member's own requests (the server already leaves them out).
-        final wall = prayer.wall.where((r) => !r.mine).toList();
+        final wall = prayer.wall.where((r) => !r.mine && !r.iPrayed).toList();
         final count = wall.length;
         if (_index >= count) _index = count == 0 ? 0 : count - 1;
         return SubPage(
@@ -153,21 +167,34 @@ class _PrayerWallScreenState extends State<PrayerWallScreen> {
             else if (wall.isEmpty)
               PrayerNote(tr(context, 'pw_empty_wall'))
             else ...[
+              // "3 of 11" in a small pill, with room above it (it used to sit on the edge of the purple band).
+              const SizedBox(height: 18),
               Center(
-                child: Text(
-                  tr(
-                    context,
-                    'pw_position',
-                    args: {'n': '${_index + 1}', 'total': '$count'},
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 7,
                   ),
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    tr(
+                      context,
+                      'pw_position',
+                      args: {'n': '${_index + 1}', 'total': '$count'},
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.purple,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               GestureDetector(
                 // A swipe left shows the next request, a swipe right the one before.
                 onHorizontalDragEnd: (d) {

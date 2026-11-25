@@ -85,6 +85,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
   /// The three tiles of the selected tab, then "View all".
+  /// The height of a gradient tile: enough for the icon, a title of two lines and a line under it, also with a larger phone font.
+  double _tileHeight(BuildContext context) {
+    final scale = (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+      1.0,
+      1.6,
+    );
+    return 148 * scale;
+  }
+
   List<Widget> _tiles(BuildContext context) {
     final now = DateTime.now();
     switch (_tab) {
@@ -293,12 +302,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
+                // A tile is as tall as its text needs, not a share of its width: a two-line title in Devanagari, Tamil or
+                // Malayalam (taller lines) or a larger phone font overflowed a tile of a fixed shape.
+                child: GridView(
                   key: ValueKey(_tab),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.4,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    mainAxisExtent: _tileHeight(context),
+                  ),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
