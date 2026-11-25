@@ -8,6 +8,35 @@ import 'package:noah_frontend_flutter/screens/my_prayer_requests_screen.dart';
 import 'package:noah_frontend_flutter/screens/prayer_wall_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
 
+WallRequest _request(String id, String text, {bool prayed = false}) =>
+    WallRequest(
+      id: id,
+      category: 'healing',
+      text: text,
+      everyone: true,
+      name: 'Member $id',
+      mine: false,
+      prayedBy: 1,
+      iPrayed: prayed,
+      createdAt: DateTime.now(),
+    );
+
+Future<void> _open(WidgetTester tester, Widget screen) async {
+  final loader = FontLoader('PlusJakartaSans')
+    ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
+  await tester.runAsync(loader.load);
+  tester.view.physicalSize = const Size(390, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    AppLocale(
+      controller: LocaleController(),
+      child: MaterialApp(theme: buildTheme(), home: screen),
+    ),
+  );
+  await tester.pump();
+}
+
 void main() {
   test('a wall request is read from the server answer', () {
     final r = WallRequest.fromJson({
@@ -43,40 +72,13 @@ void main() {
   });
 
   testWidgets(
-    'the wall goes one request at a time; my requests are a separate page with their state',
+    'the wall is a deck of cards, one on top, with no Previous / Next; my requests are a separate page with their state',
     (tester) async {
-      final loader = FontLoader('PlusJakartaSans')
-        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
-      await tester.runAsync(loader.load);
-      tester.view.physicalSize = const Size(390, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-
       prayer
         ..loaded = true
         ..wall = [
-          WallRequest(
-            id: '1',
-            category: 'healing',
-            text: 'Please pray for my mother.',
-            everyone: true,
-            name: 'Asha Thomas',
-            mine: false,
-            prayedBy: 2,
-            iPrayed: false,
-            createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-          ),
-          WallRequest(
-            id: '2',
-            category: 'family',
-            text: 'A private matter.',
-            everyone: false,
-            name: null,
-            mine: false,
-            prayedBy: 0,
-            iPrayed: false,
-            createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
-          ),
+          _request('1', 'Please pray for my mother.'),
+          _request('2', 'A private matter.'),
         ]
         ..mine = [
           MyPrayer(
@@ -91,52 +93,29 @@ void main() {
         ];
       addTearDown(prayer.clear);
 
-      await tester.pumpWidget(
-        AppLocale(
-          controller: LocaleController(),
-          child: MaterialApp(
-            theme: buildTheme(),
-            home: const PrayerWallScreen(),
-          ),
-        ),
-      );
-      await tester.pump();
+      await _open(tester, const PrayerWallScreen());
 
-      // One at a time: the first request only.
-      expect(find.text('1 of 2'), findsOneWidget);
+      // One card on top: the first request only. The others wait behind it.
+      expect(find.text('To pray for: 2'), findsOneWidget);
       expect(find.text('Please pray for my mother.'), findsOneWidget);
-      expect(find.textContaining('Asha Thomas'), findsOneWidget);
-      expect(
-        find.text('I prayed'),
-        findsOneWidget,
-        reason: 'not yet prayed for',
-      );
-      expect(find.text('2 praying'), findsOneWidget);
+      expect(find.textContaining('Member 1'), findsOneWidget);
+      expect(find.text('1 praying'), findsOneWidget);
       expect(find.text('A private matter.'), findsNothing);
-      expect(find.text('Previous'), findsOneWidget);
-
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-      expect(find.text('2 of 2'), findsOneWidget);
-      expect(find.text('A private matter.'), findsOneWidget);
-      expect(find.text('Please pray for my mother.'), findsNothing);
-      expect(find.text('Prayer warriors'), findsOneWidget);
-      expect(find.textContaining('Anonymous'), findsOneWidget);
-      // My requests are not on the wall, and there is no tab for them here.
+      expect(find.text('Previous'), findsNothing);
+      expect(find.text('Next'), findsNothing);
+      // What to do is told, and the two round buttons do the same as a swipe.
+      expect(
+        find.text('Swipe right when you have prayed, left to skip'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('wall-pray')), findsOneWidget);
+      expect(find.byKey(const ValueKey('wall-skip')), findsOneWidget);
+      // My requests are not on the wall.
       expect(find.text('Thank you Lord'), findsNothing);
       expect(find.text('My requests'), findsNothing);
 
       // The member's own requests are on their own page, waiting for approval.
-      await tester.pumpWidget(
-        AppLocale(
-          controller: LocaleController(),
-          child: MaterialApp(
-            theme: buildTheme(),
-            home: const MyPrayerRequestsScreen(),
-          ),
-        ),
-      );
-      await tester.pump();
+      await _open(tester, const MyPrayerRequestsScreen());
       expect(find.text('Thank you Lord'), findsOneWidget);
       expect(find.text('Waiting for Approval'), findsOneWidget);
       expect(find.text('Add a prayer request'), findsOneWidget);
@@ -145,36 +124,17 @@ void main() {
   );
 
   testWidgets(
-    'I prayed takes the request off the wall and shows the next one; nothing moves on by itself; a refused prayer comes back',
+    'swipe right: prayed, the request leaves the wall for good and the next card comes up; swipe left: skipped, it goes to the back; a short drag does nothing; nothing moves by itself',
     (tester) async {
-      final loader = FontLoader('PlusJakartaSans')
-        ..addFont(rootBundle.load('assets/fonts/PlusJakartaSans.ttf'));
-      await tester.runAsync(loader.load);
-      tester.view.physicalSize = const Size(390, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-
-      WallRequest request(String id, String text, {bool prayed = false}) =>
-          WallRequest(
-            id: id,
-            category: 'healing',
-            text: text,
-            everyone: true,
-            name: 'Member $id',
-            mine: false,
-            prayedBy: 1,
-            iPrayed: prayed,
-            createdAt: DateTime.now(),
-          );
       final sent = <String>[];
       var refuse = false;
       prayer
         ..loaded = true
         ..wall = [
-          request('1', 'First request'),
-          request('2', 'Second request'),
-          request('3', 'Third request'),
-          request('4', 'Already prayed for', prayed: true),
+          _request('1', 'First request'),
+          _request('2', 'Second request'),
+          _request('3', 'Third request'),
+          _request('4', 'Already prayed for', prayed: true),
         ]
         ..sendPrayer = (id) async {
           sent.add(id);
@@ -186,62 +146,117 @@ void main() {
         prayer.sendPrayer = (id) => api.prayFor(id);
       });
 
-      await tester.pumpWidget(
-        AppLocale(
-          controller: LocaleController(),
-          child: MaterialApp(
-            theme: buildTheme(),
-            home: const PrayerWallScreen(),
-          ),
-        ),
-      );
-      await tester.pump();
+      await _open(tester, const PrayerWallScreen());
 
-      // One the member prayed for is not on the wall. Time passing does not move it on.
-      expect(find.text('1 of 3'), findsOneWidget);
+      // One the member prayed for is not on the wall. Time passing does not move the card on.
+      expect(find.text('To pray for: 3'), findsOneWidget);
       expect(find.text('First request'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 30));
-      expect(
-        find.text('First request'),
-        findsOneWidget,
-        reason: 'it stays until the member acts',
-      );
       expect(find.text('Already prayed for'), findsNothing);
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('First request'), findsOneWidget);
 
-      // Look at the second one without praying: nothing is taken off.
-      await tester.tap(find.text('Next'));
+      // A short drag springs back: nothing prayed, nothing skipped.
+      await tester.drag(
+        find.byKey(const ValueKey('wall-top')),
+        const Offset(60, 0),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('2 of 3'), findsOneWidget);
-      expect(find.text('Second request'), findsOneWidget);
+      expect(find.text('First request'), findsOneWidget);
+      expect(sent, isEmpty);
+      expect(prayer.wall.map((r) => r.id), ['1', '2', '3', '4']);
 
-      // "I prayed": the second request is gone, and the third comes in at once.
-      await tester.tap(find.text('I prayed'));
+      // Swipe left: skipped. The first card goes to the back, the second is on top; the server is not told.
+      await tester.drag(
+        find.byKey(const ValueKey('wall-top')),
+        const Offset(-300, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(sent, isEmpty);
+      expect(find.text('Second request'), findsOneWidget);
+      expect(find.text('First request'), findsNothing);
+      expect(prayer.wall.map((r) => r.id), ['2', '3', '4', '1']);
+      expect(
+        find.text('To pray for: 3'),
+        findsOneWidget,
+        reason: 'still on the wall',
+      );
+
+      // Swipe right: prayed. The server is told, the request is gone, the next card comes up.
+      await tester.drag(
+        find.byKey(const ValueKey('wall-top')),
+        const Offset(300, 0),
+      );
       await tester.pumpAndSettle();
       expect(sent, ['2']);
       expect(find.text('Second request'), findsNothing);
       expect(find.text('Third request'), findsOneWidget);
-      expect(find.text('2 of 2'), findsOneWidget);
+      expect(find.text('To pray for: 2'), findsOneWidget);
       expect(
-        find.text('First request'),
-        findsNothing,
-        reason: 'it moved to the next, not back',
+        find.text('You prayed'),
+        findsOneWidget,
+        reason: 'told in a message',
       );
-      expect(prayer.wall.map((r) => r.id), ['1', '3', '4']);
+      expect(prayer.wall.map((r) => r.id), ['3', '4', '1']);
 
-      // Praying for the last one leaves the one before it (there is no next), and the wall is one shorter again.
-      await tester.tap(find.text('I prayed'));
+      // The round buttons do the same: the prayer button prays for the top card.
+      await tester.tap(find.byKey(const ValueKey('wall-pray')));
       await tester.pumpAndSettle();
       expect(sent, ['2', '3']);
       expect(find.text('First request'), findsOneWidget);
-      expect(find.text('1 of 1'), findsOneWidget);
+      expect(find.text('To pray for: 1'), findsOneWidget);
+
+      // The last card cannot be skipped to the back (nothing is behind it): it stays.
+      await tester.tap(find.byKey(const ValueKey('wall-skip')));
+      await tester.pumpAndSettle();
+      expect(find.text('First request'), findsOneWidget);
+      expect(sent, ['2', '3']);
 
       // The server refuses: the request comes back where it was.
       refuse = true;
-      await tester.tap(find.text('I prayed'));
+      await tester.tap(find.byKey(const ValueKey('wall-pray')));
       await tester.pumpAndSettle();
       expect(sent, ['2', '3', '1']);
       expect(find.text('First request'), findsOneWidget);
-      expect(find.text('1 of 1'), findsOneWidget);
+      expect(find.text('To pray for: 1'), findsOneWidget);
     },
   );
+
+  testWidgets('a wall with nothing to pray for says so, and shows no buttons', (
+    tester,
+  ) async {
+    prayer
+      ..loaded = true
+      ..wall = [_request('1', 'Prayed already', prayed: true)];
+    addTearDown(prayer.clear);
+    await _open(tester, const PrayerWallScreen());
+    expect(find.byKey(const ValueKey('wall-pray')), findsNothing);
+    expect(find.byKey(const ValueKey('wall-skip')), findsNothing);
+    expect(find.text('Prayed already'), findsNothing);
+  });
+
+  test('the new wall words exist in every language the app shows', () {
+    for (final key in ['pw_skip', 'pw_left', 'pw_swipe_hint']) {
+      final english = trIn(AppLang.en, key);
+      expect(english, isNot(key), reason: key);
+      for (final lang in AppLang.values) {
+        expect(
+          trIn(lang, key).trim(),
+          isNotEmpty,
+          reason: '$key in ${lang.name}',
+        );
+        if (lang != AppLang.en) {
+          expect(
+            trIn(lang, key),
+            isNot(english),
+            reason: '$key in ${lang.name} is translated',
+          );
+        }
+      }
+    }
+    expect(
+      trIn(AppLang.hi, 'pw_left').contains('{n}'),
+      isTrue,
+      reason: 'the count goes in',
+    );
+  });
 }
