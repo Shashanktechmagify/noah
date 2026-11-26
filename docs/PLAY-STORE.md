@@ -1,6 +1,6 @@
 # NOAH on Google Play: what is ready, and what is left
 
-App id (permanent): **`com.karunasadan.noah`**. App name: **NOAH**. First version: `1.0.0+1` (`pubspec.yaml`).
+App id (permanent): **`com.karunasadan.noah`** (a NEW app next to the ministry's live `com.gdiz.noahmembers`; decided). App name: **NOAH**. First version: `1.0.0+1` (`pubspec.yaml`).
 
 ## 1. What is already done in the code
 
@@ -36,11 +36,9 @@ storeFile=C:/Users/user/noah-keys/noah-upload.jks
 ```
 Keep the `.jks` file and both passwords in **two safe places** (a password manager and a copy elsewhere). In Play Console choose **Play App Signing** (the default): Google keeps the real signing key and this is only the key you upload with, so a lost upload key can be reset through Google support.
 
-### 2.3 Firebase (push notifications) for the new package
-1. Firebase console: use (or make) the **production** Firebase project. The one the app has now is `noah-b-test`, a test project.
-2. Add an Android app there with the package **`com.karunasadan.noah`**. Download `google-services.json` into `android/app/`.
-3. The backend sends push with a service account: `FCM_SERVICE_ACCOUNT` of the function in **Production** must be from the **same** Firebase project, or no push arrives.
-Without the new file the app still builds and runs, only without push (the build prints a warning).
+### 2.3 Firebase (push notifications) for the new package: DONE
+The ministry's Firebase project **NOAH (`noah-203605`)** now has the Android app `com.karunasadan.noah`. Its `google-services.json` is in `android/app/` (git-ignored; a debug build was checked: project `noah-203605`). The backend sends push with a service account of the **same** project: its JSON goes into `FCM_SERVICE_ACCOUNT` of the function in **Production** (never in git; keep the file in a private folder). The dev function still uses the test project `noah-b-test`: do not mix the two.
+When the app is on Play, add the **Play App Signing SHA-1** (Play Console, App integrity) to this Firebase app too.
 
 ### 2.4 The production backend
 Deploy `noah_api` to the **Production** environment of Catalyst and give it its own settings (see `noah-backend/README.md` and `docs/FOR-CONSOLE-HELP-BOT.md`): at least `NOAH_JWT_SECRET`, `NOAH_OTP_PEPPER`, `ADMIN_API_KEY`, the MSG91 settings (`SMS_PROVIDER=msg91`, ...; `docs/MSG91-SMS.md`), `OTP_DEV_ECHO=false`, `NOAH_DEBUG_ERRORS=false`, `FCM_SERVICE_ACCOUNT`, `SUPPORT_EMAIL`, and the mail settings. Then note the **Production URL** of the function.
