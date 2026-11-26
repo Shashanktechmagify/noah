@@ -167,56 +167,69 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
     final saved = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheet) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + MediaQuery.of(sheet).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              tr(sheet, birthday ? 'cel_tpl_title_b' : 'cel_tpl_title_a'),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              tr(sheet, 'cel_tpl_hint', args: {'name': '{name}'}),
-              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const ValueKey('cel-tpl-field'),
-              controller: controller,
-              minLines: 4,
-              maxLines: 8,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                TextButton(
-                  key: const ValueKey('cel-tpl-reset'),
-                  onPressed: () => Navigator.of(sheet).pop(''),
-                  child: Text(tr(sheet, 'cel_tpl_reset')),
+      // Above the phone's own buttons (SafeArea) and the keyboard (viewInsets); scrolls when the screen is short.
+      builder: (sheet) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            24 + MediaQuery.of(sheet).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr(sheet, birthday ? 'cel_tpl_title_b' : 'cel_tpl_title_a'),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
-                const Spacer(),
-                FilledButton(
-                  key: const ValueKey('cel-tpl-save'),
-                  onPressed: () =>
-                      Navigator.of(sheet).pop(controller.text.trim()),
-                  child: Text(tr(sheet, 'cel_tpl_save')),
-                ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                tr(sheet, 'cel_tpl_hint', args: {'name': '{name}'}),
+                style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('cel-tpl-field'),
+                controller: controller,
+                minLines: 4,
+                maxLines: 8,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Flexible(
+                    child: TextButton(
+                      key: const ValueKey('cel-tpl-reset'),
+                      onPressed: () => Navigator.of(sheet).pop(''),
+                      child: Text(
+                        tr(sheet, 'cel_tpl_reset'),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    key: const ValueKey('cel-tpl-save'),
+                    onPressed: () =>
+                        Navigator.of(sheet).pop(controller.text.trim()),
+                    child: Text(tr(sheet, 'cel_tpl_save')),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

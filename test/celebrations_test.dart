@@ -260,6 +260,29 @@ void main() {
   );
 
   testWidgets(
+    'the message sheet keeps Save and the standard-message button above the phone buttons, on a short screen too',
+    (tester) async {
+      await _open(tester, asked: [], launched: []);
+      // A short phone with a 48 px bar of buttons at the bottom.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.padding = const FakeViewPadding(bottom: 48);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('cel-tpl-edit')));
+      await tester.pumpAndSettle();
+      for (final k in ['cel-tpl-save', 'cel-tpl-reset']) {
+        final box = tester.getRect(find.byKey(ValueKey(k)));
+        expect(box.bottom, lessThanOrEqualTo(640 - 48), reason: k);
+        expect(box.left, greaterThanOrEqualTo(0), reason: k);
+        expect(box.right, lessThanOrEqualTo(360), reason: k);
+      }
+    },
+  );
+
+  testWidgets(
     'when the phone cannot open WhatsApp or the dialler, the number is given in a message',
     (tester) async {
       await _open(tester, asked: [], launched: [], opens: false);
