@@ -52,6 +52,10 @@ android {
             // Signed with the upload key when android/key.properties exists. Without it `flutter run --release` still works
             // (debug keys), but a bundle for Google Play is refused below: Play rejects an app signed with the debug key.
             signingConfig = if (keystoreFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            // No code shrinking (R8): with it the Play build broke shared_preferences_android (NoSuchMethodError SharedPreferencesApiRegistrar.getAll,
+            // R8 renamed the Continuation in its signature), so nothing could be saved on the phone and the push token was never sent.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
