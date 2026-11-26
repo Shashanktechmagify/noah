@@ -1,11 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// The key that signs the app for Google Play: android/key.properties (never committed; see docs/PLAY-STORE.md).
+val keystoreFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystoreFile.exists()) keystoreFile.inputStream().use { keystoreProperties.load(it) }
+
 android {
-    namespace = "com.example.noah_frontend_flutter"
+    namespace = "com.karunasadan.noah"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -17,10 +24,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.noah_frontend_flutter"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Permanent: the id of the app in Google Play (it cannot be changed after the first upload).
+        applicationId = "com.karunasadan.noah"
         minSdk = 24 // the camera plugin needs API 24+
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
@@ -31,11 +36,22 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystoreFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Signed with the upload key when android/key.properties exists. Without it `flutter run --release` still works
+            // (debug keys), but a bundle for Google Play is refused below: Play rejects an app signed with the debug key.
+            signingConfig = if (keystoreFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 }
@@ -50,10 +66,23 @@ flutter {
     source = "../.."
 }
 
-// Firebase push needs the config file from the Firebase console (not committed).
-// Without it the app still builds and runs, just without push notifications.
-if (file("google-services.json").exists()) {
+// A bundle for Google Play must be signed with the upload key.
+gradle.taskGraph.whenReady {
+    if (!keystoreFile.exists() && allTasks.any { it.name == "bundleRelease" }) {
+        throw GradleException(
+            "android/key.properties is missing, so the bundle would be signed with the debug key and Google Play would refuse it. " +
+                "Make the upload key and key.properties first: see docs/PLAY-STORE.md."
+        )
+    }
+}
+
+// Firebase push needs the config file from the Firebase console (not committed), and it must be the one of THIS app's package.
+// Without it (or with the file of another package) the app still builds and runs, just without push notifications.
+val googleServices = file("google-services.json")
+if (googleServices.exists() && Regex("\"package_name\"\\s*:\\s*\"com\\.karunasadan\\.noah\"").containsMatchIn(googleServices.readText())) {
     apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn("android/app/google-services.json is missing or is not for com.karunasadan.noah: building without push notifications.")
 }
 
 dependencies {

@@ -436,6 +436,12 @@ class ApiClient {
   /// `{ member, registration: {status}, next }`.
   Future<Map<String, dynamic>> me() => _send('GET', '/me');
 
+  /// The member deletes their own account: switched off at once, the office removes the personal data within 30 days.
+  /// Fails with `staff_account` for office staff (the office removes those).
+  Future<void> deleteAccount() async {
+    await _send('POST', '/me/delete-account', json: {'confirm': true});
+  }
+
   // ── Children in the family ────────────────────────────────────────────
 
   /// A parent adds a child. The photo is uploaded first ([photoFileId]); the Aadhaar (number and picture) is optional.

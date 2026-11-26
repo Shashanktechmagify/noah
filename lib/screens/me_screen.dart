@@ -14,6 +14,7 @@ import '../widgets/page_scaffold.dart';
 import 'login_screen.dart';
 import 'main_shell.dart' show ShellScope;
 import 'me/drive_screen.dart';
+import 'me/delete_account.dart';
 import 'me/family_screen.dart';
 import 'me/language_screen.dart';
 import 'me/location_screen.dart';
@@ -36,6 +37,9 @@ class MeScreen extends StatelessWidget {
   /// Opens a page inside the Me tab (the bottom bar stays visible).
   void _open(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+
+  void _deleteAccount(BuildContext context) =>
+      confirmAndDeleteAccount(context, onDeleted: () => _signOut(context));
 
   void _signOut(BuildContext context) {
     endLiveSession();
@@ -426,6 +430,13 @@ class MeScreen extends StatelessWidget {
                   subtitle: tr(context, 'me2_logout_sub'),
                   destructive: true,
                   onTap: () => _signOut(context),
+                ),
+                _Row(
+                  icon: Icons.delete_forever_outlined,
+                  title: tr(context, 'me2_delete'),
+                  subtitle: tr(context, 'me2_delete_sub'),
+                  destructive: true,
+                  onTap: () => _deleteAccount(context),
                 ),
               ],
             ),

@@ -1,4 +1,4 @@
-package com.example.noah_frontend_flutter
+package com.karunasadan.noah
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
