@@ -10,6 +10,7 @@ import '../data/noahgram_data.dart';
 import '../data/profile_data.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coming_soon.dart';
 import '../widgets/page_scaffold.dart';
 import 'login_screen.dart';
 import 'main_shell.dart' show ShellScope;
@@ -377,26 +378,52 @@ class MeScreen extends StatelessWidget {
                   icon: Icons.favorite_border,
                   title: 'Jodie',
                   subtitle: tr(context, 'me2_jodie_sub'),
-                  pill: _Pill(tr(context, 'me2_open'), StatusPill.book),
+                  pill: liveApi
+                      ? _Pill(tr(context, 'coming_soon'), StatusPill.book)
+                      : _Pill(tr(context, 'me2_open'), StatusPill.book),
                   onTap: () => shell?.selectSlot(_jodieSlot),
                 ),
                 _Row(
                   icon: Icons.folder_outlined,
                   title: tr(context, 'me2_drive'),
                   subtitle: tr(context, 'me2_drive_sub'),
-                  onTap: () => _open(context, const DriveScreen()),
+                  onTap: () => _open(
+                    context,
+                    liveApi
+                        ? ComingSoonPage(
+                            title: tr(context, 'me2_drive'),
+                            icon: Icons.folder_outlined,
+                          )
+                        : const DriveScreen(),
+                  ),
                 ),
                 _Row(
                   icon: Icons.shopping_cart_outlined,
                   title: tr(context, 'me2_store'),
                   subtitle: tr(context, 'me2_store_sub'),
-                  onTap: () => _open(context, const StoreScreen()),
+                  onTap: () => _open(
+                    context,
+                    liveApi
+                        ? ComingSoonPage(
+                            title: tr(context, 'me2_store'),
+                            icon: Icons.shopping_cart_outlined,
+                          )
+                        : const StoreScreen(),
+                  ),
                 ),
                 _Row(
                   icon: Icons.currency_rupee,
                   title: tr(context, 'me2_rewards'),
                   subtitle: tr(context, 'me2_rewards_sub'),
-                  onTap: () => _open(context, const RewardsScreen()),
+                  onTap: () => _open(
+                    context,
+                    liveApi
+                        ? ComingSoonPage(
+                            title: tr(context, 'me2_rewards'),
+                            icon: Icons.currency_rupee,
+                          )
+                        : const RewardsScreen(),
+                  ),
                 ),
               ],
             ),

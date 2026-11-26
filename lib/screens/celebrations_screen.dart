@@ -3,13 +3,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../data/api_client.dart';
 import '../data/celebration_links.dart';
+import '../data/celebration_template.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/page_scaffold.dart';
-import 'events/events_widgets.dart' show fullDate, monthName;
 import 'me/sub_page.dart';
 
-/// Reads the celebrations between two dates (as `2026-11-25`).
+/// Reads the celebrations of the days from one date to another (as `2026-11-25`); the screen asks for today only.
 typedef CelebrationsLoader = Future<Map<String, dynamic>> Function(
   String from,
   String to,
@@ -18,10 +18,10 @@ typedef CelebrationsLoader = Future<Map<String, dynamic>> Function(
 /// Opens a link outside the app (a call, WhatsApp). True when it opened.
 typedef LinkLauncher = Future<bool> Function(Uri uri);
 
-/// The birthdays and wedding anniversaries of a range of dates, for the pastors and the cell leaders (the menu shows it to them,
-/// and the server refuses anyone else). Two date pickers choose the range, looking back or ahead; each person comes with how to
-/// reach them (phone, WhatsApp, email, address) and who they are (marital status), a Call button, and a WhatsApp button that
-/// opens the chat with the greeting already written: only "send" is left to press.
+/// The birthdays and wedding anniversaries of TODAY only (nothing past, nothing ahead), for the pastors and the cell leaders (the
+/// menu shows it to them, and the server refuses anyone else). Two tabs, Birthdays and Anniversaries. Each person comes with how to
+/// reach them (phone, WhatsApp, email, address) and who they are (marital status), a Call button, and a WhatsApp button that opens
+/// the chat with the greeting already written; the greeting can be changed ("WhatsApp message"), and is kept on the phone.
 class CelebrationsScreen extends StatefulWidget {
   const CelebrationsScreen({super.key, this.load, this.launch, this.today});
 
@@ -37,16 +37,14 @@ class CelebrationsScreen extends StatefulWidget {
 const _pink = Color(0xFFE0409A);
 const _whatsapp = Color(0xFF1FA855);
 
-/// The longest range the server answers (a year).
-const _maxDays = 365;
-
 class _CelebrationsScreenState extends State<CelebrationsScreen> {
-  late DateTime _from;
-  late DateTime _to;
   bool _loading = true;
   String? _error;
+  bool _birthdaysTab = true;
   List<Map<String, dynamic>> _birth = const [];
   List<Map<String, dynamic>> _anniv = const [];
+  String? _tplBirthday;
+  String? _tplAnniversary;
 
   DateTime get _today {
     final t = widget.today ?? DateTime.now();
@@ -56,10 +54,13 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
   @override
   void initState() {
     super.initState();
-    // The week ahead to begin with.
-    _from = _today;
-    _to = _today.add(const Duration(days: 6));
     _load();
+    CelebrationTemplate.read(true).then((v) {
+      if (mounted) setState(() => _tplBirthday = v);
+    });
+    CelebrationTemplate.read(false).then((v) {
+      if (mounted) setState(() => _tplAnniversary = v);
+    });
   }
 
   String _iso(DateTime d) =>
@@ -72,7 +73,7 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
     });
     try {
       final read = widget.load ?? (f, t) => api.celebrations(from: f, to: t);
-      final d = await read(_iso(_from), _iso(_to));
+      final d = await read(_iso(_today), _iso(_today));
       if (!mounted) return;
       setState(() {
         _birth = ((d['birthdays'] as List?) ?? const []).cast();
@@ -86,41 +87,6 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
         _loading = false;
       });
     }
-  }
-
-  /// A range from [from] to [to]; the other end follows when the two would cross or be more than a year apart.
-  void _setRange(DateTime from, DateTime to, {required bool fromChanged}) {
-    if (to.isBefore(from)) {
-      if (fromChanged) {
-        to = from;
-      } else {
-        from = to;
-      }
-    }
-    if (to.difference(from).inDays > _maxDays) {
-      if (fromChanged) {
-        to = from.add(const Duration(days: _maxDays));
-      } else {
-        from = to.subtract(const Duration(days: _maxDays));
-      }
-    }
-    setState(() {
-      _from = from;
-      _to = to;
-    });
-    _load();
-  }
-
-  Future<void> _pick({required bool from}) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: from ? _from : _to,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked == null || !mounted) return;
-    final day = DateTime(picked.year, picked.month, picked.day);
-    _setRange(from ? day : _from, from ? _to : day, fromChanged: from);
   }
 
   Future<void> _open(Uri? uri, String? number) async {
@@ -147,125 +113,137 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
     }
   }
 
-  // ── The range ───────────────────────────────────────────────────────────
+  // ── The tabs and the message ────────────────────────────────────────────
 
-  Widget _dateField(String key, String label, DateTime date, bool from) =>
-      Expanded(
-        child: GestureDetector(
-          key: ValueKey(key),
-          onTap: () => _pick(from: from),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.tint,
-              borderRadius: BorderRadius.circular(14),
+  Widget _tab(String key, String label, int count, bool birthday) {
+    final on = _birthdaysTab == birthday;
+    return Expanded(
+      child: GestureDetector(
+        key: ValueKey(key),
+        onTap: () => setState(() => _birthdaysTab = birthday),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: on ? AppColors.magenta : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: on ? AppColors.magenta : AppColors.border,
             ),
-            child: Row(
+          ),
+          child: Text(
+            _loading ? label : '$label ($count)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: on ? Colors.white : AppColors.ink,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabs(BuildContext context) => Row(
+    children: [
+      _tab('cel-tab-b', tr(context, 'cel_birthdays'), _birth.length, true),
+      const SizedBox(width: 10),
+      _tab('cel-tab-a', tr(context, 'cel_anniversaries'), _anniv.length, false),
+    ],
+  );
+
+  String _standard(bool birthday) => tr(
+    context,
+    birthday ? 'bday_wish' : 'anv_wish',
+    args: {'name': '{name}'},
+  );
+
+  String _template(bool birthday) =>
+      (birthday ? _tplBirthday : _tplAnniversary) ?? _standard(birthday);
+
+  Future<void> _editTemplate() async {
+    final birthday = _birthdaysTab;
+    final controller = TextEditingController(text: _template(birthday));
+    final saved = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheet) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(sheet).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr(sheet, birthday ? 'cel_tpl_title_b' : 'cel_tpl_title_a'),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(sheet, 'cel_tpl_hint', args: {'name': '{name}'}),
+              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('cel-tpl-field'),
+              controller: controller,
+              minLines: 4,
+              maxLines: 8,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            Row(
               children: [
-                const Icon(
-                  Icons.calendar_month_outlined,
-                  size: 20,
-                  color: AppColors.magenta,
+                TextButton(
+                  key: const ValueKey('cel-tpl-reset'),
+                  onPressed: () => Navigator.of(sheet).pop(''),
+                  child: Text(tr(sheet, 'cel_tpl_reset')),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        fullDate(context, date),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
+                const Spacer(),
+                FilledButton(
+                  key: const ValueKey('cel-tpl-save'),
+                  onPressed: () =>
+                      Navigator.of(sheet).pop(controller.text.trim()),
+                  child: Text(tr(sheet, 'cel_tpl_save')),
                 ),
               ],
             ),
-          ),
-        ),
-      );
-
-  Widget _quick(String key, String label, DateTime from, DateTime to) {
-    final on = _from == from && _to == to;
-    return GestureDetector(
-      key: ValueKey(key),
-      onTap: () => _setRange(from, to, fromChanged: true),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: on ? AppColors.tint : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: on ? AppColors.magenta : AppColors.border),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            color: on ? AppColors.magenta : AppColors.ink,
-          ),
+          ],
         ),
       ),
     );
+    if (saved == null) return;
+    // The standard text saved as it is stays "standard", so it follows the app language.
+    final value = saved == _standard(birthday) ? '' : saved;
+    await CelebrationTemplate.write(birthday, value);
+    if (!mounted) return;
+    setState(() {
+      if (birthday) {
+        _tplBirthday = value.isEmpty ? null : value;
+      } else {
+        _tplAnniversary = value.isEmpty ? null : value;
+      }
+    });
   }
 
-  Widget _rangeCard(BuildContext context) {
-    final t = _today;
-    return WhiteCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _dateField('cel-from', tr(context, 'cel_from'), _from, true),
-              const SizedBox(width: 10),
-              _dateField('cel-to', tr(context, 'cel_to'), _to, false),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _quick('cel-today', tr(context, 'cel_r_today'), t, t),
-              _quick(
-                'cel-week',
-                tr(context, 'cel_r_week'),
-                t,
-                t.add(const Duration(days: 6)),
-              ),
-              _quick(
-                'cel-30',
-                tr(context, 'cel_r_30'),
-                t,
-                t.add(const Duration(days: 29)),
-              ),
-              _quick(
-                'cel-month',
-                tr(context, 'cel_r_month'),
-                DateTime(t.year, t.month),
-                DateTime(t.year, t.month + 1, 0),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _templateButton() => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton.icon(
+      key: const ValueKey('cel-tpl-edit'),
+      onPressed: _editTemplate,
+      icon: const Icon(Icons.edit_outlined, size: 18),
+      label: Text(tr(context, 'cel_tpl_edit')),
+      style: TextButton.styleFrom(foregroundColor: _whatsapp),
+    ),
+  );
 
   // ── The people ──────────────────────────────────────────────────────────
 
@@ -350,11 +328,7 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
       return const SizedBox.shrink();
     }
     final first = '${p['name']}'.split(' ').first;
-    final greeting = tr(
-      context,
-      birthday ? 'bday_wish' : 'anv_wish',
-      args: {'name': first},
-    );
+    final greeting = _template(birthday).replaceAll('{name}', first);
     final kind = birthday ? 'b' : 'a';
     final id = '${p['memberId']}-$kind-${p['date']}';
     return Padding(
@@ -390,7 +364,6 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
   }
 
   Widget _person(Map<String, dynamic> p, bool birthday) {
-    final today = p['today'] == true;
     final n = (p[birthday ? 'turning' : 'years'] as num?)?.toInt() ?? 0;
     final sub = birthday
         ? tr(context, 'cel_turning', args: {'n': '$n'})
@@ -400,9 +373,7 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
     final email = _text(p, 'email');
     final address = _text(p, 'address');
     final marital = _text(p, 'maritalStatus');
-    final month = (p['month'] as num?)?.toInt() ?? 1;
     return Container(
-      color: today ? const Color(0xFFFFF4D6) : null,
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,34 +405,9 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
                   ],
                 ),
               ),
-              if (today)
-                const Padding(
-                  padding: EdgeInsets.only(right: 10),
-                  child: Icon(Icons.cake_rounded, color: _pink),
-                ),
-              SizedBox(
-                width: 46,
-                child: Column(
-                  children: [
-                    Text(
-                      '${p['day']}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.magenta,
-                      ),
-                    ),
-                    Text(
-                      monthName(context, month),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
+              Icon(
+                birthday ? Icons.cake_rounded : Icons.favorite,
+                color: _pink,
               ),
             ],
           ),
@@ -479,34 +425,26 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
     );
   }
 
-  Widget _section(
-    String title,
-    List<Map<String, dynamic>> people,
-    bool birthday,
-  ) {
-    if (people.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 18),
+  Widget _list(List<Map<String, dynamic>> people, bool birthday) {
+    if (people.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(28),
+        child: Center(
+          child: Text(
+            tr(context, 'cel_none_today'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted),
+          ),
+        ),
+      );
+    }
+    return WhiteCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-            child: Text(
-              '$title (${people.length})',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-          ),
-          WhiteCard(
-            child: Column(
-              children: [
-                for (final (i, p) in people.indexed) ...[
-                  if (i > 0) const Divider(height: 1, color: AppColors.border),
-                  _person(p, birthday),
-                ],
-              ],
-            ),
-          ),
+          for (final (i, p) in people.indexed) ...[
+            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            _person(p, birthday),
+          ],
         ],
       ),
     );
@@ -519,7 +457,8 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
       subtitle: tr(context, 'cel_sub'),
       bandHeight: 84,
       children: [
-        _rangeCard(context),
+        _tabs(context),
+        _templateButton(),
         if (_loading)
           const Padding(
             padding: EdgeInsets.all(32),
@@ -533,21 +472,8 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
               style: const TextStyle(color: AppColors.muted),
             ),
           )
-        else if (_birth.isEmpty && _anniv.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(28),
-            child: Center(
-              child: Text(
-                tr(context, 'cel_none_range'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted),
-              ),
-            ),
-          )
-        else ...[
-          _section(tr(context, 'cel_birthdays'), _birth, true),
-          _section(tr(context, 'cel_anniversaries'), _anniv, false),
-        ],
+        else
+          _list(_birthdaysTab ? _birth : _anniv, _birthdaysTab),
       ],
     );
   }

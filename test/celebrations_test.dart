@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:noah_frontend_flutter/data/api_client.dart';
 import 'package:noah_frontend_flutter/data/celebration_links.dart';
+import 'package:noah_frontend_flutter/data/celebration_template.dart';
 import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/screens/celebrations_screen.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
@@ -126,50 +128,28 @@ void main() {
   });
 
   testWidgets(
-    'two date pickers choose the range: the week ahead to begin with; the quick ranges; the other end follows when they would cross',
+    'only today is asked for; two tabs (Birthdays, Anniversaries) show the people of each; the age and the years are written short',
     (tester) async {
       final asked = <(String, String)>[];
       await _open(tester, asked: asked, launched: []);
 
-      expect(asked, [('2026-11-25', '2026-12-01')], reason: 'the week ahead');
-      expect(find.text('25 November 2026'), findsOneWidget);
-      expect(find.text('1 December 2026'), findsOneWidget);
-      expect(find.text('From'), findsOneWidget);
-      expect(find.text('To'), findsOneWidget);
+      expect(asked, [('2026-11-25', '2026-11-25')], reason: 'today only');
+      // No date pickers, no ranges.
+      expect(find.byKey(const ValueKey('cel-from')), findsNothing);
+      expect(find.byKey(const ValueKey('cel-today')), findsNothing);
+      expect(find.text('Birthdays (3)'), findsOneWidget);
+      expect(find.text('Anniversaries (1)'), findsOneWidget);
 
-      // The quick ranges.
-      await tester.tap(find.byKey(const ValueKey('cel-today')));
-      await tester.pumpAndSettle();
-      expect(asked.last, ('2026-11-25', '2026-11-25'));
-      await tester.tap(find.byKey(const ValueKey('cel-month')));
-      await tester.pumpAndSettle();
-      expect(asked.last, ('2026-11-01', '2026-11-30'));
-      await tester.tap(find.byKey(const ValueKey('cel-30')));
-      await tester.pumpAndSettle();
-      expect(asked.last, ('2026-11-25', '2026-12-24'));
+      // The Birthdays tab first: only birthdays.
+      expect(find.text('Age: 36 years'), findsOneWidget);
+      expect(find.text('Years: 11'), findsNothing);
+      expect(find.text('Turning 36'), findsNothing);
 
-      // The first date moved past the last one: the last one follows.
-      await tester.tap(find.byKey(const ValueKey('cel-today')));
+      await tester.tap(find.byKey(const ValueKey('cel-tab-a')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('cel-from')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: find.byType(Dialog), matching: find.text('28')),
-      );
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-      expect(asked.last, ('2026-11-28', '2026-11-28'));
-      expect(find.text('28 November 2026'), findsNWidgets(2));
-
-      // The last date moved before the first one: the first one follows.
-      await tester.tap(find.byKey(const ValueKey('cel-to')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: find.byType(Dialog), matching: find.text('20')),
-      );
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-      expect(asked.last, ('2026-11-20', '2026-11-20'));
+      expect(find.text('Years: 11'), findsOneWidget);
+      expect(find.text('Age: 36 years'), findsNothing);
+      expect(find.text('11 years married'), findsNothing);
     },
   );
 
@@ -179,21 +159,13 @@ void main() {
       final launched = <Uri>[];
       await _open(tester, asked: [], launched: launched);
 
-      expect(find.text('Birthdays (3)'), findsOneWidget);
-      expect(find.text('Anniversaries (1)'), findsOneWidget);
-      expect(
-        find.text('Ben Thomas'),
-        findsNWidgets(2),
-        reason: 'a birthday and an anniversary',
-      );
-      expect(find.text('Turning 36'), findsOneWidget);
-      expect(find.text('11 years married'), findsOneWidget);
-      // Phone, WhatsApp, email, address, marital status.
-      expect(find.text('+919000000523'), findsNWidgets(2));
-      expect(find.text('WhatsApp · +919811111111'), findsNWidgets(2));
-      expect(find.text('ben@example.org'), findsNWidgets(2));
-      expect(find.text('12 Hill Road, Kalina, Mumbai'), findsNWidgets(2));
-      expect(find.text('Married'), findsNWidgets(2));
+      // Birthdays tab: phone, WhatsApp, email, address, marital status.
+      expect(find.text('Ben Thomas'), findsOneWidget);
+      expect(find.text('+919000000523'), findsOneWidget);
+      expect(find.text('WhatsApp · +919811111111'), findsOneWidget);
+      expect(find.text('ben@example.org'), findsOneWidget);
+      expect(find.text('12 Hill Road, Kalina, Mumbai'), findsOneWidget);
+      expect(find.text('Married'), findsOneWidget);
       expect(find.text('Single'), findsOneWidget);
       expect(find.text('nophone@example.org'), findsOneWidget);
       // No WhatsApp line when it is the same as the mobile number, or when there is none.
@@ -213,14 +185,6 @@ void main() {
       await tester.pump();
       expect(launched.last.toString(), 'tel:+919000000523');
 
-      // The anniversary has its own greeting.
-      await tester.tap(find.byKey(const ValueKey('cel-wa-1-a-2026-11-29')));
-      await tester.pump();
-      expect(
-        launched.last.queryParameters['text'],
-        startsWith('Ben Wishing you a very Happy Anniversary!'),
-      );
-
       // Dee has only a mobile number: WhatsApp goes there.
       await tester.tap(find.byKey(const ValueKey('cel-wa-2-b-2026-11-28')));
       await tester.pump();
@@ -232,6 +196,66 @@ void main() {
         findsNothing,
       );
       expect(find.byKey(const ValueKey('cel-wa-3-b-2026-11-30')), findsNothing);
+
+      // The anniversary has its own greeting.
+      await tester.tap(find.byKey(const ValueKey('cel-tab-a')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cel-wa-1-a-2026-11-29')));
+      await tester.pump();
+      expect(
+        launched.last.queryParameters['text'],
+        startsWith('Ben Wishing you a very Happy Anniversary!'),
+      );
+    },
+  );
+
+  testWidgets(
+    'the WhatsApp message can be changed (kept on the phone, one for each tab) and put back to the standard one',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final launched = <Uri>[];
+      await _open(tester, asked: [], launched: launched);
+
+      await tester.tap(find.byKey(const ValueKey('cel-tpl-edit')));
+      await tester.pumpAndSettle();
+      expect(find.text('Birthday message'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('cel-tpl-field')),
+        'God bless you {name}!',
+      );
+      await tester.tap(find.byKey(const ValueKey('cel-tpl-save')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('cel-wa-1-b-2026-11-26')));
+      await tester.pump();
+      expect(launched.last.queryParameters['text'], 'God bless you Ben!');
+      expect(await CelebrationTemplate.read(true), 'God bless you {name}!');
+      expect(await CelebrationTemplate.read(false), isNull);
+
+      // The anniversary tab still has the standard message.
+      await tester.tap(find.byKey(const ValueKey('cel-tab-a')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cel-wa-1-a-2026-11-29')));
+      await tester.pump();
+      expect(
+        launched.last.queryParameters['text'],
+        startsWith('Ben Wishing you a very Happy Anniversary!'),
+      );
+
+      // Back to the standard one.
+      await tester.tap(find.byKey(const ValueKey('cel-tab-b')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cel-tpl-edit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cel-tpl-reset')));
+      await tester.pumpAndSettle();
+      expect(await CelebrationTemplate.read(true), isNull);
+      await tester.tap(find.byKey(const ValueKey('cel-wa-1-b-2026-11-26')));
+      await tester.pump();
+      expect(
+        launched.last.queryParameters['text'],
+        startsWith('Happy Birthday Ben. Wishing you another wonderful year'),
+      );
     },
   );
 
@@ -248,36 +272,41 @@ void main() {
     },
   );
 
-  test('the words of the range exist in every language the app shows', () {
-    for (final key in [
-      'cel_from',
-      'cel_to',
-      'cel_r_today',
-      'cel_r_week',
-      'cel_r_30',
-      'cel_r_month',
-      'cel_none_range',
-      'cel_call',
-      'cel_open_failed',
-    ]) {
-      final english = trIn(AppLang.en, key);
-      expect(english, isNot(key), reason: key);
-      for (final lang in AppLang.values) {
-        expect(
-          trIn(lang, key).trim(),
-          isNotEmpty,
-          reason: '$key in ${lang.name}',
-        );
-        if (lang != AppLang.en && english.length > 2) {
+  test(
+    'the words of the celebrations exist in every language the app shows',
+    () {
+      for (final key in [
+        'cel_none_today',
+        'cel_tpl_edit',
+        'cel_tpl_title_b',
+        'cel_tpl_title_a',
+        'cel_tpl_hint',
+        'cel_tpl_save',
+        'cel_tpl_reset',
+        'cel_turning',
+        'cel_years',
+        'cel_call',
+        'cel_open_failed',
+      ]) {
+        final english = trIn(AppLang.en, key);
+        expect(english, isNot(key), reason: key);
+        for (final lang in AppLang.values) {
           expect(
-            trIn(lang, key),
-            isNot(english),
-            reason: '$key in ${lang.name} is translated',
+            trIn(lang, key).trim(),
+            isNotEmpty,
+            reason: '$key in ${lang.name}',
           );
+          if (lang != AppLang.en && english.length > 2) {
+            expect(
+              trIn(lang, key),
+              isNot(english),
+              reason: '$key in ${lang.name} is translated',
+            );
+          }
         }
       }
-    }
-  });
+    },
+  );
 
   test('api: the range goes to the server as from and to', () {
     // The call is made with these query names (see celebrations() in api_client.dart).

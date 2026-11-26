@@ -20,6 +20,7 @@ import 'noahgram/live/live_noahgram_screen.dart';
 import 'noahgram/live/ng_pages.dart';
 import 'noahgram/noahgram_screen.dart';
 import 'noahtube_screen.dart';
+import '../widgets/coming_soon.dart';
 import 'word_screens.dart';
 import 'celebrations_screen.dart';
 import '../widgets/birthday_celebration.dart';
@@ -342,9 +343,17 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             TabNavigator(
               root: liveApi ? const LiveEventsScreen() : const EventsScreen(),
             ),
-            const JodieScreen(),
+            // Matching is not built on the server yet: the signed-in app says so, the demo keeps the sample people.
+            liveApi
+                ? ComingSoonView(title: 'Jodie', icon: Icons.favorite_border)
+                : const JodieScreen(),
             TabNavigator(root: const MeScreen(), navigatorKey: _meNav),
-            NoahtubeScreen(),
+            liveApi
+                ? ComingSoonView(
+                    title: 'Noah Tube',
+                    icon: Icons.play_circle_outline,
+                  )
+                : NoahtubeScreen(),
           ],
         ),
         bottomNavigationBar: _BottomBar(index: _slot, onSelect: _onSelect),
