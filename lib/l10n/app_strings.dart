@@ -10753,7 +10753,7 @@ const Map<String, List<String>> _strings = {
     'ஹே {name}, உங்களுக்கு இனிய பிறந்தநாள் வாழ்த்துகள்!',
   ],
 'mn_celebrations': [
-    'Birthdays & anniversaries',
+    'Birthdays & Anniversaries',
     'जन्मदिन और वर्षगाँठ',
     'वाढदिवस आणि वर्धापनदिन',
     '',
@@ -10762,7 +10762,7 @@ const Map<String, List<String>> _strings = {
     'பிறந்தநாள் & ஆண்டுவிழா',
   ],
 'cel_title': [
-    'Birthdays & anniversaries',
+    'Birthdays & Anniversaries',
     'जन्मदिन और वर्षगाँठ',
     'वाढदिवस आणि वर्धापनदिन',
     '',
