@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -61,13 +62,21 @@ class PushService {
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp();
       final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission();
+      // The token is read and sent to the server FIRST. The permission question (Android 13 and newer) waits for the member's answer,
+      // maybe for ever (a locked screen, a dialog dismissed): it must never hold back the registration.
       // getToken is deprecated in favour of onRegistered, which gives an
       // installation id. The server sends with FCM v1 to the classic token,
       // so keep getToken until the new id is confirmed to work there.
       // ignore: deprecated_member_use
       final token = await messaging.getToken();
       if (token != null) await _register(token);
+      // Not awaited: the answer is only needed for the banners, not for the token.
+      unawaited(
+        messaging.requestPermission().then<void>(
+          (_) {},
+          onError: (Object e) => debugPrint('Push permission not asked: $e'),
+        ),
+      );
       if (_started) return;
       _started = true;
       // ignore: deprecated_member_use
