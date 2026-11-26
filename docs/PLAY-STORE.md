@@ -139,9 +139,9 @@ Purposes: App functionality, Account management, Communications. Not for adverti
 
 ## 5. Before you publish: check these
 
-1. **Screens that still show sample content when signed in**: the **Jodie** tab (matching) and, in Me, **Drive**, **Store** and **Rewards** are not connected to the server yet and show made-up people and items. Real members and Google's reviewers would see them. Hide them until they are built (the menu entries that say "coming soon" are fine).
+1. **Sample screens**: done. When signed in, **Jodie**, **Noah Tube** and, in Me, **Drive**, **Store** and **Rewards** say "Coming soon" (the demo build, without `NOAH_API`, still shows the samples).
 2. **Jodie is member-to-member chat**: if it ships, Google's rules need a way to report and block people. It does not exist yet.
 3. **Deleting an account**: the account is switched off at once, but the **office removes the data by hand within 30 days** (the privacy pages promise it). Someone must do it, and keep the records the law requires.
 4. **Read `/privacy-policy`** once: the first part is the ministry's own text from the app; the part about the app is a plain list of what the app does, to be checked by the ministry.
 5. **Cell leaders** can see every member's contact details, address and marital status in the birthday list. Consider limiting it to their own cell.
-6. The icon file is 160 x 160 (section 2.6).
+6. The icon: `docs/app-icon-square.png` (1024 x 1024, square) is the Play icon and the launcher icon; the round logo stays inside the app. Upload a 512 x 512 copy in Play Console. Feature graphic and screenshots are still to do (section 2.6).
