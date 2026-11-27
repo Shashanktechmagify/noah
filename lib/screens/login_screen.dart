@@ -17,6 +17,11 @@ import 'otp_screen.dart';
 
 /// The Login page: a mobile number only, for a member who is already registered. With [register] it is the Register page:
 /// a mobile number or an email address, and a new one starts a registration.
+/// What the mobile number field holds when the login page opens (or the country changes). The real app starts EMPTY, showing only
+/// the grey placeholder; the demo (no server) keeps a sample Indian number so it can be clicked through.
+String loginDefaultNumber({required bool live, required bool india}) =>
+    !live && india ? '98765 43210' : '';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.register = false});
 
@@ -27,7 +32,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _controller = TextEditingController(text: '98765 43210');
+  final _controller = TextEditingController(
+    text: loginDefaultNumber(live: liveApi, india: true),
+  );
   DialCountry _country = DialData.fallback.first;
   final _email = TextEditingController();
 
@@ -77,8 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _pickCountry(DialCountry c) {
     setState(() => _country = c);
-    // The demo number only makes sense for India.
-    _controller.text = c.isIndia ? '98765 43210' : '';
+    _controller.text = loginDefaultNumber(live: liveApi, india: c.isIndia);
   }
 
   bool _sending = false;

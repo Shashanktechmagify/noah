@@ -22,6 +22,8 @@ import 'package:noah_frontend_flutter/l10n/app_strings.dart';
 import 'package:noah_frontend_flutter/main.dart';
 import 'package:noah_frontend_flutter/screens/events/events_widgets.dart';
 import 'package:noah_frontend_flutter/screens/main_shell.dart';
+import 'package:noah_frontend_flutter/screens/login_screen.dart'
+    show loginDefaultNumber;
 import 'package:noah_frontend_flutter/screens/noahgram/noahgram_widgets.dart';
 import 'package:noah_frontend_flutter/theme/app_theme.dart';
 import 'package:noah_frontend_flutter/widgets/event_carousel.dart'
@@ -1293,6 +1295,13 @@ void main() {
     await settle();
     expect(profile.get('email'), 'daniel.fernandes@example.com');
     expect(profile.pendingFor('email')!.newValue, 'daniel@new.com');
+  });
+
+  test('login: the real app starts with an empty number, only the demo has a sample one', () {
+    expect(loginDefaultNumber(live: true, india: true), '');
+    expect(loginDefaultNumber(live: true, india: false), '');
+    expect(loginDefaultNumber(live: false, india: true), '98765 43210');
+    expect(loginDefaultNumber(live: false, india: false), '');
   });
 
   testWidgets('login: terms and conditions note after the button', (
