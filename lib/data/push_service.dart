@@ -62,21 +62,36 @@ class PushService {
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp();
       final messaging = FirebaseMessaging.instance;
-      // The token is read and sent to the server FIRST. The permission question (Android 13 and newer) waits for the member's answer,
-      // maybe for ever (a locked screen, a dialog dismissed): it must never hold back the registration.
-      // getToken is deprecated in favour of onRegistered, which gives an
-      // installation id. The server sends with FCM v1 to the classic token,
-      // so keep getToken until the new id is confirmed to work there.
-      // ignore: deprecated_member_use
-      final token = await messaging.getToken();
+      final ios = defaultTargetPlatform == TargetPlatform.iOS;
+      if (ios) {
+        // iPhone: the permission is asked FIRST, then Apple hands out its push token (APNs), and only then can Firebase give its own.
+        await messaging.requestPermission();
+        for (var i = 0; i < 15 && await messaging.getAPNSToken() == null; i++) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
+      // Android: the token is read and sent to the server FIRST. The permission question (Android 13 and newer) waits for the
+      // member's answer, maybe for ever (a locked screen, a dialog dismissed): it must never hold back the registration.
+      // getToken is deprecated in favour of onRegistered, which gives an installation id. The server sends with FCM v1 to the
+      // classic token, so keep getToken until the new id is confirmed to work there.
+      String? token;
+      try {
+        // ignore: deprecated_member_use
+        token = await messaging.getToken();
+      } catch (e) {
+        // On an iPhone the token can still be on its way (apns-token-not-set): onTokenRefresh below delivers it.
+        debugPrint('Push token not ready yet: $e');
+      }
       if (token != null) await _register(token);
-      // Not awaited: the answer is only needed for the banners, not for the token.
-      unawaited(
-        messaging.requestPermission().then<void>(
-          (_) {},
-          onError: (Object e) => debugPrint('Push permission not asked: $e'),
-        ),
-      );
+      if (!ios) {
+        // Not awaited: the answer is only needed for the banners, not for the token.
+        unawaited(
+          messaging.requestPermission().then<void>(
+            (_) {},
+            onError: (Object e) => debugPrint('Push permission not asked: $e'),
+          ),
+        );
+      }
       if (_started) return;
       _started = true;
       // ignore: deprecated_member_use
@@ -143,6 +158,12 @@ class PushService {
     await _banners.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // The question about notifications is asked by Firebase (requestPermission), not by this plugin.
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
       ),
       // A banner drawn by the app itself was tapped.
       onDidReceiveNotificationResponse: (r) {
@@ -174,6 +195,12 @@ class PushService {
           _channel.name,
           importance: Importance.high,
           priority: Priority.high,
+        ),
+        // A push that arrives while the app is open: iOS shows it only when it is drawn like this.
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
       ),
     );

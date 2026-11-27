@@ -1,0 +1,133 @@
+# Builds the SIGNED iOS app on GitHub and sends it to TestFlight (App Store Connect). No Mac needed.
+# Run it by hand: GitHub > Actions > "iOS TestFlight" > Run workflow. See docs/IOS-TESTFLIGHT.md for the one-time setup.
+# A macOS runner costs 10x the minutes of a Linux one, so it does not run on every push.
+#
+# Secrets (GitHub > Settings > Secrets and variables > Actions):
+#   APPLE_TEAM_ID                  the 10-character Team ID (developer.apple.com > Membership details)
+#   ASC_KEY_ID, ASC_ISSUER_ID      of the App Store Connect API key (Users and Access > Integrations)
+#   ASC_KEY_P8                     the whole text of that AuthKey_XXXX.p8 file
+#   GOOGLE_SERVICE_INFO_PLIST_B64  GoogleService-Info.plist of the Firebase iOS app, in base64
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "API address the app talks to (NOAH_API)"
+        required: true
+        default: "https://noahapp-60093443705.catalystserverless.in/server/noah_api"
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Check the secrets are there
+        run: |
+          missing=""
+          [ -z "${{ secrets.APPLE_TEAM_ID }}" ] && missing="$missing APPLE_TEAM_ID"
+          [ -z "${{ secrets.ASC_KEY_ID }}" ] && missing="$missing ASC_KEY_ID"
+          [ -z "${{ secrets.ASC_ISSUER_ID }}" ] && missing="$missing ASC_ISSUER_ID"
+          [ -z "${{ secrets.ASC_KEY_P8 }}" ] && missing="$missing ASC_KEY_P8"
+          [ -z "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" ] && missing="$missing GOOGLE_SERVICE_INFO_PLIST_B64"
+          if [ -n "$missing" ]; then echo "Missing secrets:$missing"; exit 1; fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter (the version the app is built with)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      # Firebase (push) reads this file inside the app. It is not in the repository.
+      - name: Firebase iOS config
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          grep -A1 "BUNDLE_ID" ios/Runner/GoogleService-Info.plist
+          grep -q "com.karunasadan.noah" ios/Runner/GoogleService-Info.plist || { echo "This GoogleService-Info.plist is not for com.karunasadan.noah"; exit 1; }
+
+      # The file must also be part of the app bundle: add it to the Xcode project.
+      - name: Add the Firebase file to the Xcode project
+        run: |
+          ruby -e '
+            require "xcodeproj"
+            project = Xcodeproj::Project.open("ios/Runner.xcodeproj")
+            target = project.targets.find { |t| t.name == "Runner" }
+            group = project.main_group["Runner"]
+            ref = group.new_file("GoogleService-Info.plist")
+            target.resources_build_phase.add_file_reference(ref)
+            project.save
+          '
+
+      # Creates ios/Podfile (it is not in the repository) and the generated settings. The build number is the number of this run,
+      # so every upload to TestFlight has a higher one.
+      - name: Prepare the iOS project
+        run: flutter build ios --config-only --release --no-codesign --build-number=${{ github.run_number }} --dart-define=NOAH_API=${{ inputs.api_url }}
+
+      # Firebase and the other plugins need iOS 15; the Xcode project already says 15.0, the generated Podfile must agree.
+      - name: Podfile needs iOS 15
+        run: |
+          sed -i '' -E "s/^# *platform :ios, '[0-9.]+'/platform :ios, '15.0'/; s/^platform :ios, '[0-9.]+'/platform :ios, '15.0'/" ios/Podfile
+          grep -n "platform :ios" ios/Podfile
+          cd ios && pod install
+
+      - name: App Store Connect API key
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys" "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+          cp "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" "$HOME/.appstoreconnect/private_keys/"
+
+      # Automatic signing: Xcode makes the certificate and the profile itself, through the API key.
+      - name: Archive (signed)
+        run: |
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/Runner.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            archive
+
+      - name: Export the .ipa
+        run: |
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive -archivePath build/Runner.xcarchive \
+            -exportPath build/ipa -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+          ls -lh build/ipa
+
+      - name: Keep the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: noah-ios-ipa
+          path: build/ipa/*.ipa
+          retention-days: 14
+
+      - name: Send to TestFlight
+        run: |
+          xcrun altool --upload-app --type ios --file build/ipa/*.ipa \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
